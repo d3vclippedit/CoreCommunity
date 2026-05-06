@@ -20,6 +20,7 @@
     "pages:dev": "wrangler pages dev"
   },
   "dependencies": {
+    "@noble/hashes": "^2.2.0",
     "@remix-run/cloudflare": "^2.15.0",
     "@remix-run/cloudflare-pages": "^2.15.0",
     "@remix-run/react": "^2.15.0",

@@ -1,5 +1,6 @@
 import { createPagesFunctionHandler } from "@remix-run/cloudflare-pages";
-// @ts-expect-error — build output exists after `pnpm build`
+// @ts-ignore — build output exists after `pnpm build`
 import * as build from "../build/server/index.js";
 
-export const onRequest = createPagesFunctionHandler({ build });
+// biome-ignore lint/suspicious/noExplicitAny: build artifact, types resolved by esbuild not tsc
+export const onRequest = createPagesFunctionHandler({ build: build as any });

@@ -1,9 +1,9 @@
+import { resolve } from "node:path";
 import {
   vitePlugin as remix,
   cloudflareDevProxyVitePlugin as remixCloudflareDevProxy,
 } from "@remix-run/dev";
 import tailwindcss from "@tailwindcss/vite";
-import { resolve } from "path";
 import { defineConfig } from "vite";
 import { getLoadContext } from "./load-context";
 

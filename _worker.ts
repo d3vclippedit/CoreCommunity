@@ -1,10 +1,12 @@
 import { createRequestHandler } from "@remix-run/cloudflare";
 
-// Imported at build time — produced by `remix vite:build`
-// @ts-expect-error — not in tsconfig paths, resolved by esbuild
+// Imported at build time — produced by `remix vite:build`; types resolved by esbuild, not tsc
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore
 import * as serverBuild from "./build/server/index.js";
 
-const handleRequest = createRequestHandler(serverBuild);
+// biome-ignore lint/suspicious/noExplicitAny: build artifact, types resolved by esbuild not tsc
+const handleRequest = createRequestHandler(serverBuild as any);
 
 export default {
   async fetch(request: Request, env: Env & { ASSETS: Fetcher }, ctx: ExecutionContext) {
@@ -27,7 +29,8 @@ export default {
         env,
         ctx,
         cf: (request as unknown as { cf: IncomingRequestCfProperties }).cf,
-        caches,
+        // biome-ignore lint/suspicious/noExplicitAny: Workers CacheStorage type mismatch
+        caches: caches as any,
       },
     });
   },
