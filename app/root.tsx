@@ -1,4 +1,4 @@
-import type { LinksFunction } from "@remix-run/cloudflare";
+import type { LinksFunction, LoaderFunctionArgs } from "@remix-run/cloudflare";
 import {
   Links,
   Meta,
@@ -8,6 +8,7 @@ import {
   isRouteErrorResponse,
   useRouteError,
 } from "@remix-run/react";
+import { getCurrentUser } from "~/lib/auth/user.server";
 import tailwindStyles from "~/styles/tailwind.css?url";
 
 export const links: LinksFunction = () => [
@@ -15,7 +16,7 @@ export const links: LinksFunction = () => [
   {
     rel: "preconnect",
     href: "https://fonts.gstatic.com",
-    crossOrigin: "anonymous",
+    crossOrigin: "anonymous" as const,
   },
   {
     rel: "stylesheet",
@@ -24,6 +25,11 @@ export const links: LinksFunction = () => [
   { rel: "stylesheet", href: tailwindStyles },
   { rel: "icon", href: "/favicon.ico" },
 ];
+
+export async function loader({ request, context }: LoaderFunctionArgs) {
+  const user = await getCurrentUser(request, context.cloudflare.env);
+  return { user };
+}
 
 export function Layout({ children }: { children: React.ReactNode }) {
   return (

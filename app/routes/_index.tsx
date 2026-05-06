@@ -1,8 +1,9 @@
 import type { MetaFunction } from "@remix-run/cloudflare";
-import { Link } from "@remix-run/react";
+import { Link, useRouteLoaderData } from "@remix-run/react";
 import { AppShell } from "~/components/layout/AppShell";
 import { Footer } from "~/components/layout/Footer";
 import { Header } from "~/components/layout/Header";
+import type { loader as rootLoader } from "~/root";
 
 export const meta: MetaFunction = () => [
   { title: "CORE — Communities for creators who actually run them" },
@@ -20,9 +21,12 @@ export const meta: MetaFunction = () => [
 ];
 
 export default function Index() {
+  const root = useRouteLoaderData<typeof rootLoader>("root");
+  const user = root?.user ?? null;
+
   return (
     <div className="flex flex-col min-h-screen" style={{ background: "var(--color-bg)" }}>
-      <Header user={null} />
+      <Header user={user} />
 
       <AppShell>
         <div className="flex flex-col items-start gap-10 py-16 md:py-24">
