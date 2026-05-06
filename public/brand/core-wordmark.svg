@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 36" width="120" height="36" role="img" aria-label="CORE">
+  <style>
+    text {
+      font-family: Inter, system-ui, sans-serif;
+      font-weight: 700;
+      letter-spacing: -0.6px;
+    }
+  </style>
+  <!-- CORE wordmark — all-caps, tight tracking, Inter 700 -->
+  <text x="0" y="28" font-size="32" fill="#F5F5F7">CORE</text>
+  <!-- Subtle accent dot on the O counter — optional green fill -->
+  <!-- Uncomment and adjust if Ollie wants the dot treatment:
+  <circle cx="59" cy="18" r="3" fill="#3DD68C" />
+  -->
+</svg>

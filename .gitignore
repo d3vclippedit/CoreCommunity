@@ -1,0 +1,29 @@
+node_modules/
+build/
+.wrangler/
+.dev.vars
+wrangler.toml
+dist/
+.cache/
+.env
+.env.*
+!.env.example
+*.local
+
+# pnpm
+.pnpm-store/
+
+# tsc artifacts (noEmit is set, but just in case)
+app/**/*.js
+db/**/*.js
+load-context.js
+vite.config.js
+drizzle.config.js
+
+# Playwright
+test-results/
+playwright-report/
+
+# OS
+.DS_Store
+Thumbs.db
