@@ -1,4 +1,4 @@
-import { Link, useLocation } from "@remix-run/react";
+import { Form, Link, useLocation } from "@remix-run/react";
 import { cn } from "~/lib/cn";
 
 interface HeaderProps {
@@ -103,7 +103,7 @@ function UserMenu({
   user: { displayName: string; handle: string; avatarUrl?: string | null };
 }) {
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex items-center gap-1">
       <Link
         to={`/u/${user.handle}`}
         className="flex items-center gap-2 px-2 py-1 rounded-md transition-colors no-underline"
@@ -112,6 +112,15 @@ function UserMenu({
         <Avatar displayName={user.displayName} avatarUrl={user.avatarUrl} size={28} />
         <span className="hidden sm:block text-sm font-medium">{user.displayName}</span>
       </Link>
+      <Form method="post" action="/auth/logout">
+        <button
+          type="submit"
+          className="px-2 py-1 text-xs rounded-md transition-colors"
+          style={{ color: "var(--color-text-faint)" }}
+        >
+          Log out
+        </button>
+      </Form>
     </div>
   );
 }
