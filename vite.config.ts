@@ -12,6 +12,11 @@ export default defineConfig({
     alias: {
       "~": resolve(__dirname, "app"),
     },
+    conditions: ["worker", "browser", "module", "import", "default"],
+  },
+  ssr: {
+    target: "webworker",
+    noExternal: true,
   },
   plugins: [
     remixCloudflareDevProxy({ getLoadContext }),
