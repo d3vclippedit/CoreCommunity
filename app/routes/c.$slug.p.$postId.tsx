@@ -1,6 +1,6 @@
 import type { ActionFunctionArgs, LoaderFunctionArgs, MetaFunction } from "@remix-run/cloudflare";
 import { Link, useFetcher, useLoaderData, useRouteLoaderData } from "@remix-run/react";
-import { and, desc, eq, isNull } from "drizzle-orm";
+import { and, desc, eq, isNull, sql } from "drizzle-orm";
 import { AppShell } from "~/components/layout/AppShell";
 import { Footer } from "~/components/layout/Footer";
 import { Header } from "~/components/layout/Header";
@@ -109,10 +109,9 @@ export async function action({ params, request, context }: ActionFunctionArgs) {
     updatedAt: now,
   });
 
-  // Increment comment count on post
   await db
     .update(posts)
-    .set({ commentCount: post.id ? undefined : 0 }) // handled by separate denorm task
+    .set({ commentCount: sql`${posts.commentCount} + 1`, updatedAt: now })
     .where(eq(posts.id, post.id));
 
   return { ok: true };
