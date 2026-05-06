@@ -3,10 +3,16 @@ import {
   cloudflareDevProxyVitePlugin as remixCloudflareDevProxy,
 } from "@remix-run/dev";
 import tailwindcss from "@tailwindcss/vite";
+import { resolve } from "path";
 import { defineConfig } from "vite";
 import { getLoadContext } from "./load-context";
 
 export default defineConfig({
+  resolve: {
+    alias: {
+      "~": resolve(__dirname, "app"),
+    },
+  },
   plugins: [
     remixCloudflareDevProxy({ getLoadContext }),
     remix({
