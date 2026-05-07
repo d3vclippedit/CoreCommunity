@@ -35,6 +35,17 @@
   --shadow-1: 0 1px 0 rgba(255, 255, 255, 0.04) inset;
 }
 
+/* ── Role badge glow animation (admin / streamer) ─────────────────────────── */
+@keyframes glow-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 5px 2px var(--glow-color, rgba(168, 85, 247, 0.5));
+  }
+  50% {
+    box-shadow: 0 0 12px 5px var(--glow-color, rgba(168, 85, 247, 0.8));
+  }
+}
+
 /* Base resets */
 *,
 *::before,

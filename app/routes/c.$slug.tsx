@@ -18,6 +18,14 @@ import type { loader as rootLoader } from "~/root";
 import { communities, communityMemberships, users } from "../../db/schema";
 import { CommunityAvatar } from "./communities._index";
 
+// Default role colors used when community hasn't customised them
+const DEFAULT_ROLE_COLORS = {
+  streamer: "#F59E0B",
+  admin: "#A855F7",
+  senior_mod: "#3B82F6",
+  mod: "#22C55E",
+} as const;
+
 export async function loader({ params, request, context }: LoaderFunctionArgs) {
   const { env } = context.cloudflare;
   const db = createDb(env.DB);
@@ -40,7 +48,6 @@ export async function loader({ params, request, context }: LoaderFunctionArgs) {
     });
   }
 
-  // Staff members (everyone with a non-member role) + owner user info
   const staffRows = await db
     .select({
       userId: communityMemberships.userId,
@@ -58,7 +65,6 @@ export async function loader({ params, request, context }: LoaderFunctionArgs) {
       ),
     );
 
-  // Owner user (may or may not have a membership row — always show in Streamer section)
   const ownerUser = await db.query.users.findFirst({
     where: eq(users.id, community.ownerId),
     columns: { id: true, handle: true, displayName: true, avatarUrl: true },
@@ -69,7 +75,6 @@ export async function loader({ params, request, context }: LoaderFunctionArgs) {
   return {
     community,
     membership: membership ?? null,
-    user,
     staffRows,
     ownerUser: ownerUser ?? null,
     host,
@@ -85,6 +90,13 @@ export default function CommunityHub() {
     membership?.role === "mod" || membership?.role === "senior_mod" || membership?.role === "admin";
 
   const twitchChannel = community.twitchChannel;
+
+  const roleColors = {
+    streamer: community.roleColorStreamer ?? DEFAULT_ROLE_COLORS.streamer,
+    admin: community.roleColorAdmin ?? DEFAULT_ROLE_COLORS.admin,
+    senior_mod: community.roleColorSeniorMod ?? DEFAULT_ROLE_COLORS.senior_mod,
+    mod: community.roleColorMod ?? DEFAULT_ROLE_COLORS.mod,
+  };
 
   const leftNav = (
     <nav className="flex flex-col gap-1" aria-label="Community navigation">
@@ -125,7 +137,6 @@ export default function CommunityHub() {
         />
       </div>
 
-      {/* Live stream embed */}
       {twitchChannel && (
         <div className="mt-4 flex flex-col gap-2">
           <p
@@ -148,7 +159,6 @@ export default function CommunityHub() {
             />
           </div>
 
-          {/* Live chat embed */}
           <p
             className="text-xs font-semibold uppercase tracking-wide mt-1"
             style={{ color: "var(--color-text-faint)" }}
@@ -172,14 +182,12 @@ export default function CommunityHub() {
     </nav>
   );
 
-  // Group staff by role for the members rail
   const admins = staffRows.filter((s) => s.role === "admin");
   const seniorMods = staffRows.filter((s) => s.role === "senior_mod");
   const mods = staffRows.filter((s) => s.role === "mod");
 
   const rightRail = (
     <div className="flex flex-col gap-4">
-      {/* Community info card */}
       <div
         className="rounded-lg p-4"
         style={{ background: "var(--color-bg-elev-1)", border: "1px solid var(--color-border)" }}
@@ -214,59 +222,64 @@ export default function CommunityHub() {
         )}
       </div>
 
-      {/* Members list card */}
       <div
         className="rounded-lg p-4"
         style={{ background: "var(--color-bg-elev-1)", border: "1px solid var(--color-border)" }}
       >
         <h2 className="text-sm font-semibold mb-3" style={{ color: "var(--color-text)" }}>
-          Members
+          Staff
         </h2>
 
         {ownerUser && (
-          <MemberSection label="Streamer / Owner">
+          <MemberSection label="Streamer / Owner" color={roleColors.streamer}>
             <MemberRow
               handle={ownerUser.handle}
               displayName={ownerUser.displayName}
               avatarUrl={ownerUser.avatarUrl}
+              roleColor={roleColors.streamer}
+              glowing
             />
           </MemberSection>
         )}
 
         {admins.length > 0 && (
-          <MemberSection label="Admins">
+          <MemberSection label="Admins" color={roleColors.admin}>
             {admins.map((m) => (
               <MemberRow
                 key={m.userId}
                 handle={m.handle}
                 displayName={m.displayName}
                 avatarUrl={m.avatarUrl}
+                roleColor={roleColors.admin}
+                glowing
               />
             ))}
           </MemberSection>
         )}
 
         {seniorMods.length > 0 && (
-          <MemberSection label="Senior Mods">
+          <MemberSection label="Senior Mods" color={roleColors.senior_mod}>
             {seniorMods.map((m) => (
               <MemberRow
                 key={m.userId}
                 handle={m.handle}
                 displayName={m.displayName}
                 avatarUrl={m.avatarUrl}
+                roleColor={roleColors.senior_mod}
               />
             ))}
           </MemberSection>
         )}
 
         {mods.length > 0 && (
-          <MemberSection label="Mods">
+          <MemberSection label="Mods" color={roleColors.mod}>
             {mods.map((m) => (
               <MemberRow
                 key={m.userId}
                 handle={m.handle}
                 displayName={m.displayName}
                 avatarUrl={m.avatarUrl}
+                roleColor={roleColors.mod}
               />
             ))}
           </MemberSection>
@@ -277,7 +290,7 @@ export default function CommunityHub() {
             className="flex justify-between text-xs"
             style={{ color: "var(--color-text-faint)" }}
           >
-            <span>Members</span>
+            <span>All members</span>
             <Link
               to={`/c/${community.slug}/members`}
               className="no-underline hover:underline"
@@ -293,7 +306,7 @@ export default function CommunityHub() {
 
   return (
     <div
-      className="flex flex-col min-h-screen"
+      className="h-screen flex flex-col overflow-hidden"
       style={
         {
           background: community.backgroundCss ?? "var(--color-bg)",
@@ -302,7 +315,7 @@ export default function CommunityHub() {
       }
     >
       <Header user={rootUser} />
-      <AppShell leftNav={leftNav} rightRail={rightRail} transparent>
+      <AppShell leftNav={leftNav} rightRail={rightRail} transparent className="flex-1 min-h-0">
         <Outlet />
       </AppShell>
       <Footer />
@@ -312,20 +325,27 @@ export default function CommunityHub() {
 
 function MemberSection({
   label,
+  color,
   children,
 }: {
   label: string;
+  color?: string | null;
   children: React.ReactNode;
 }) {
   return (
     <div className="mb-3">
-      <p
-        className="text-xs font-semibold uppercase tracking-wide mb-1.5"
-        style={{ color: "var(--color-text-faint)" }}
-      >
-        {label}
-      </p>
-      <div className="flex flex-col gap-1">{children}</div>
+      <div className="flex items-center gap-1.5 mb-1.5">
+        {color && (
+          <div className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: color }} />
+        )}
+        <p
+          className="text-xs font-semibold uppercase tracking-wide"
+          style={{ color: "var(--color-text-faint)" }}
+        >
+          {label}
+        </p>
+      </div>
+      <div className="flex flex-col gap-0.5">{children}</div>
     </div>
   );
 }
@@ -334,10 +354,14 @@ function MemberRow({
   handle,
   displayName,
   avatarUrl,
+  roleColor,
+  glowing,
 }: {
   handle: string;
   displayName: string;
   avatarUrl: string | null | undefined;
+  roleColor?: string | null;
+  glowing?: boolean;
 }) {
   return (
     <Link
@@ -346,18 +370,29 @@ function MemberRow({
     >
       <div
         className="w-6 h-6 rounded-full flex-shrink-0 flex items-center justify-center text-xs font-semibold"
-        style={{
-          background: avatarUrl ? undefined : "var(--color-bg-elev-2)",
-          border: "1px solid var(--color-border)",
-          backgroundImage: avatarUrl ? `url(${avatarUrl})` : undefined,
-          backgroundSize: "cover",
-          backgroundPosition: "center",
-          color: "var(--color-text-dim)",
-        }}
+        style={
+          {
+            background: avatarUrl ? undefined : "var(--color-bg-elev-2)",
+            border: `1.5px solid ${roleColor ?? "var(--color-border)"}`,
+            backgroundImage: avatarUrl ? `url(${avatarUrl})` : undefined,
+            backgroundSize: "cover",
+            backgroundPosition: "center",
+            color: roleColor ?? "var(--color-text-dim)",
+            ...(glowing && roleColor
+              ? {
+                  "--glow-color": `${roleColor}99`,
+                  animation: "glow-pulse 2s ease-in-out infinite",
+                }
+              : {}),
+          } as React.CSSProperties
+        }
       >
         {!avatarUrl && displayName[0]?.toUpperCase()}
       </div>
-      <span className="text-xs truncate" style={{ color: "var(--color-text-dim)" }}>
+      <span
+        className="text-xs truncate font-medium"
+        style={{ color: roleColor ?? "var(--color-text-dim)" }}
+      >
         {displayName}
       </span>
     </Link>

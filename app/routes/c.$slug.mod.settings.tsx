@@ -117,6 +117,10 @@ export async function action({ params, request, context }: ActionFunctionArgs) {
     const bannerUrl = (form.get("bannerUrl") as string | null)?.trim() ?? "";
     const backgroundCss = (form.get("backgroundCss") as string | null)?.trim() ?? "";
     const twitchChannel = (form.get("twitchChannel") as string | null)?.trim() ?? "";
+    const roleColorStreamer = (form.get("roleColorStreamer") as string | null)?.trim() ?? "";
+    const roleColorAdmin = (form.get("roleColorAdmin") as string | null)?.trim() ?? "";
+    const roleColorSeniorMod = (form.get("roleColorSeniorMod") as string | null)?.trim() ?? "";
+    const roleColorMod = (form.get("roleColorMod") as string | null)?.trim() ?? "";
     const memberCanPostLinks = form.get("memberCanPostLinks") === "1";
     const memberCanPostImages = form.get("memberCanPostImages") === "1";
     const memberCanPostVideos = form.get("memberCanPostVideos") === "1";
@@ -128,6 +132,15 @@ export async function action({ params, request, context }: ActionFunctionArgs) {
     if (tagline.length > 120) return { error: "Tagline must be under 120 characters.", intent };
     if (accentColor && !/^#[0-9a-fA-F]{6}$/.test(accentColor))
       return { error: "Accent color must be a valid hex color like #3DD68C.", intent };
+    for (const [field, val] of [
+      ["Streamer color", roleColorStreamer],
+      ["Admin color", roleColorAdmin],
+      ["Senior Mod color", roleColorSeniorMod],
+      ["Mod color", roleColorMod],
+    ] as [string, string][]) {
+      if (val && !/^#[0-9a-fA-F]{6}$/.test(val))
+        return { error: `${field} must be a valid hex color.`, intent };
+    }
     if (memberPostsPerHour !== null && (Number.isNaN(memberPostsPerHour) || memberPostsPerHour < 0))
       return { error: "Posts per hour must be a positive number or blank for no limit.", intent };
 
@@ -148,6 +161,10 @@ export async function action({ params, request, context }: ActionFunctionArgs) {
         bannerUrl: bannerUrl || null,
         backgroundCss: backgroundCss || null,
         twitchChannel: twitchChannel || null,
+        roleColorStreamer: roleColorStreamer || null,
+        roleColorAdmin: roleColorAdmin || null,
+        roleColorSeniorMod: roleColorSeniorMod || null,
+        roleColorMod: roleColorMod || null,
         memberCanPostLinks,
         memberCanPostImages,
         memberCanPostVideos,
@@ -644,6 +661,45 @@ export default function ModSettings() {
                     posts / hour
                   </span>
                 </div>
+              </div>
+
+              {/* Staff role colors */}
+              <div
+                className="rounded-md p-4 flex flex-col gap-3"
+                style={{
+                  background: "var(--color-bg-elev-2)",
+                  border: "1px solid var(--color-border)",
+                }}
+              >
+                <p
+                  className="text-xs font-semibold uppercase tracking-wide"
+                  style={{ color: "var(--color-text-faint)" }}
+                >
+                  Staff role colors
+                </p>
+                <p className="text-xs" style={{ color: "var(--color-text-faint)" }}>
+                  Colors shown on staff badges in the community sidebar.
+                </p>
+                <RoleColorPicker
+                  name="roleColorStreamer"
+                  label="Streamer / Owner"
+                  defaultValue={community.roleColorStreamer ?? "#F59E0B"}
+                />
+                <RoleColorPicker
+                  name="roleColorAdmin"
+                  label="Admin"
+                  defaultValue={community.roleColorAdmin ?? "#A855F7"}
+                />
+                <RoleColorPicker
+                  name="roleColorSeniorMod"
+                  label="Senior Mod"
+                  defaultValue={community.roleColorSeniorMod ?? "#3B82F6"}
+                />
+                <RoleColorPicker
+                  name="roleColorMod"
+                  label="Mod"
+                  defaultValue={community.roleColorMod ?? "#22C55E"}
+                />
               </div>
 
               <Button
@@ -1502,6 +1558,56 @@ function PermissionCheckbox({
         {label}
       </span>
     </label>
+  );
+}
+
+function RoleColorPicker({
+  name,
+  label,
+  defaultValue,
+}: { name: string; label: string; defaultValue: string }) {
+  const pickerId = `${name}Picker`;
+  return (
+    <div className="flex items-center gap-3">
+      <input
+        type="color"
+        id={pickerId}
+        defaultValue={defaultValue}
+        onChange={(e) => {
+          const input = document.getElementById(name) as HTMLInputElement;
+          if (input) input.value = e.target.value;
+        }}
+        className="w-8 h-8 rounded cursor-pointer flex-shrink-0"
+        style={{
+          border: "1px solid var(--color-border)",
+          padding: "2px",
+          background: "var(--color-bg-elev-2)",
+        }}
+      />
+      <span className="text-sm flex-1" style={{ color: "var(--color-text-dim)" }}>
+        {label}
+      </span>
+      <input
+        type="text"
+        id={name}
+        name={name}
+        defaultValue={defaultValue}
+        pattern="#[0-9a-fA-F]{6}"
+        className="w-24 rounded-md px-2 py-1.5 text-xs font-mono text-right"
+        style={{
+          background: "var(--color-bg-elev-1)",
+          border: "1px solid var(--color-border)",
+          color: "var(--color-text)",
+          outline: "none",
+        }}
+        onChange={(e) => {
+          if (/^#[0-9a-fA-F]{6}$/.test(e.target.value)) {
+            const picker = document.getElementById(pickerId) as HTMLInputElement;
+            if (picker) picker.value = e.target.value;
+          }
+        }}
+      />
+    </div>
   );
 }
 

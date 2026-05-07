@@ -82,6 +82,10 @@ export const communities = sqliteTable("communities", {
     .default(true),
   memberPostsPerHour: integer("member_posts_per_hour"), // null = system default (10)
   twitchChannel: text("twitch_channel"),
+  roleColorStreamer: text("role_color_streamer"),
+  roleColorAdmin: text("role_color_admin"),
+  roleColorSeniorMod: text("role_color_senior_mod"),
+  roleColorMod: text("role_color_mod"),
   ownerId: text("owner_id")
     .notNull()
     .references(() => users.id),
