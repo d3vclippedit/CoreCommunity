@@ -5,6 +5,8 @@ import { AppShell } from "~/components/layout/AppShell";
 import { Footer } from "~/components/layout/Footer";
 import { Header } from "~/components/layout/Header";
 import { getCurrentUser } from "~/lib/auth/user.server";
+import { getActiveBadgeDefinitions, getPostBadgeSummary } from "~/lib/badges.server";
+import { getBalance } from "~/lib/coins.server";
 import { createDb } from "~/lib/db/index";
 import { getEmbedSrc } from "~/lib/embeds";
 import { type OgPreview, getOgPreview } from "~/lib/og.server";
@@ -104,13 +106,20 @@ export async function loader({ params, request, context }: LoaderFunctionArgs) {
 
   const host = new URL(request.url).hostname;
 
-  // For link posts without a native embed, fetch OG preview data (cached in KV)
   let ogPreview = null;
   if (post.type === "link" && post.url && !post.embedKind) {
     ogPreview = await getOgPreview(post.url, env.KV);
   }
 
-  return { community, post, author, comments: topComments, userVote, memberRole, host, ogPreview };
+  const [badgeSummary, badgeDefs, userCoinBalance] = await Promise.all([
+    getPostBadgeSummary(db, post.id),
+    getActiveBadgeDefinitions(db),
+    user ? getBalance(db, user.id) : Promise.resolve(0),
+  ]);
+
+  const isPostAuthor = user?.id === post.authorId;
+
+  return { community, post, author, comments: topComments, userVote, memberRole, host, ogPreview, badgeSummary, badgeDefs, userCoinBalance, isPostAuthor };
 }
 
 export async function action({ params, request, context }: ActionFunctionArgs) {
@@ -185,11 +194,16 @@ export default function PostPermalink() {
     memberRole,
     host,
     ogPreview,
+    badgeSummary,
+    badgeDefs,
+    userCoinBalance,
+    isPostAuthor,
   } = useLoaderData<typeof loader>();
   const root = useRouteLoaderData<typeof rootLoader>("root");
   const rootUser = root?.user ?? null;
   const commentFetcher = useFetcher<typeof action>();
   const modFetcher = useFetcher();
+  const badgeFetcher = useFetcher<{ success?: boolean; newBalance?: number; error?: string }>();
   const isAdmin = rootUser?.isPlatformAdmin ?? false;
   const canPin = canPinPost(memberRole as Parameters<typeof canPinPost>[0]) || isAdmin;
   const canFeature = canFeaturePost(memberRole as Parameters<typeof canFeaturePost>[0]) || isAdmin;
@@ -369,6 +383,73 @@ export default function PostPermalink() {
                   </div>
                 )}
               </div>
+            </div>
+
+            {/* Badge row */}
+            <div className="mt-4 pt-4" style={{ borderTop: "1px solid var(--color-border)" }}>
+              {badgeSummary.length > 0 && (
+                <div className="flex flex-wrap gap-2 mb-3">
+                  {badgeSummary.map((b) => (
+                    <span
+                      key={b.badgeDefinitionId}
+                      className="flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium"
+                      style={{ background: "var(--color-bg-elev-2)", border: "1px solid var(--color-border)", color: "var(--color-text-dim)" }}
+                      title={`${b.name}: ${b.count} × ${b.coinCost} cc`}
+                    >
+                      <span>{b.icon}</span>
+                      <span>{b.name}</span>
+                      {b.count > 1 && <span style={{ color: "var(--color-text-faint)" }}>×{b.count}</span>}
+                    </span>
+                  ))}
+                </div>
+              )}
+              {rootUser && !isPostAuthor && (
+                <details className="group">
+                  <summary
+                    className="cursor-pointer text-xs font-medium list-none flex items-center gap-1.5 w-fit"
+                    style={{ color: "var(--color-text-faint)" }}
+                  >
+                    <span>🏅</span>
+                    <span>Give badge</span>
+                    <span className="ml-1 text-[10px]" style={{ color: "var(--color-text-faint)" }}>
+                      Balance: {userCoinBalance.toLocaleString()} cc
+                    </span>
+                  </summary>
+                  <div className="mt-2 grid grid-cols-2 sm:grid-cols-4 gap-2">
+                    {badgeDefs.map((def) => {
+                      const canAfford = userCoinBalance >= def.coinCost;
+                      return (
+                        <badgeFetcher.Form key={def.id} method="post" action="/api/badges/apply">
+                          <input type="hidden" name="postId" value={post.id} />
+                          <input type="hidden" name="badgeDefinitionId" value={def.id} />
+                          <button
+                            type="submit"
+                            disabled={!canAfford || badgeFetcher.state !== "idle"}
+                            className="w-full rounded-lg p-2.5 flex flex-col items-center gap-1 transition-opacity hover:opacity-80 disabled:opacity-40"
+                            style={{ background: "var(--color-bg-elev-2)", border: "1px solid var(--color-border)" }}
+                            title={canAfford ? `Give ${def.name} (${def.coinCost} cc)` : "Not enough coins"}
+                          >
+                            <span className="text-xl">{def.icon}</span>
+                            <span className="text-xs font-medium" style={{ color: "var(--color-text)" }}>{def.name}</span>
+                            <span className="text-[10px]" style={{ color: "var(--color-text-faint)" }}>{def.coinCost.toLocaleString()} cc</span>
+                          </button>
+                        </badgeFetcher.Form>
+                      );
+                    })}
+                  </div>
+                  {badgeFetcher.data?.error && (
+                    <p className="text-xs mt-2" style={{ color: "var(--color-danger)" }}>{badgeFetcher.data.error}</p>
+                  )}
+                  {badgeFetcher.data?.success && (
+                    <p className="text-xs mt-2" style={{ color: "var(--color-success)" }}>Badge given! New balance: {badgeFetcher.data.newBalance?.toLocaleString()} cc</p>
+                  )}
+                </details>
+              )}
+              {rootUser && !isPostAuthor && badgeDefs.length > 0 && userCoinBalance === 0 && (
+                <p className="text-xs" style={{ color: "var(--color-text-faint)" }}>
+                  <a href="/coins" style={{ color: "var(--color-text-dim)" }}>Buy coins</a> to give badges.
+                </p>
+              )}
             </div>
           </div>
 

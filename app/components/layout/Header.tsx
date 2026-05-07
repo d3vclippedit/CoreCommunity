@@ -36,7 +36,9 @@ export function Header({ user }: HeaderProps) {
 
         {/* Nav links */}
         <nav className="hidden md:flex items-center gap-1 flex-1" aria-label="Main navigation">
+          {user && <NavLink to="/" current={location.pathname} label="Feed" exact />}
           <NavLink to="/communities" current={location.pathname} label="Communities" />
+          {user && <NavLink to="/coins" current={location.pathname} label="Coins" />}
         </nav>
 
         {/* Auth / user area */}
@@ -74,12 +76,14 @@ function NavLink({
   to,
   current,
   label,
+  exact,
 }: {
   to: string;
   current: string;
   label: string;
+  exact?: boolean;
 }) {
-  const active = current.startsWith(to);
+  const active = exact ? current === to : current.startsWith(to);
   return (
     <Link
       to={to}
