@@ -72,6 +72,7 @@ export const communities = sqliteTable("communities", {
   bannerUrl: text("banner_url"),
   iconUrl: text("icon_url"),
   accentColor: text("accent_color"), // hex, e.g. "#3DD68C"
+  backgroundCss: text("background_css"), // e.g. "#1a1a2e" or "linear-gradient(...)" or url(...)
   ownerId: text("owner_id")
     .notNull()
     .references(() => users.id),
@@ -81,6 +82,23 @@ export const communities = sqliteTable("communities", {
   createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
   updatedAt: integer("updated_at", { mode: "timestamp" }).notNull(),
   deletedAt: integer("deleted_at", { mode: "timestamp" }),
+});
+
+// ─── Community Custom Roles ───────────────────────────────────────────────────
+
+export type CustomRoleBase = "member" | "mod" | "senior_mod" | "admin";
+
+export const communityCustomRoles = sqliteTable("community_custom_roles", {
+  id: text("id").primaryKey(),
+  communityId: text("community_id")
+    .notNull()
+    .references(() => communities.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  color: text("color"), // hex, shown as role badge color
+  baseRole: text("base_role").$type<CustomRoleBase>().notNull().default("member"),
+  displayOrder: integer("display_order").notNull().default(0),
+  createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
+  updatedAt: integer("updated_at", { mode: "timestamp" }).notNull(),
 });
 
 // ─── Community Memberships ────────────────────────────────────────────────────
@@ -97,6 +115,9 @@ export const communityMemberships = sqliteTable(
       .notNull()
       .references(() => communities.id, { onDelete: "cascade" }),
     role: text("role").$type<CommunityRole>().notNull().default("member"),
+    customRoleId: text("custom_role_id").references(() => communityCustomRoles.id, {
+      onDelete: "set null",
+    }),
     joinedAt: integer("joined_at", { mode: "timestamp" }).notNull(),
     updatedAt: integer("updated_at", { mode: "timestamp" }).notNull(),
     // V2: reputation: integer

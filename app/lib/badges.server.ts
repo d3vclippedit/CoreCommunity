@@ -44,7 +44,6 @@ export async function applyBadge(
 
   if (!post) throw new Error("POST_NOT_FOUND");
   if (post.removedAt) throw new Error("POST_REMOVED");
-  if (post.authorId === giverUserId) throw new Error("CANNOT_BADGE_OWN_POST");
 
   // Verify badge definition
   const badgeDef = await db

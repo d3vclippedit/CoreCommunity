@@ -7,10 +7,9 @@ import {
   useNavigation,
   useRouteLoaderData,
 } from "@remix-run/react";
-import { and, eq, isNull, ne } from "drizzle-orm";
+import { and, asc, eq, isNull, ne } from "drizzle-orm";
 import { AppShell } from "~/components/layout/AppShell";
 import { Footer } from "~/components/layout/Footer";
-import { Header } from "~/components/layout/Header";
 import { Alert } from "~/components/ui/Alert";
 import { Button } from "~/components/ui/Button";
 import { Input } from "~/components/ui/Input";
@@ -21,7 +20,9 @@ import { generateId } from "~/lib/utils";
 import type { loader as rootLoader } from "~/root";
 import {
   type CommunityRole,
+  type CustomRoleBase,
   communities,
+  communityCustomRoles,
   communityMemberships,
   moderationActions,
   users,
@@ -69,7 +70,13 @@ export async function loader({ params, request, context }: LoaderFunctionArgs) {
       ),
     );
 
-  return { community, staff, myRole: membership?.role ?? null };
+  const customRoles = await db
+    .select()
+    .from(communityCustomRoles)
+    .where(eq(communityCustomRoles.communityId, community.id))
+    .orderBy(asc(communityCustomRoles.displayOrder), asc(communityCustomRoles.createdAt));
+
+  return { community, staff, myRole: membership?.role ?? null, customRoles };
 }
 
 export async function action({ params, request, context }: ActionFunctionArgs) {
@@ -105,6 +112,8 @@ export async function action({ params, request, context }: ActionFunctionArgs) {
     const description = (form.get("description") as string | null)?.trim() ?? "";
     const rules = (form.get("rules") as string | null)?.trim() ?? "";
     const accentColor = (form.get("accentColor") as string | null)?.trim() ?? "";
+    const iconUrl = (form.get("iconUrl") as string | null)?.trim() ?? "";
+    const backgroundCss = (form.get("backgroundCss") as string | null)?.trim() ?? "";
 
     if (!name || name.length < 2 || name.length > 64)
       return { error: "Name must be between 2 and 64 characters.", intent };
@@ -125,6 +134,8 @@ export async function action({ params, request, context }: ActionFunctionArgs) {
         description: description || null,
         rules: rulesArray.length ? JSON.stringify(rulesArray) : null,
         accentColor: accentColor || null,
+        iconUrl: iconUrl || null,
+        backgroundCss: backgroundCss || null,
         updatedAt: new Date(),
       })
       .where(eq(communities.id, community.id));
@@ -136,6 +147,53 @@ export async function action({ params, request, context }: ActionFunctionArgs) {
       action: "settings_change",
       createdAt: new Date(),
     });
+
+    return { ok: true, intent };
+  }
+
+  // ── Create custom role ────────────────────────────────────────────────────
+  if (intent === "create_role") {
+    const roleName = (form.get("roleName") as string | null)?.trim() ?? "";
+    const roleColor = (form.get("roleColor") as string | null)?.trim() ?? "";
+    const baseRole = (form.get("baseRole") as string | null) ?? "member";
+
+    if (!roleName || roleName.length < 1 || roleName.length > 32)
+      return { error: "Role name must be 1–32 characters.", intent };
+    if (roleColor && !/^#[0-9a-fA-F]{6}$/.test(roleColor))
+      return { error: "Role color must be a valid hex color.", intent };
+
+    const validBases: CustomRoleBase[] = ["member", "mod", "senior_mod", "admin"];
+    if (!validBases.includes(baseRole as CustomRoleBase))
+      return { error: "Invalid permission level.", intent };
+
+    const now = new Date();
+    await db.insert(communityCustomRoles).values({
+      id: generateId(),
+      communityId: community.id,
+      name: roleName,
+      color: roleColor || null,
+      baseRole: baseRole as CustomRoleBase,
+      displayOrder: 0,
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    return { ok: true, intent };
+  }
+
+  // ── Delete custom role ────────────────────────────────────────────────────
+  if (intent === "delete_role") {
+    const roleId = (form.get("roleId") as string | null) ?? "";
+    if (!roleId) return { error: "Missing role ID.", intent };
+
+    await db
+      .delete(communityCustomRoles)
+      .where(
+        and(
+          eq(communityCustomRoles.id, roleId),
+          eq(communityCustomRoles.communityId, community.id),
+        ),
+      );
 
     return { ok: true, intent };
   }
@@ -236,7 +294,7 @@ export async function action({ params, request, context }: ActionFunctionArgs) {
 }
 
 export default function ModSettings() {
-  const { community, staff, myRole } = useLoaderData<typeof loader>();
+  const { community, staff, myRole, customRoles } = useLoaderData<typeof loader>();
   const data = useActionData<typeof action>();
   const nav = useNavigation();
   const root = useRouteLoaderData<typeof rootLoader>("root");
@@ -254,8 +312,13 @@ export default function ModSettings() {
     }
   })();
 
+  const submittingIntent = nav.state === "submitting"
+    ? (nav.formData?.get("_intent") as string | null) ?? "settings"
+    : null;
+
   const settingsOk = data && "ok" in data && data.ok && data.intent === "settings";
-  const staffOk = data && "ok" in data && data.ok && data.intent !== "settings";
+  const roleOk = data && "ok" in data && data.ok && (data.intent === "create_role" || data.intent === "delete_role");
+  const staffOk = data && "ok" in data && data.ok && (data.intent === "add_staff" || data.intent === "remove_staff");
   const errorMsg = data && "error" in data ? data.error : null;
 
   const ROLE_LABELS: Record<string, string> = {
@@ -265,9 +328,20 @@ export default function ModSettings() {
     mod: "Mod",
   };
 
+  const BASE_ROLE_LABELS: Record<string, string> = {
+    member: "Member (read + post)",
+    mod: "Mod (remove + timeout)",
+    senior_mod: "Senior Mod (ban + feature)",
+    admin: "Admin (full access)",
+  };
+
+  const cardStyle = {
+    background: "var(--color-bg-elev-1)",
+    border: "1px solid var(--color-border)",
+  };
+
   return (
     <div className="flex flex-col min-h-screen" style={{ background: "var(--color-bg)" }}>
-      <Header user={user} />
       <AppShell>
         <div className="py-6 max-w-xl flex flex-col gap-6">
           <div className="flex items-center gap-4">
@@ -284,17 +358,12 @@ export default function ModSettings() {
           </div>
 
           {settingsOk && <Alert variant="success">Settings saved.</Alert>}
+          {roleOk && <Alert variant="success">Roles updated.</Alert>}
           {staffOk && <Alert variant="success">Staff updated.</Alert>}
           {errorMsg && <Alert variant="error">{errorMsg}</Alert>}
 
           {/* ── General settings ── */}
-          <div
-            className="rounded-lg p-6"
-            style={{
-              background: "var(--color-bg-elev-1)",
-              border: "1px solid var(--color-border)",
-            }}
-          >
+          <div className="rounded-lg p-6" style={cardStyle}>
             <h2 className="text-sm font-semibold mb-4" style={{ color: "var(--color-text)" }}>
               General
             </h2>
@@ -339,6 +408,17 @@ export default function ModSettings() {
                   }}
                 />
               </div>
+
+              {/* Community icon URL */}
+              <Input
+                id="iconUrl"
+                name="iconUrl"
+                type="url"
+                label="Community icon URL"
+                placeholder="https://example.com/icon.png"
+                defaultValue={community.iconUrl ?? ""}
+                hint="Square image shown in the community header and directory card."
+              />
 
               {/* Accent color */}
               <div className="flex flex-col gap-1.5">
@@ -394,6 +474,35 @@ export default function ModSettings() {
                 </p>
               </div>
 
+              {/* Background */}
+              <div className="flex flex-col gap-1.5">
+                <label
+                  htmlFor="backgroundCss"
+                  className="text-sm font-medium"
+                  style={{ color: "var(--color-text)" }}
+                >
+                  Page background
+                </label>
+                <input
+                  type="text"
+                  id="backgroundCss"
+                  name="backgroundCss"
+                  defaultValue={community.backgroundCss ?? ""}
+                  placeholder="#1a1a2e  or  linear-gradient(135deg, #0f0c29, #302b63)  or  url(https://...)"
+                  className="w-full rounded-md px-3 py-2 text-sm font-mono"
+                  style={{
+                    background: "var(--color-bg-elev-2)",
+                    border: "1px solid var(--color-border)",
+                    color: "var(--color-text)",
+                    outline: "none",
+                  }}
+                />
+                <p className="text-xs" style={{ color: "var(--color-text-faint)" }}>
+                  Any valid CSS <code>background</code> value — solid color, gradient, or image URL.
+                  Leave blank for the default dark background.
+                </p>
+              </div>
+
               <div className="flex flex-col gap-1.5">
                 <label
                   htmlFor="rules"
@@ -419,25 +528,168 @@ export default function ModSettings() {
                   }}
                 />
               </div>
-              <Button type="submit" loading={isSubmitting} className="w-full">
+              <Button type="submit" loading={submittingIntent === "settings" && isSubmitting} className="w-full">
                 Save settings
               </Button>
             </Form>
           </div>
 
+          {/* ── Custom roles ── */}
+          <div className="rounded-lg p-6" style={cardStyle}>
+            <h2 className="text-sm font-semibold mb-1" style={{ color: "var(--color-text)" }}>
+              Custom member roles
+            </h2>
+            <p className="text-xs mb-4" style={{ color: "var(--color-text-faint)" }}>
+              Create display roles like "VIP" or "Content Creator". Each role has a permission level
+              that determines what actions members with that role can take.
+            </p>
+
+            {customRoles.length === 0 ? (
+              <p className="text-sm mb-4" style={{ color: "var(--color-text-faint)" }}>
+                No custom roles yet.
+              </p>
+            ) : (
+              <div
+                className="flex flex-col divide-y mb-4"
+                style={{ borderColor: "var(--color-border)" }}
+              >
+                {customRoles.map((role) => (
+                  <div key={role.id} className="flex items-center justify-between py-3">
+                    <div className="flex items-center gap-2">
+                      <span
+                        className="text-xs px-2 py-0.5 rounded-full font-medium"
+                        style={{
+                          background: role.color ? `${role.color}22` : "var(--color-bg-elev-2)",
+                          color: role.color ?? "var(--color-text-dim)",
+                          border: `1px solid ${role.color ?? "var(--color-border)"}`,
+                        }}
+                      >
+                        {role.name}
+                      </span>
+                      <span className="text-xs" style={{ color: "var(--color-text-faint)" }}>
+                        {BASE_ROLE_LABELS[role.baseRole] ?? role.baseRole}
+                      </span>
+                    </div>
+                    <Form method="post">
+                      <input type="hidden" name="_intent" value="delete_role" />
+                      <input type="hidden" name="roleId" value={role.id} />
+                      <button
+                        type="submit"
+                        className="text-xs px-2 py-1 rounded transition-colors hover:opacity-80"
+                        style={{
+                          color: "var(--color-danger)",
+                          border: "1px solid var(--color-border)",
+                        }}
+                      >
+                        Delete
+                      </button>
+                    </Form>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Create role form */}
+            <Form method="post" className="flex flex-col gap-3">
+              <input type="hidden" name="_intent" value="create_role" />
+              <div className="flex gap-2 items-end">
+                <div className="flex-1">
+                  <Input
+                    id="roleName"
+                    name="roleName"
+                    type="text"
+                    label="Role name"
+                    placeholder="VIP"
+                  />
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <label
+                    htmlFor="roleColorPicker"
+                    className="text-sm font-medium"
+                    style={{ color: "var(--color-text)" }}
+                  >
+                    Color
+                  </label>
+                  <div className="flex items-center gap-1.5">
+                    <input
+                      type="color"
+                      id="roleColorPicker"
+                      defaultValue="#3DD68C"
+                      onChange={(e) => {
+                        const input = document.getElementById("roleColor") as HTMLInputElement;
+                        if (input) input.value = e.target.value;
+                      }}
+                      className="w-10 h-9 rounded cursor-pointer"
+                      style={{
+                        border: "1px solid var(--color-border)",
+                        padding: "2px",
+                        background: "var(--color-bg-elev-2)",
+                      }}
+                    />
+                    <input
+                      type="text"
+                      id="roleColor"
+                      name="roleColor"
+                      defaultValue="#3DD68C"
+                      placeholder="#3DD68C"
+                      className="w-24 rounded-md px-2 py-2 text-sm font-mono"
+                      style={{
+                        background: "var(--color-bg-elev-2)",
+                        border: "1px solid var(--color-border)",
+                        color: "var(--color-text)",
+                        outline: "none",
+                      }}
+                      onChange={(e) => {
+                        if (/^#[0-9a-fA-F]{6}$/.test(e.target.value)) {
+                          const picker = document.getElementById("roleColorPicker") as HTMLInputElement;
+                          if (picker) picker.value = e.target.value;
+                        }
+                      }}
+                    />
+                  </div>
+                </div>
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <label
+                  htmlFor="baseRole"
+                  className="text-sm font-medium"
+                  style={{ color: "var(--color-text)" }}
+                >
+                  Permission level
+                </label>
+                <select
+                  id="baseRole"
+                  name="baseRole"
+                  className="rounded-md px-3 py-2 text-sm"
+                  style={{
+                    background: "var(--color-bg-elev-2)",
+                    border: "1px solid var(--color-border)",
+                    color: "var(--color-text)",
+                    outline: "none",
+                  }}
+                >
+                  <option value="member">Member — read + post</option>
+                  <option value="mod">Mod — remove posts + timeout users</option>
+                  <option value="senior_mod">Senior Mod — ban + feature posts</option>
+                  <option value="admin">Admin — full community access</option>
+                </select>
+              </div>
+              <Button
+                type="submit"
+                variant="secondary"
+                loading={submittingIntent === "create_role" && isSubmitting}
+              >
+                Create role
+              </Button>
+            </Form>
+          </div>
+
           {/* ── Staff management ── */}
-          <div
-            className="rounded-lg p-6"
-            style={{
-              background: "var(--color-bg-elev-1)",
-              border: "1px solid var(--color-border)",
-            }}
-          >
+          <div className="rounded-lg p-6" style={cardStyle}>
             <h2 className="text-sm font-semibold mb-4" style={{ color: "var(--color-text)" }}>
               Staff
             </h2>
 
-            {/* Current staff list */}
             {staff.length === 0 ? (
               <p className="text-sm mb-4" style={{ color: "var(--color-text-faint)" }}>
                 No staff yet.
@@ -485,7 +737,6 @@ export default function ModSettings() {
               </div>
             )}
 
-            {/* Add staff form */}
             {canStaff && (
               <Form method="post" className="flex flex-col gap-3">
                 <input type="hidden" name="_intent" value="add_staff" />
@@ -524,7 +775,11 @@ export default function ModSettings() {
                     </select>
                   </div>
                 </div>
-                <Button type="submit" variant="secondary" loading={isSubmitting}>
+                <Button
+                  type="submit"
+                  variant="secondary"
+                  loading={submittingIntent === "add_staff" && isSubmitting}
+                >
                   Add staff member
                 </Button>
               </Form>

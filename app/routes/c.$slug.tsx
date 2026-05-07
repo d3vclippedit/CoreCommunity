@@ -130,7 +130,7 @@ export default function CommunityHub() {
       className="flex flex-col min-h-screen"
       style={
         {
-          background: "var(--color-bg)",
+          background: community.backgroundCss ?? "var(--color-bg)",
           ...(community.accentColor ? { "--color-accent": community.accentColor } : {}),
         } as React.CSSProperties
       }

@@ -420,7 +420,7 @@ export default function PostPermalink() {
                   ))}
                 </div>
               )}
-              {rootUser && !isPostAuthor && badgeDefs.length > 0 && (
+              {rootUser && badgeDefs.length > 0 && (
                 <div>
                   <div className="flex items-center justify-between mb-2">
                     <p className="text-xs font-medium" style={{ color: "var(--color-text-faint)" }}>
