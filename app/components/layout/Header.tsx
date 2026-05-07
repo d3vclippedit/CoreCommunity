@@ -38,7 +38,7 @@ export function Header({ user }: HeaderProps) {
         <nav className="hidden md:flex items-center gap-1 flex-1" aria-label="Main navigation">
           {user && <NavLink to="/" current={location.pathname} label="Feed" exact />}
           <NavLink to="/communities" current={location.pathname} label="Communities" />
-          {user && <NavLink to="/coins" current={location.pathname} label="Coins" />}
+          {user && <NavLink to="/monetization" current={location.pathname} label="Monetisation" />}
         </nav>
 
         {/* Auth / user area */}
