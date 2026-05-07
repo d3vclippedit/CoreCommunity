@@ -31,7 +31,8 @@ export async function action({ request, context }: ActionFunctionArgs) {
     return {
       errors: {
         form: `Too many sign-up attempts. Try again in ${Math.ceil(rl.retryAfterSeconds / 60)} minutes.`,
-      },
+      } as Record<string, string>,
+      suggestions: [] as string[],
     };
   }
 
@@ -54,7 +55,7 @@ export async function action({ request, context }: ActionFunctionArgs) {
   const passwordError = validatePassword(password);
   if (passwordError) errors.password = PASSWORD_ERROR_MESSAGES[passwordError];
 
-  if (Object.keys(errors).length > 0) return { errors };
+  if (Object.keys(errors).length > 0) return { errors, suggestions: [] as string[] };
 
   const db = createDb(env.DB);
 

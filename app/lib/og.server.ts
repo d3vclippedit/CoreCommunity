@@ -1,14 +1,18 @@
-import type { KVNamespace } from "@cloudflare/workers-types";
-
 export type OgPreview = {
   title: string | null;
   description: string | null;
   image: string | null;
 };
 
+// Minimal interface — avoids @cloudflare/workers-types version conflicts
+type KvStore = {
+  get(key: string, type: "json"): Promise<unknown>;
+  put(key: string, value: string, options?: { expirationTtl?: number }): Promise<void>;
+};
+
 const TTL = 60 * 60 * 24; // 24h
 
-export async function getOgPreview(url: string, kv: KVNamespace): Promise<OgPreview | null> {
+export async function getOgPreview(url: string, kv: KvStore): Promise<OgPreview | null> {
   const key = `og:${url}`;
   const cached = await kv.get(key, "json");
   if (cached) return cached as OgPreview;
