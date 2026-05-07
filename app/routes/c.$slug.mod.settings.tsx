@@ -312,13 +312,22 @@ export default function ModSettings() {
     }
   })();
 
-  const submittingIntent = nav.state === "submitting"
-    ? (nav.formData?.get("_intent") as string | null) ?? "settings"
-    : null;
+  const submittingIntent =
+    nav.state === "submitting"
+      ? ((nav.formData?.get("_intent") as string | null) ?? "settings")
+      : null;
 
   const settingsOk = data && "ok" in data && data.ok && data.intent === "settings";
-  const roleOk = data && "ok" in data && data.ok && (data.intent === "create_role" || data.intent === "delete_role");
-  const staffOk = data && "ok" in data && data.ok && (data.intent === "add_staff" || data.intent === "remove_staff");
+  const roleOk =
+    data &&
+    "ok" in data &&
+    data.ok &&
+    (data.intent === "create_role" || data.intent === "delete_role");
+  const staffOk =
+    data &&
+    "ok" in data &&
+    data.ok &&
+    (data.intent === "add_staff" || data.intent === "remove_staff");
   const errorMsg = data && "error" in data ? data.error : null;
 
   const ROLE_LABELS: Record<string, string> = {
@@ -528,7 +537,11 @@ export default function ModSettings() {
                   }}
                 />
               </div>
-              <Button type="submit" loading={submittingIntent === "settings" && isSubmitting} className="w-full">
+              <Button
+                type="submit"
+                loading={submittingIntent === "settings" && isSubmitting}
+                className="w-full"
+              >
                 Save settings
               </Button>
             </Form>
@@ -641,7 +654,9 @@ export default function ModSettings() {
                       }}
                       onChange={(e) => {
                         if (/^#[0-9a-fA-F]{6}$/.test(e.target.value)) {
-                          const picker = document.getElementById("roleColorPicker") as HTMLInputElement;
+                          const picker = document.getElementById(
+                            "roleColorPicker",
+                          ) as HTMLInputElement;
                           if (picker) picker.value = e.target.value;
                         }
                       }}
