@@ -30,6 +30,9 @@ export async function action({ request, context }: ActionFunctionArgs) {
   const orderId = crypto.randomUUID();
   const origin = new URL(request.url).origin;
 
+  const paypalEnv = (env as unknown as PayPalEnv).PAYPAL_ENV;
+  console.log("[paypal/create] PAYPAL_ENV present:", !!paypalEnv, "value:", paypalEnv);
+
   try {
     const { id: providerOrderId, approvalUrl } = await createOrder(
       env as unknown as PayPalEnv,
@@ -58,7 +61,8 @@ export async function action({ request, context }: ActionFunctionArgs) {
 
     return Response.json({ approvalUrl });
   } catch (err) {
-    console.error("PayPal create order error:", err);
-    return Response.json({ error: "Payment provider error. Please try again." }, { status: 502 });
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error("[paypal/create] Error:", msg);
+    return Response.json({ error: `PayPal error: ${msg}` }, { status: 502 });
   }
 }
