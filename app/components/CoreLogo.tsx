@@ -11,7 +11,7 @@ export function CoreLogo({
     <div className={className} style={{ position: "relative", ...style }}>
       <img
         src={coreLogoUrl}
-        alt="Core Communities"
+        alt="Cormunities"
         className="core-logo-img"
         style={{
           display: "block",

@@ -66,7 +66,7 @@ export async function createOrder(
       application_context: {
         return_url: returnUrl,
         cancel_url: cancelUrl,
-        brand_name: "CORE",
+        brand_name: "Cormunities",
         landing_page: "LOGIN",
         user_action: "PAY_NOW",
       },

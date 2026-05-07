@@ -1,7 +1,7 @@
 import type { MetaFunction } from "@remix-run/cloudflare";
 import { Link } from "@remix-run/react";
 
-export const meta: MetaFunction = () => [{ title: "Check your email — CORE" }];
+export const meta: MetaFunction = () => [{ title: "Check your email — Cormunities" }];
 
 export default function CheckEmail() {
   return (
@@ -35,7 +35,7 @@ export default function CheckEmail() {
         </h1>
         <p className="text-sm leading-relaxed mb-6" style={{ color: "var(--color-text-dim)" }}>
           We sent a verification link to your email address. Click it to activate your account. You
-          can browse CORE while you wait, but you won't be able to post until you're verified.
+          can browse Cormunities while you wait, but you won't be able to post until you're verified.
         </p>
         <Link
           to="/"
@@ -46,7 +46,7 @@ export default function CheckEmail() {
             color: "var(--color-text)",
           }}
         >
-          Continue to CORE
+          Continue to Cormunities
         </Link>
       </div>
     </div>

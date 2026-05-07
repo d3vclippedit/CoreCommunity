@@ -5,7 +5,7 @@ import { Footer } from "~/components/layout/Footer";
 import { Header } from "~/components/layout/Header";
 import type { loader as rootLoader } from "~/root";
 
-export const meta: MetaFunction = () => [{ title: "Terms of Service — CORE" }];
+export const meta: MetaFunction = () => [{ title: "Terms of Service — Cormunities" }];
 
 export default function Terms() {
   const root = useRouteLoaderData<typeof rootLoader>("root");
@@ -35,7 +35,7 @@ export default function Terms() {
                 1. Acceptance
               </h2>
               <p>
-                By accessing or using CORE, you agree to these Terms. If you do not agree, do not
+                By accessing or using Cormunities, you agree to these Terms. If you do not agree, do not
                 use the platform.
               </p>
             </section>
@@ -55,7 +55,7 @@ export default function Terms() {
                 3. Content
               </h2>
               <p>
-                You retain ownership of content you post. By posting, you grant CORE a non-exclusive
+                You retain ownership of content you post. By posting, you grant Cormunities a non-exclusive
                 license to display and distribute your content on the platform. You are responsible
                 for ensuring your content does not violate any laws or third-party rights.
               </p>
@@ -65,7 +65,7 @@ export default function Terms() {
               <h2 className="text-base font-semibold mb-2" style={{ color: "var(--color-text)" }}>
                 4. Prohibited conduct
               </h2>
-              <p>You may not use CORE to:</p>
+              <p>You may not use Cormunities to:</p>
               <ul className="flex flex-col gap-1 pl-4 mt-2">
                 <li>Post illegal content or content that infringes third-party rights</li>
                 <li>Harass, threaten, or abuse other users</li>
@@ -89,7 +89,7 @@ export default function Terms() {
                 6. Disclaimer
               </h2>
               <p>
-                CORE is provided "as is" without warranties of any kind. We are not liable for
+                Cormunities is provided "as is" without warranties of any kind. We are not liable for
                 content posted by users or for any damages arising from use of the platform.
               </p>
             </section>

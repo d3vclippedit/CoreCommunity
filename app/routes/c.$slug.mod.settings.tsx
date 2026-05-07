@@ -30,7 +30,7 @@ import {
 } from "../../db/schema";
 
 export const meta: MetaFunction<typeof loader> = ({ data }) => [
-  { title: data ? `Settings — c/${data.community.slug}` : "CORE" },
+  { title: data ? `Settings — c/${data.community.slug}` : "Cormunities" },
 ];
 
 export async function loader({ params, request, context }: LoaderFunctionArgs) {

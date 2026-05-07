@@ -5,7 +5,7 @@ import { createDb } from "~/lib/db/index";
 import { communities } from "../../db/schema";
 
 export const meta: MetaFunction<typeof loader> = ({ data }) => [
-  { title: data ? `About c/${data.slug} — CORE` : "CORE" },
+  { title: data ? `About c/${data.slug} — CORE` : "Cormunities" },
 ];
 
 export async function loader({ params, context }: LoaderFunctionArgs) {

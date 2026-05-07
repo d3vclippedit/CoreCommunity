@@ -6,7 +6,7 @@ import { createDb } from "~/lib/db/index";
 import { communities, posts, users } from "../../db/schema";
 
 export const meta: MetaFunction<typeof loader> = ({ data }) => {
-  if (!data) return [{ title: "CORE" }];
+  if (!data) return [{ title: "Cormunities" }];
   const description =
     data.community.tagline ||
     data.community.description ||

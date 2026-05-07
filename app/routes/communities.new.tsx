@@ -20,7 +20,7 @@ import { generateId } from "~/lib/utils";
 import type { loader as rootLoader } from "~/root";
 import { communities, communityMemberships } from "../../db/schema";
 
-export const meta: MetaFunction = () => [{ title: "New community — CORE" }];
+export const meta: MetaFunction = () => [{ title: "New community — Cormunities" }];
 
 export async function loader({ request, context }: LoaderFunctionArgs) {
   const { env } = context.cloudflare;

@@ -10,10 +10,10 @@ import type { loader as rootLoader } from "~/root";
 import { badges, communities, communityMemberships, posts } from "../../db/schema";
 
 export const meta: MetaFunction = () => [
-  { title: "Communities — CORE" },
-  { name: "description", content: "Browse all creator communities on CORE." },
-  { property: "og:title", content: "Communities — CORE" },
-  { property: "og:description", content: "Browse all creator communities on CORE." },
+  { title: "Communities — Cormunities" },
+  { name: "description", content: "Browse all creator communities on Cormunities." },
+  { property: "og:title", content: "Communities — Cormunities" },
+  { property: "og:description", content: "Browse all creator communities on Cormunities." },
   { property: "og:type", content: "website" },
 ];
 

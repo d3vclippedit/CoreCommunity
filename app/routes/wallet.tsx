@@ -9,7 +9,7 @@ import { getBalance, getTransactionHistory } from "~/lib/coins.server";
 import { createDb } from "~/lib/db/index";
 import type { loader as rootLoader } from "~/root";
 
-export const meta: MetaFunction = () => [{ title: "Wallet — CORE" }];
+export const meta: MetaFunction = () => [{ title: "Wallet — Cormunities" }];
 
 export async function loader({ request, context }: LoaderFunctionArgs) {
   const { env } = context.cloudflare;

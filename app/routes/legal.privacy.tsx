@@ -5,7 +5,7 @@ import { Footer } from "~/components/layout/Footer";
 import { Header } from "~/components/layout/Header";
 import type { loader as rootLoader } from "~/root";
 
-export const meta: MetaFunction = () => [{ title: "Privacy Policy — CORE" }];
+export const meta: MetaFunction = () => [{ title: "Privacy Policy — Cormunities" }];
 
 export default function Privacy() {
   const root = useRouteLoaderData<typeof rootLoader>("root");

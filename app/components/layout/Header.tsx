@@ -35,11 +35,11 @@ export function Header({ user }: HeaderProps) {
         <Link
           to="/"
           className="flex-shrink-0 flex items-center no-underline"
-          aria-label="CORE Communities — home"
+          aria-label="Cormunities — home"
         >
           <img
             src={coreMiniUrl}
-            alt="CORE Communities"
+            alt="Cormunities"
             style={{
               height: 36,
               width: "auto",

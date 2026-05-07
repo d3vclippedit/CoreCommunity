@@ -16,7 +16,7 @@ import { createDb } from "~/lib/db/index";
 import { checkRateLimit, getIp } from "~/lib/ratelimit";
 import { users } from "../../db/schema";
 
-export const meta: MetaFunction = () => [{ title: "Log in — CORE" }];
+export const meta: MetaFunction = () => [{ title: "Log in — Cormunities" }];
 
 export async function loader({ request, context }: LoaderFunctionArgs) {
   const user = await getCurrentUser(request, context.cloudflare.env);

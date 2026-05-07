@@ -11,7 +11,7 @@ import type { loader as rootLoader } from "~/root";
 import { communities, communityMemberships, reports, users } from "../../db/schema";
 
 export const meta: MetaFunction<typeof loader> = ({ data }) => [
-  { title: data ? `Mod queue — c/${data.slug}` : "CORE" },
+  { title: data ? `Mod queue — c/${data.slug}` : "Cormunities" },
 ];
 
 export async function loader({ params, request, context }: LoaderFunctionArgs) {

@@ -11,8 +11,8 @@ import type { loader as rootLoader } from "~/root";
 import { communities, communityMemberships, posts, users } from "../../db/schema";
 
 export const meta: MetaFunction<typeof loader> = ({ data }) => {
-  if (!data) return [{ title: "CORE" }];
-  const description = `${data.user.displayName}'s profile on CORE.`;
+  if (!data) return [{ title: "Cormunities" }];
+  const description = `${data.user.displayName}'s profile on Cormunities.`;
   return [
     { title: `@${data.user.handle} — CORE` },
     { name: "description", content: description },

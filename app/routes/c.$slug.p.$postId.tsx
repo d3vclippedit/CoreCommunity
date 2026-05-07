@@ -26,7 +26,7 @@ import {
 import { CommunityAvatar } from "./communities._index";
 
 export const meta: MetaFunction<typeof loader> = ({ data }) => {
-  if (!data) return [{ title: "CORE" }];
+  if (!data) return [{ title: "Cormunities" }];
   const description = data.post.body
     ? data.post.body.replace(/<[^>]+>/g, "").slice(0, 160)
     : `Discussion in c/${data.community.slug} on CORE`;

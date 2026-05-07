@@ -14,7 +14,7 @@ import { checkRateLimit, getIp } from "~/lib/ratelimit";
 import { expiresAt, generateId, generateToken } from "~/lib/utils";
 import { emailVerifications, users } from "../../db/schema";
 
-export const meta: MetaFunction = () => [{ title: "Sign up — CORE" }];
+export const meta: MetaFunction = () => [{ title: "Sign up — Cormunities" }];
 
 export async function loader({ request, context }: LoaderFunctionArgs) {
   const { env } = context.cloudflare;
@@ -114,7 +114,7 @@ export async function action({ request, context }: ActionFunctionArgs) {
   try {
     await sendEmail(env.RESEND_API_KEY, {
       to: email,
-      subject: "Verify your CORE account",
+      subject: "Verify your Cormunities account",
       html: verificationEmailHtml(`${baseUrl}/auth/verify/${verificationToken}`),
     });
   } catch {

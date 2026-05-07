@@ -12,7 +12,7 @@ import { checkRateLimit, getIp } from "~/lib/ratelimit";
 import { expiresAt, generateId, generateToken } from "~/lib/utils";
 import { passwordResets, users } from "../../db/schema";
 
-export const meta: MetaFunction = () => [{ title: "Forgot password — CORE" }];
+export const meta: MetaFunction = () => [{ title: "Forgot password — Cormunities" }];
 
 export async function loader({ request, context }: LoaderFunctionArgs) {
   const user = await getCurrentUser(request, context.cloudflare.env);
@@ -55,7 +55,7 @@ export async function action({ request, context }: ActionFunctionArgs) {
     try {
       await sendEmail(env.RESEND_API_KEY, {
         to: user.email,
-        subject: "Reset your CORE password",
+        subject: "Reset your Cormunities password",
         html: passwordResetEmailHtml(`${baseUrl}/auth/reset/${token}`),
       });
     } catch {

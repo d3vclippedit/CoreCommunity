@@ -18,7 +18,7 @@ import { checkEligibility, getPayoutHistory } from "~/lib/monetization.server";
 import type { loader as rootLoader } from "~/root";
 
 export const meta: MetaFunction = () => [
-  { title: "Monetisation — CORE" },
+  { title: "Monetisation — Cormunities" },
   { name: "description", content: "Manage your coins, buy bundles, and track creator earnings." },
 ];
 

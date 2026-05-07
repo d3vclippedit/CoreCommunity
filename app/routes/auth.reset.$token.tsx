@@ -15,7 +15,7 @@ import { PASSWORD_ERROR_MESSAGES, hashPassword, validatePassword } from "~/lib/a
 import { createDb } from "~/lib/db/index";
 import { passwordResets, users } from "../../db/schema";
 
-export const meta: MetaFunction = () => [{ title: "Reset password — CORE" }];
+export const meta: MetaFunction = () => [{ title: "Reset password — Cormunities" }];
 
 export async function loader({ params, context }: LoaderFunctionArgs) {
   const db = createDb(context.cloudflare.env.DB);

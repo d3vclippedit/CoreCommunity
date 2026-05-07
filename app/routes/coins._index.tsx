@@ -11,7 +11,7 @@ import { createDb } from "~/lib/db/index";
 import type { loader as rootLoader } from "~/root";
 
 export const meta: MetaFunction = () => [
-  { title: "Core Coins — CORE" },
+  { title: "Core Coins — Cormunities" },
   {
     name: "description",
     content: "Buy Core Coins to support creators with badges and boost posts.",

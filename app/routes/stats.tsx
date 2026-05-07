@@ -7,7 +7,7 @@ import { getLiveStreams } from "~/lib/twitch/client.server";
 import { CORE_STREAMERS, type StreamStatus, formatViewers } from "~/lib/twitch/shared";
 import type { loader as rootLoader } from "~/root";
 
-export const meta: MetaFunction = () => [{ title: "Stream Stats — CORE" }];
+export const meta: MetaFunction = () => [{ title: "Stream Stats — Cormunities" }];
 
 type Range = "24h" | "7d" | "28d";
 

@@ -6,8 +6,8 @@ import { Header } from "~/components/layout/Header";
 import type { loader as rootLoader } from "~/root";
 
 export const meta: MetaFunction = () => [
-  { title: "About — CORE" },
-  { name: "description", content: "CORE is a creator-owned community platform for streamers." },
+  { title: "About — Cormunities" },
+  { name: "description", content: "Cormunities is a creator-owned community platform for streamers." },
 ];
 
 export default function About() {
@@ -23,7 +23,7 @@ export default function About() {
             className="text-3xl font-display font-bold tracking-tight mb-6"
             style={{ color: "var(--color-text)" }}
           >
-            About CORE
+            About Cormunities
           </h1>
 
           <div
@@ -31,7 +31,7 @@ export default function About() {
             style={{ color: "var(--color-text-dim)" }}
           >
             <p>
-              CORE is a creator-owned community platform built for streamers and the people around
+              Cormunities is a creator-owned community platform built for streamers and the people around
               them. Forum-style, discoverable, identity-bearing — not ephemeral chat.
             </p>
             <p>
@@ -46,14 +46,14 @@ export default function About() {
               </h2>
               <p>
                 Streamers build audiences, but they don't own the infrastructure they live on. When
-                Discord changes pricing or Reddit removes API access, communities suffer. CORE is
+                Discord changes pricing or Reddit removes API access, communities suffer. Cormunities is
                 the alternative: forums you control, built to last.
               </p>
             </section>
 
             <section>
               <h2 className="text-base font-semibold mb-2" style={{ color: "var(--color-text)" }}>
-                What makes CORE different
+                What makes Cormunities different
               </h2>
               <ul className="flex flex-col gap-2 pl-4">
                 <li>Threaded posts and comments — not chat, not tweets</li>
@@ -68,7 +68,7 @@ export default function About() {
                 Early access
               </h2>
               <p>
-                CORE is currently in early access, built in public. Features are still rolling out.
+                Cormunities is currently in early access, built in public. Features are still rolling out.
                 If something's broken or you have feedback, we want to hear it.
               </p>
             </section>

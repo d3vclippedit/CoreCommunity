@@ -9,7 +9,7 @@ import { creditCoins, debitCoins } from "~/lib/coins.server";
 import { createDb } from "~/lib/db/index";
 import { coinBundles, postBadgeDefinitions, users } from "../../db/schema";
 
-export const meta: MetaFunction = () => [{ title: "Admin — CORE" }];
+export const meta: MetaFunction = () => [{ title: "Admin — Cormunities" }];
 
 export async function loader({ request, context }: LoaderFunctionArgs) {
   const { env } = context.cloudflare;

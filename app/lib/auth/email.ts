@@ -7,7 +7,7 @@ interface SendEmailOptions {
 
 export async function sendEmail(
   resendApiKey: string,
-  { to, subject, html, from = "CORE <noreply@corecommunity.app>" }: SendEmailOptions,
+  { to, subject, html, from = "Cormunities <noreply@corecommunity.app>" }: SendEmailOptions,
 ): Promise<void> {
   const res = await fetch("https://api.resend.com/emails", {
     method: "POST",
@@ -29,7 +29,7 @@ export function verificationEmailHtml(verifyUrl: string): string {
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
 <body style="margin:0;padding:0;background:#0A0A0C;font-family:Inter,system-ui,sans-serif;color:#F5F5F7">
   <div style="max-width:480px;margin:40px auto;padding:32px;background:#111114;border:1px solid #222227;border-radius:10px">
-    <p style="font-size:24px;font-weight:700;letter-spacing:-0.02em;margin:0 0 8px">CORE</p>
+    <p style="font-size:24px;font-weight:700;letter-spacing:-0.02em;margin:0 0 8px">Cormunities</p>
     <p style="color:#A1A1AA;font-size:13px;margin:0 0 32px">Communities for creators who actually run them.</p>
     <h1 style="font-size:18px;font-weight:600;margin:0 0 12px">Verify your email</h1>
     <p style="color:#A1A1AA;font-size:14px;line-height:1.6;margin:0 0 24px">
@@ -40,7 +40,7 @@ export function verificationEmailHtml(verifyUrl: string): string {
       Verify email
     </a>
     <p style="color:#6B6B73;font-size:12px;margin:24px 0 0">
-      If you didn't create a CORE account, you can ignore this email.
+      If you didn't create a Cormunities account, you can ignore this email.
     </p>
   </div>
 </body>
@@ -53,7 +53,7 @@ export function passwordResetEmailHtml(resetUrl: string): string {
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
 <body style="margin:0;padding:0;background:#0A0A0C;font-family:Inter,system-ui,sans-serif;color:#F5F5F7">
   <div style="max-width:480px;margin:40px auto;padding:32px;background:#111114;border:1px solid #222227;border-radius:10px">
-    <p style="font-size:24px;font-weight:700;letter-spacing:-0.02em;margin:0 0 8px">CORE</p>
+    <p style="font-size:24px;font-weight:700;letter-spacing:-0.02em;margin:0 0 8px">Cormunities</p>
     <p style="color:#A1A1AA;font-size:13px;margin:0 0 32px">Communities for creators who actually run them.</p>
     <h1 style="font-size:18px;font-weight:600;margin:0 0 12px">Reset your password</h1>
     <p style="color:#A1A1AA;font-size:14px;line-height:1.6;margin:0 0 24px">

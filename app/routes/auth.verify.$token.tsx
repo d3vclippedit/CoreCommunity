@@ -4,7 +4,7 @@ import { and, eq, gt } from "drizzle-orm";
 import { createDb } from "~/lib/db/index";
 import { emailVerifications, users } from "../../db/schema";
 
-export const meta: MetaFunction = () => [{ title: "Verify email — CORE" }];
+export const meta: MetaFunction = () => [{ title: "Verify email — Cormunities" }];
 
 export async function loader({ params, context }: LoaderFunctionArgs) {
   const { env } = context.cloudflare;

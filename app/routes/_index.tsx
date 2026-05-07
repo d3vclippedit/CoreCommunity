@@ -16,9 +16,9 @@ export const meta: MetaFunction = () => [
   {
     name: "description",
     content:
-      "CORE is a creator-owned community platform — forum-style discussion, threaded posts, voting, and real moderation tools. Built for streamers and the people around them.",
+      "Cormunities is a creator-owned community platform — forum-style discussion, threaded posts, voting, and real moderation tools. Built for streamers and the people around them.",
   },
-  { property: "og:title", content: "CORE" },
+  { property: "og:title", content: "Cormunities" },
   { property: "og:description", content: "Communities for creators who actually run them." },
   { property: "og:type", content: "website" },
 ];

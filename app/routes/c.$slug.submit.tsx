@@ -28,7 +28,7 @@ import {
 } from "../../db/schema";
 
 export const meta: MetaFunction<typeof loader> = ({ data }) => [
-  { title: data ? `Submit to c/${data.slug} — CORE` : "CORE" },
+  { title: data ? `Submit to c/${data.slug} — CORE` : "Cormunities" },
 ];
 
 async function loadPerms(
