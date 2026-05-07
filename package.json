@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "build": "remix vite:build && pnpm build:worker",
-    "build:worker": "esbuild _worker.ts --bundle --outfile=build/client/_worker.js --format=esm --target=es2022 --platform=browser --conditions=worker --external:cloudflare:workers --minify",
+    "build:worker": "pnpm exec esbuild _worker.ts --bundle --outfile=build/client/_worker.js --format=esm --target=es2022 --platform=browser --conditions=worker --external:cloudflare:workers --minify",
     "dev": "remix vite:dev",
     "lint": "biome check .",
     "format": "biome format . --write",
