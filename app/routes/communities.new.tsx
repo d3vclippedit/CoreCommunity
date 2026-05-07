@@ -18,7 +18,7 @@ import { getCurrentUser } from "~/lib/auth/user.server";
 import { createDb } from "~/lib/db/index";
 import { generateId } from "~/lib/utils";
 import type { loader as rootLoader } from "~/root";
-import { communities } from "../../db/schema";
+import { communities, communityMemberships } from "../../db/schema";
 
 export const meta: MetaFunction = () => [{ title: "New community — CORE" }];
 
@@ -52,14 +52,23 @@ export async function action({ request, context }: ActionFunctionArgs) {
   if (existing) return { error: "That slug is already taken." };
 
   const now = new Date();
+  const communityId = generateId();
   await db.insert(communities).values({
-    id: generateId(),
+    id: communityId,
     slug,
     name,
     description: description || null,
     ownerId: user.id,
-    memberCount: 0,
+    memberCount: 1,
     createdAt: now,
+    updatedAt: now,
+  });
+
+  await db.insert(communityMemberships).values({
+    userId: user.id,
+    communityId,
+    role: "admin",
+    joinedAt: now,
     updatedAt: now,
   });
 

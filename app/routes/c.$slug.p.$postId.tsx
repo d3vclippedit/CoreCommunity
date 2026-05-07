@@ -3,7 +3,6 @@ import { Form, Link, useFetcher, useLoaderData, useRouteLoaderData } from "@remi
 import { and, desc, eq, gt, isNull, or, sql } from "drizzle-orm";
 import { AppShell } from "~/components/layout/AppShell";
 import { Footer } from "~/components/layout/Footer";
-import { Header } from "~/components/layout/Header";
 import { getCurrentUser } from "~/lib/auth/user.server";
 import { getActiveBadgeDefinitions, getPostBadgeSummary } from "~/lib/badges.server";
 import { getBalance } from "~/lib/coins.server";
@@ -232,7 +231,6 @@ export default function PostPermalink() {
 
   return (
     <div className="flex flex-col min-h-screen" style={{ background: "var(--color-bg)" }}>
-      <Header user={rootUser} />
       <AppShell>
         <div className="py-4">
           {/* Breadcrumb */}
@@ -422,54 +420,53 @@ export default function PostPermalink() {
                   ))}
                 </div>
               )}
-              {rootUser && !isPostAuthor && (
-                <details className="group">
-                  <summary
-                    className="cursor-pointer text-xs font-medium list-none flex items-center gap-1.5 w-fit"
-                    style={{ color: "var(--color-text-faint)" }}
-                  >
-                    <span>🏅</span>
-                    <span>Give badge</span>
-                    <span className="ml-1 text-[10px]" style={{ color: "var(--color-text-faint)" }}>
-                      Balance: {userCoinBalance.toLocaleString()} cc
-                    </span>
-                  </summary>
-                  <div className="mt-2 grid grid-cols-2 sm:grid-cols-4 gap-2">
+              {rootUser && !isPostAuthor && badgeDefs.length > 0 && (
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-xs font-medium" style={{ color: "var(--color-text-faint)" }}>
+                      Give a badge
+                    </p>
+                    <p className="text-xs" style={{ color: "var(--color-text-faint)" }}>
+                      Balance:{" "}
+                      <span style={{ color: "var(--color-text-dim)" }}>
+                        {userCoinBalance.toLocaleString()} cc
+                      </span>
+                    </p>
+                  </div>
+                  <div className="grid grid-cols-4 sm:grid-cols-8 gap-1.5">
                     {badgeDefs.map((def) => {
                       const canAfford = userCoinBalance >= def.coinCost;
                       return (
-                        <badgeFetcher.Form key={def.id} method="post" action="/api/badges/apply">
+                        <form
+                          key={def.id}
+                          method="post"
+                          action="/api/badges/apply"
+                          onSubmit={(e) => {
+                            e.preventDefault();
+                            badgeFetcher.submit(e.currentTarget);
+                          }}
+                        >
                           <input type="hidden" name="postId" value={post.id} />
                           <input type="hidden" name="badgeDefinitionId" value={def.id} />
                           <button
                             type="submit"
                             disabled={!canAfford || badgeFetcher.state !== "idle"}
-                            className="w-full rounded-lg p-2.5 flex flex-col items-center gap-1 transition-opacity hover:opacity-80 disabled:opacity-40"
+                            className="w-full rounded-lg p-2 flex flex-col items-center gap-0.5 transition-opacity hover:opacity-80 disabled:opacity-40"
                             style={{
                               background: "var(--color-bg-elev-2)",
                               border: "1px solid var(--color-border)",
                             }}
-                            title={
-                              canAfford
-                                ? `Give ${def.name} (${def.coinCost} cc)`
-                                : "Not enough coins"
-                            }
+                            title={canAfford ? `${def.coinCost} cc` : "Not enough coins"}
                           >
-                            <span className="text-xl">{def.icon}</span>
+                            <span className="text-lg">{def.icon}</span>
                             <span
-                              className="text-xs font-medium"
-                              style={{ color: "var(--color-text)" }}
-                            >
-                              {def.name}
-                            </span>
-                            <span
-                              className="text-[10px]"
+                              className="text-[10px] leading-tight font-medium"
                               style={{ color: "var(--color-text-faint)" }}
                             >
-                              {def.coinCost.toLocaleString()} cc
+                              {def.coinCost >= 1000 ? `${def.coinCost / 1000}k` : def.coinCost}
                             </span>
                           </button>
-                        </badgeFetcher.Form>
+                        </form>
                       );
                     })}
                   </div>
@@ -480,18 +477,18 @@ export default function PostPermalink() {
                   )}
                   {badgeFetcher.data?.success && (
                     <p className="text-xs mt-2" style={{ color: "var(--color-success)" }}>
-                      Badge given! New balance: {badgeFetcher.data.newBalance?.toLocaleString()} cc
+                      Badge given! Balance: {badgeFetcher.data.newBalance?.toLocaleString()} cc
                     </p>
                   )}
-                </details>
-              )}
-              {rootUser && !isPostAuthor && badgeDefs.length > 0 && userCoinBalance === 0 && (
-                <p className="text-xs" style={{ color: "var(--color-text-faint)" }}>
-                  <a href="/coins" style={{ color: "var(--color-text-dim)" }}>
-                    Buy coins
-                  </a>{" "}
-                  to give badges.
-                </p>
+                  {userCoinBalance === 0 && (
+                    <p className="text-xs mt-1.5" style={{ color: "var(--color-text-faint)" }}>
+                      <a href="/coins" style={{ color: "var(--color-text-dim)" }}>
+                        Buy coins
+                      </a>{" "}
+                      to give badges.
+                    </p>
+                  )}
+                </div>
               )}
             </div>
           </div>
