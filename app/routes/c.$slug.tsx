@@ -136,7 +136,7 @@ export default function CommunityHub() {
       }
     >
       <Header user={rootUser} />
-      <AppShell leftNav={leftNav} rightRail={rightRail}>
+      <AppShell leftNav={leftNav} rightRail={rightRail} transparent>
         <Outlet />
       </AppShell>
       <Footer />

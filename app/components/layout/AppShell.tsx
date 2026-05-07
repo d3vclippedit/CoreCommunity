@@ -6,6 +6,7 @@ interface AppShellProps {
   rightRail?: ReactNode;
   children: ReactNode;
   className?: string;
+  transparent?: boolean;
 }
 
 /**
@@ -13,9 +14,12 @@ interface AppShellProps {
  * single-column on mobile (left nav behind drawer).
  * Max page width: ~1280px. Center column max: ~720px on community feeds.
  */
-export function AppShell({ leftNav, rightRail, children, className }: AppShellProps) {
+export function AppShell({ leftNav, rightRail, children, className, transparent }: AppShellProps) {
   return (
-    <div className={cn("min-h-screen", className)} style={{ background: "var(--color-bg)" }}>
+    <div
+      className={cn("min-h-screen", className)}
+      style={{ background: transparent ? "transparent" : "var(--color-bg)" }}
+    >
       <div className="mx-auto w-full px-4 md:px-6" style={{ maxWidth: "1280px" }}>
         <div className="flex gap-6 pt-6 pb-16">
           {/* Left nav — hidden on mobile, shown as drawer trigger */}
