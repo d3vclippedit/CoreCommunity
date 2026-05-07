@@ -24,11 +24,11 @@ export function AppShell({ leftNav, rightRail, children, className, transparent 
       <div className={cn("h-full overflow-hidden", className)}>
         <div
           className="mx-auto w-full h-full flex flex-col px-4 md:px-6"
-          style={{ maxWidth: "1280px" }}
+          style={{ maxWidth: "1520px" }}
         >
           {/* Dark floating card — each column scrolls independently */}
           <div
-            className="flex gap-6 flex-1 pt-6 px-6 md:px-8 mx-2 md:mx-4 my-8"
+            className="flex gap-6 flex-1 pt-6 px-6 md:px-10 mx-2 md:mx-4 my-8"
             style={{
               background: "var(--color-bg)",
               borderRadius: "14px",
@@ -38,7 +38,7 @@ export function AppShell({ leftNav, rightRail, children, className, transparent 
           >
             {leftNav && (
               <aside
-                className="hidden lg:flex flex-col flex-shrink-0 w-56 xl:w-64 overflow-y-auto"
+                className="hidden lg:flex flex-col flex-shrink-0 w-64 xl:w-80 overflow-y-auto"
                 aria-label="Community navigation"
               >
                 <div className="pb-8">{leftNav}</div>
@@ -54,7 +54,7 @@ export function AppShell({ leftNav, rightRail, children, className, transparent 
 
             {rightRail && (
               <aside
-                className="hidden xl:flex flex-col flex-shrink-0 w-72 overflow-y-auto"
+                className="hidden xl:flex flex-col flex-shrink-0 w-80 xl:w-96 overflow-y-auto"
                 aria-label="Community info"
               >
                 <div className="space-y-4 pb-8">{rightRail}</div>
