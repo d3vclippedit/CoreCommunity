@@ -19,8 +19,9 @@ export async function action({ request, context }: ActionFunctionArgs) {
   // Rate limit: 20 badge applications per minute per user
   const rlKey = `rl:badge:apply:${user.id}`;
   const rl = await env.KV.get(rlKey);
-  if (rl && Number(rl) >= 20) return Response.json({ error: "Too many requests. Slow down." }, { status: 429 });
-  await env.KV.put(rlKey, String((Number(rl ?? 0)) + 1), { expirationTtl: 60 });
+  if (rl && Number(rl) >= 20)
+    return Response.json({ error: "Too many requests. Slow down." }, { status: 429 });
+  await env.KV.put(rlKey, String(Number(rl ?? 0) + 1), { expirationTtl: 60 });
 
   const db = createDb(env.DB);
 

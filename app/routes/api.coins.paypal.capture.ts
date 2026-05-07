@@ -27,21 +27,46 @@ export async function action({ request, context }: ActionFunctionArgs) {
     .get();
 
   if (!order) return Response.json({ error: "Order not found" }, { status: 404 });
-  if (order.status === "completed") return Response.json({ already: true, coinAmount: order.coinAmount });
-  if (order.status !== "pending") return Response.json({ error: "Order cannot be captured" }, { status: 400 });
-  if (!order.providerOrderId) return Response.json({ error: "No PayPal order ID" }, { status: 400 });
+  if (order.status === "completed")
+    return Response.json({ already: true, coinAmount: order.coinAmount });
+  if (order.status !== "pending")
+    return Response.json({ error: "Order cannot be captured" }, { status: 400 });
+  if (!order.providerOrderId)
+    return Response.json({ error: "No PayPal order ID" }, { status: 400 });
 
   try {
-    const { captureId, status } = await captureOrder(env as unknown as PayPalEnv, order.providerOrderId);
+    const { captureId, status } = await captureOrder(
+      env as unknown as PayPalEnv,
+      order.providerOrderId,
+    );
 
     if (status !== "COMPLETED") {
-      await db.update(paymentOrders).set({ status: "failed", updatedAt: new Date() }).where(eq(paymentOrders.id, orderId));
+      await db
+        .update(paymentOrders)
+        .set({ status: "failed", updatedAt: new Date() })
+        .where(eq(paymentOrders.id, orderId));
       return Response.json({ error: "Payment not completed" }, { status: 402 });
     }
 
     // Credit coins atomically
-    await db.update(paymentOrders).set({ status: "completed", providerTxId: captureId, completedAt: new Date(), updatedAt: new Date() }).where(eq(paymentOrders.id, orderId));
-    await creditCoins(db, user.id, order.coinAmount, "purchase", "payment_order", orderId, `PayPal purchase: ${order.coinAmount} coins`);
+    await db
+      .update(paymentOrders)
+      .set({
+        status: "completed",
+        providerTxId: captureId,
+        completedAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .where(eq(paymentOrders.id, orderId));
+    await creditCoins(
+      db,
+      user.id,
+      order.coinAmount,
+      "purchase",
+      "payment_order",
+      orderId,
+      `PayPal purchase: ${order.coinAmount} coins`,
+    );
 
     // Audit log
     await db.insert(adminMoneyLogs).values({
@@ -58,6 +83,9 @@ export async function action({ request, context }: ActionFunctionArgs) {
     return Response.json({ success: true, coinAmount: order.coinAmount });
   } catch (err) {
     console.error("PayPal capture error:", err);
-    return Response.json({ error: "Capture failed. Contact support if money was charged." }, { status: 502 });
+    return Response.json(
+      { error: "Capture failed. Contact support if money was charged." },
+      { status: 502 },
+    );
   }
 }

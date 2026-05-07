@@ -26,10 +26,9 @@ export async function action({ request, context }: ActionFunctionArgs) {
     if (intent === "follow") {
       await followUser(db, user.id, targetUserId);
       return Response.json({ following: true });
-    } else {
-      await unfollowUser(db, user.id, targetUserId);
-      return Response.json({ following: false });
     }
+    await unfollowUser(db, user.id, targetUserId);
+    return Response.json({ following: false });
   } catch (err) {
     console.error("Follow action error:", err);
     return Response.json({ error: "Action failed." }, { status: 500 });

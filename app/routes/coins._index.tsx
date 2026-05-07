@@ -1,17 +1,20 @@
 import type { LoaderFunctionArgs, MetaFunction } from "@remix-run/cloudflare";
-import { useFetcher, useLoaderData, useSearchParams, useRouteLoaderData } from "@remix-run/react";
+import { useFetcher, useLoaderData, useRouteLoaderData, useSearchParams } from "@remix-run/react";
+import { AppShell } from "~/components/layout/AppShell";
+import { Footer } from "~/components/layout/Footer";
+import { Header } from "~/components/layout/Header";
 import { getCurrentUser } from "~/lib/auth/user.server";
 import { formatCoins } from "~/lib/coins";
 import { getActiveBundles, getBalance } from "~/lib/coins.server";
 import { createDb } from "~/lib/db/index";
-import { AppShell } from "~/components/layout/AppShell";
-import { Footer } from "~/components/layout/Footer";
-import { Header } from "~/components/layout/Header";
 import type { loader as rootLoader } from "~/root";
 
 export const meta: MetaFunction = () => [
   { title: "Core Coins — CORE" },
-  { name: "description", content: "Buy Core Coins to support creators with badges and boost posts." },
+  {
+    name: "description",
+    content: "Buy Core Coins to support creators with badges and boost posts.",
+  },
 ];
 
 export async function loader({ request, context }: LoaderFunctionArgs) {
@@ -51,7 +54,11 @@ export default function CoinsPage() {
           {(paypalStatus === "success" || cryptoStatus === "success") && (
             <div
               className="rounded-lg px-4 py-3 mb-5 text-sm font-medium"
-              style={{ background: "rgba(61,214,140,0.1)", border: "1px solid var(--color-success)", color: "var(--color-success)" }}
+              style={{
+                background: "rgba(61,214,140,0.1)",
+                border: "1px solid var(--color-success)",
+                color: "var(--color-success)",
+              }}
             >
               Payment confirmed! Coins have been added to your wallet.
             </div>
@@ -59,7 +66,11 @@ export default function CoinsPage() {
           {(paypalStatus === "cancelled" || cryptoStatus === "cancelled") && (
             <div
               className="rounded-lg px-4 py-3 mb-5 text-sm"
-              style={{ background: "rgba(229,72,77,0.1)", border: "1px solid var(--color-danger)", color: "var(--color-danger)" }}
+              style={{
+                background: "rgba(229,72,77,0.1)",
+                border: "1px solid var(--color-danger)",
+                color: "var(--color-danger)",
+              }}
             >
               Payment cancelled. No charge was made.
             </div>
@@ -69,21 +80,33 @@ export default function CoinsPage() {
           {user && (
             <div
               className="rounded-xl p-5 mb-6 flex items-center justify-between"
-              style={{ background: "var(--color-bg-elev-1)", border: "1px solid var(--color-border)" }}
+              style={{
+                background: "var(--color-bg-elev-1)",
+                border: "1px solid var(--color-border)",
+              }}
             >
               <div>
-                <p className="text-xs uppercase tracking-wide mb-1" style={{ color: "var(--color-text-faint)" }}>
+                <p
+                  className="text-xs uppercase tracking-wide mb-1"
+                  style={{ color: "var(--color-text-faint)" }}
+                >
                   Your balance
                 </p>
                 <p className="text-3xl font-bold" style={{ color: "var(--color-text)" }}>
                   {formatCoins(balance)}
                 </p>
-                <p className="text-xs mt-1" style={{ color: "var(--color-text-faint)" }}>Core Coins</p>
+                <p className="text-xs mt-1" style={{ color: "var(--color-text-faint)" }}>
+                  Core Coins
+                </p>
               </div>
               <a
                 href="/wallet"
                 className="text-xs px-3 py-1.5 rounded-md transition-opacity hover:opacity-80"
-                style={{ background: "var(--color-bg-elev-2)", border: "1px solid var(--color-border)", color: "var(--color-text-dim)" }}
+                style={{
+                  background: "var(--color-bg-elev-2)",
+                  border: "1px solid var(--color-border)",
+                  color: "var(--color-text-dim)",
+                }}
               >
                 View history
               </a>
@@ -93,9 +116,14 @@ export default function CoinsPage() {
           {/* How it works */}
           <div
             className="rounded-xl p-5 mb-6"
-            style={{ background: "var(--color-bg-elev-1)", border: "1px solid var(--color-border)" }}
+            style={{
+              background: "var(--color-bg-elev-1)",
+              border: "1px solid var(--color-border)",
+            }}
           >
-            <h2 className="text-sm font-semibold mb-3" style={{ color: "var(--color-text)" }}>How it works</h2>
+            <h2 className="text-sm font-semibold mb-3" style={{ color: "var(--color-text)" }}>
+              How it works
+            </h2>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               {[
                 { step: "1", text: "Buy a coin bundle below using PayPal or crypto." },
@@ -109,7 +137,9 @@ export default function CoinsPage() {
                   >
                     {step}
                   </span>
-                  <p className="text-sm leading-snug" style={{ color: "var(--color-text-dim)" }}>{text}</p>
+                  <p className="text-sm leading-snug" style={{ color: "var(--color-text-dim)" }}>
+                    {text}
+                  </p>
                 </div>
               ))}
             </div>
@@ -119,10 +149,16 @@ export default function CoinsPage() {
           {!user && (
             <div
               className="rounded-xl p-5 mb-6 text-center"
-              style={{ background: "var(--color-bg-elev-1)", border: "1px solid var(--color-border)" }}
+              style={{
+                background: "var(--color-bg-elev-1)",
+                border: "1px solid var(--color-border)",
+              }}
             >
               <p className="text-sm" style={{ color: "var(--color-text-dim)" }}>
-                <a href="/auth/login" style={{ color: "var(--color-text)" }}>Sign in</a> to buy Core Coins.
+                <a href="/auth/login" style={{ color: "var(--color-text)" }}>
+                  Sign in
+                </a>{" "}
+                to buy Core Coins.
               </p>
             </div>
           )}
@@ -143,9 +179,14 @@ export default function CoinsPage() {
           {/* Badge list */}
           <div
             className="rounded-xl p-5"
-            style={{ background: "var(--color-bg-elev-1)", border: "1px solid var(--color-border)" }}
+            style={{
+              background: "var(--color-bg-elev-1)",
+              border: "1px solid var(--color-border)",
+            }}
           >
-            <h2 className="text-sm font-semibold mb-3" style={{ color: "var(--color-text)" }}>Badge types</h2>
+            <h2 className="text-sm font-semibold mb-3" style={{ color: "var(--color-text)" }}>
+              Badge types
+            </h2>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               {BADGE_DISPLAY.map((b) => (
                 <div
@@ -154,8 +195,12 @@ export default function CoinsPage() {
                   style={{ background: "var(--color-bg-elev-2)" }}
                 >
                   <span className="text-2xl">{b.icon}</span>
-                  <span className="text-xs font-semibold" style={{ color: "var(--color-text)" }}>{b.name}</span>
-                  <span className="text-xs" style={{ color: "var(--color-text-faint)" }}>{b.coins} cc</span>
+                  <span className="text-xs font-semibold" style={{ color: "var(--color-text)" }}>
+                    {b.name}
+                  </span>
+                  <span className="text-xs" style={{ color: "var(--color-text-faint)" }}>
+                    {b.coins} cc
+                  </span>
                 </div>
               ))}
             </div>
@@ -210,17 +255,23 @@ function BundleCard({ bundle }: { bundle: Bundle }) {
       style={{ background: "var(--color-bg-elev-1)", border: "1px solid var(--color-border)" }}
     >
       <div>
-        <p className="text-sm font-semibold" style={{ color: "var(--color-text)" }}>{bundle.name}</p>
+        <p className="text-sm font-semibold" style={{ color: "var(--color-text)" }}>
+          {bundle.name}
+        </p>
         <p className="text-2xl font-bold mt-0.5" style={{ color: "var(--color-text)" }}>
           {formatCoins(bundle.coinAmount)}
-          <span className="text-sm font-normal ml-1" style={{ color: "var(--color-text-faint)" }}>cc</span>
+          <span className="text-sm font-normal ml-1" style={{ color: "var(--color-text-faint)" }}>
+            cc
+          </span>
         </p>
         {bundle.bonusLabel && (
           <p className="text-xs mt-0.5" style={{ color: "var(--color-success)" }}>
             {bundle.bonusLabel}
           </p>
         )}
-        <p className="text-lg font-semibold mt-1" style={{ color: "var(--color-text-dim)" }}>{usdDisplay}</p>
+        <p className="text-lg font-semibold mt-1" style={{ color: "var(--color-text-dim)" }}>
+          {usdDisplay}
+        </p>
       </div>
 
       {(paypalFetcher.data?.error || cryptoFetcher.data?.error) && (
@@ -248,7 +299,11 @@ function BundleCard({ bundle }: { bundle: Bundle }) {
             type="submit"
             disabled={isSubmitting}
             className="w-full py-2 text-sm font-medium rounded-lg transition-opacity hover:opacity-80 disabled:opacity-50"
-            style={{ background: "var(--color-bg-elev-2)", border: "1px solid var(--color-border)", color: "var(--color-text-dim)" }}
+            style={{
+              background: "var(--color-bg-elev-2)",
+              border: "1px solid var(--color-border)",
+              color: "var(--color-text-dim)",
+            }}
           >
             {cryptoFetcher.state !== "idle" ? "Redirecting…" : "Buy with Crypto"}
           </button>

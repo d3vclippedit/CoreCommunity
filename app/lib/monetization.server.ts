@@ -47,18 +47,24 @@ export async function checkEligibility(db: Db, userId: string): Promise<Eligibil
     db
       .select({ totalCoins: sql<number>`coalesce(sum(${monetizationEarnings.grossCoins}), 0)` })
       .from(monetizationEarnings)
-      .where(and(eq(monetizationEarnings.userId, userId), gte(monetizationEarnings.createdAt, windowStart)))
+      .where(
+        and(
+          eq(monetizationEarnings.userId, userId),
+          gte(monetizationEarnings.createdAt, windowStart),
+        ),
+      )
       .get(),
   ]);
 
   const followerCount = followerRow?.count ?? 0;
   const postCount = postCountRow?.count ?? 0;
-  const totalEarningsCents = Math.floor((earningsRow?.totalCoins ?? 0)); // 1 coin = $0.01 value
+  const totalEarningsCents = Math.floor(earningsRow?.totalCoins ?? 0); // 1 coin = $0.01 value
 
   const missingRequirements: EligibilityResult["missingRequirements"] = [];
   if (followerCount < ELIGIBILITY.minFollowers) missingRequirements.push("followers");
   if (postCount < ELIGIBILITY.minPostsLast28Days) missingRequirements.push("posts");
-  if (totalEarningsCents < ELIGIBILITY.minBadgeValueCentsLast28Days) missingRequirements.push("badge_value");
+  if (totalEarningsCents < ELIGIBILITY.minBadgeValueCentsLast28Days)
+    missingRequirements.push("badge_value");
 
   return {
     isEligible: missingRequirements.length === 0,
@@ -77,7 +83,9 @@ export async function updateEarningStatuses(db: Db, userId: string, isEligible: 
   await db
     .update(monetizationEarnings)
     .set({ status: "eligible" })
-    .where(and(eq(monetizationEarnings.userId, userId), eq(monetizationEarnings.status, "pending")));
+    .where(
+      and(eq(monetizationEarnings.userId, userId), eq(monetizationEarnings.status, "pending")),
+    );
 }
 
 // Total pending/eligible earnings — for admin use only, not shown raw to users

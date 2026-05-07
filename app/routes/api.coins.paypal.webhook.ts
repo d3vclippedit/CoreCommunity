@@ -14,7 +14,11 @@ export async function action({ request, context }: ActionFunctionArgs) {
   const rawBody = await request.text();
 
   // 1. Verify signature before doing anything
-  const isValid = await verifyWebhookSignature(env as unknown as PayPalEnv, request.headers, rawBody);
+  const isValid = await verifyWebhookSignature(
+    env as unknown as PayPalEnv,
+    request.headers,
+    rawBody,
+  );
   if (!isValid) {
     console.error("PayPal webhook: invalid signature");
     return new Response("Forbidden", { status: 403 });
@@ -58,7 +62,11 @@ export async function action({ request, context }: ActionFunctionArgs) {
   // 4. Handle event types
   try {
     if (event.event_type === "PAYMENT.CAPTURE.COMPLETED") {
-      const resource = event.resource as { id: string; custom_id?: string; supplementary_data?: { related_ids?: { order_id?: string } } };
+      const resource = event.resource as {
+        id: string;
+        custom_id?: string;
+        supplementary_data?: { related_ids?: { order_id?: string } };
+      };
       const providerOrderId = resource.supplementary_data?.related_ids?.order_id ?? "";
       const captureId = resource.id;
 
@@ -69,20 +77,54 @@ export async function action({ request, context }: ActionFunctionArgs) {
         .get();
 
       if (order && order.status === "pending") {
-        await db.update(paymentOrders).set({ status: "completed", providerTxId: captureId, completedAt: new Date(), updatedAt: new Date() }).where(eq(paymentOrders.id, order.id));
-        await creditCoins(db, order.userId, order.coinAmount, "purchase", "payment_order", order.id, `PayPal webhook: ${order.coinAmount} coins`);
-        await db.insert(adminMoneyLogs).values({ id: crypto.randomUUID(), adminUserId: order.userId, action: "paypal_webhook_credit", targetUserId: order.userId, amount: order.coinAmount, refId: order.id, note: `webhook event ${eventId}`, createdAt: new Date() });
+        await db
+          .update(paymentOrders)
+          .set({
+            status: "completed",
+            providerTxId: captureId,
+            completedAt: new Date(),
+            updatedAt: new Date(),
+          })
+          .where(eq(paymentOrders.id, order.id));
+        await creditCoins(
+          db,
+          order.userId,
+          order.coinAmount,
+          "purchase",
+          "payment_order",
+          order.id,
+          `PayPal webhook: ${order.coinAmount} coins`,
+        );
+        await db.insert(adminMoneyLogs).values({
+          id: crypto.randomUUID(),
+          adminUserId: order.userId,
+          action: "paypal_webhook_credit",
+          targetUserId: order.userId,
+          amount: order.coinAmount,
+          refId: order.id,
+          note: `webhook event ${eventId}`,
+          createdAt: new Date(),
+        });
       }
     } else if (event.event_type === "PAYMENT.CAPTURE.REFUNDED") {
       const resource = event.resource as { id: string };
-      await db.update(paymentOrders).set({ status: "refunded", updatedAt: new Date() }).where(eq(paymentOrders.providerTxId, resource.id));
+      await db
+        .update(paymentOrders)
+        .set({ status: "refunded", updatedAt: new Date() })
+        .where(eq(paymentOrders.providerTxId, resource.id));
     }
 
     // Mark processed
-    await db.update(paymentWebhookEvents).set({ processed: true }).where(eq(paymentWebhookEvents.id, webhookRowId));
+    await db
+      .update(paymentWebhookEvents)
+      .set({ processed: true })
+      .where(eq(paymentWebhookEvents.id, webhookRowId));
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    await db.update(paymentWebhookEvents).set({ error: msg }).where(eq(paymentWebhookEvents.id, webhookRowId));
+    await db
+      .update(paymentWebhookEvents)
+      .set({ error: msg })
+      .where(eq(paymentWebhookEvents.id, webhookRowId));
     console.error("PayPal webhook processing error:", err);
   }
 

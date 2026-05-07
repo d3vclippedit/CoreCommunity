@@ -77,7 +77,8 @@ export async function loader({ params, request, context }: LoaderFunctionArgs) {
 }
 
 export default function UserProfile() {
-  const { user, recentPosts, joinedCommunities, viewerId, viewerIsFollowing } = useLoaderData<typeof loader>();
+  const { user, recentPosts, joinedCommunities, viewerId, viewerIsFollowing } =
+    useLoaderData<typeof loader>();
   const root = useRouteLoaderData<typeof rootLoader>("root");
   const rootUser = root?.user ?? null;
   const followFetcher = useFetcher<{ following?: boolean; error?: string }>();
@@ -179,7 +180,11 @@ export default function UserProfile() {
                       className="px-4 py-1.5 text-sm font-medium rounded-md transition-opacity hover:opacity-80 flex-shrink-0"
                       style={
                         optimisticFollowing
-                          ? { background: "var(--color-bg-elev-2)", border: "1px solid var(--color-border)", color: "var(--color-text-dim)" }
+                          ? {
+                              background: "var(--color-bg-elev-2)",
+                              border: "1px solid var(--color-border)",
+                              color: "var(--color-text-dim)",
+                            }
                           : { background: "var(--color-text)", color: "var(--color-bg)" }
                       }
                     >
@@ -193,12 +198,12 @@ export default function UserProfile() {
               </p>
               <div className="flex items-center gap-4 mt-2">
                 <span className="text-sm" style={{ color: "var(--color-text-dim)" }}>
-                  <strong style={{ color: "var(--color-text)" }}>{user.followerCount}</strong>
-                  {" "}follower{user.followerCount !== 1 ? "s" : ""}
+                  <strong style={{ color: "var(--color-text)" }}>{user.followerCount}</strong>{" "}
+                  follower{user.followerCount !== 1 ? "s" : ""}
                 </span>
                 <span className="text-sm" style={{ color: "var(--color-text-dim)" }}>
-                  <strong style={{ color: "var(--color-text)" }}>{user.followingCount}</strong>
-                  {" "}following
+                  <strong style={{ color: "var(--color-text)" }}>{user.followingCount}</strong>{" "}
+                  following
                 </span>
               </div>
               {user.bio && (

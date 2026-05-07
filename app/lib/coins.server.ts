@@ -3,30 +3,27 @@
 
 import { and, desc, eq, sql } from "drizzle-orm";
 import type { createDb } from "~/lib/db/index";
-import {
-  type CoinTxType,
-  coinBundles,
-  coinTransactions,
-  coinWallets,
-} from "../../db/schema";
+import { type CoinTxType, coinBundles, coinTransactions, coinWallets } from "../../db/schema";
 
 type Db = ReturnType<typeof createDb>;
 
 export async function getOrCreateWallet(db: Db, userId: string) {
-  const existing = await db
-    .select()
-    .from(coinWallets)
-    .where(eq(coinWallets.userId, userId))
-    .get();
+  const existing = await db.select().from(coinWallets).where(eq(coinWallets.userId, userId)).get();
   if (existing) return existing;
 
   const now = new Date();
-  await db.insert(coinWallets).values({ userId, balance: 0, totalPurchased: 0, totalSpent: 0, updatedAt: now });
+  await db
+    .insert(coinWallets)
+    .values({ userId, balance: 0, totalPurchased: 0, totalSpent: 0, updatedAt: now });
   return { userId, balance: 0, totalPurchased: 0, totalSpent: 0, updatedAt: now };
 }
 
 export async function getBalance(db: Db, userId: string): Promise<number> {
-  const w = await db.select({ balance: coinWallets.balance }).from(coinWallets).where(eq(coinWallets.userId, userId)).get();
+  const w = await db
+    .select({ balance: coinWallets.balance })
+    .from(coinWallets)
+    .where(eq(coinWallets.userId, userId))
+    .get();
   return w?.balance ?? 0;
 }
 
@@ -44,18 +41,31 @@ export async function creditCoins(
   return await db.transaction(async (tx) => {
     await tx
       .insert(coinWallets)
-      .values({ userId, balance: amount, totalPurchased: type === "purchase" ? amount : 0, totalSpent: 0, updatedAt: new Date() })
+      .values({
+        userId,
+        balance: amount,
+        totalPurchased: type === "purchase" ? amount : 0,
+        totalSpent: 0,
+        updatedAt: new Date(),
+      })
       .onConflictDoUpdate({
         target: coinWallets.userId,
         set: {
           balance: sql`${coinWallets.balance} + ${amount}`,
-          totalPurchased: type === "purchase" ? sql`${coinWallets.totalPurchased} + ${amount}` : coinWallets.totalPurchased,
+          totalPurchased:
+            type === "purchase"
+              ? sql`${coinWallets.totalPurchased} + ${amount}`
+              : coinWallets.totalPurchased,
           updatedAt: new Date(),
         },
       });
 
-    const after = await tx.select({ b: coinWallets.balance }).from(coinWallets).where(eq(coinWallets.userId, userId)).get();
-    const balanceAfter = after!.b;
+    const after = await tx
+      .select({ b: coinWallets.balance })
+      .from(coinWallets)
+      .where(eq(coinWallets.userId, userId))
+      .get();
+    const balanceAfter = after?.b ?? 0;
 
     await tx.insert(coinTransactions).values({
       id: crypto.randomUUID(),
@@ -86,7 +96,11 @@ export async function debitCoins(
   if (amount <= 0) throw new Error("Debit amount must be positive");
 
   return await db.transaction(async (tx) => {
-    const wallet = await tx.select({ balance: coinWallets.balance }).from(coinWallets).where(eq(coinWallets.userId, userId)).get();
+    const wallet = await tx
+      .select({ balance: coinWallets.balance })
+      .from(coinWallets)
+      .where(eq(coinWallets.userId, userId))
+      .get();
     if (!wallet || wallet.balance < amount) throw new Error("INSUFFICIENT_BALANCE");
 
     await tx
@@ -98,8 +112,12 @@ export async function debitCoins(
       })
       .where(and(eq(coinWallets.userId, userId), sql`${coinWallets.balance} >= ${amount}`));
 
-    const after = await tx.select({ b: coinWallets.balance }).from(coinWallets).where(eq(coinWallets.userId, userId)).get();
-    const balanceAfter = after!.b;
+    const after = await tx
+      .select({ b: coinWallets.balance })
+      .from(coinWallets)
+      .where(eq(coinWallets.userId, userId))
+      .get();
+    const balanceAfter = after?.b ?? 0;
     if (balanceAfter < 0) throw new Error("BALANCE_WENT_NEGATIVE");
 
     await tx.insert(coinTransactions).values({
@@ -134,4 +152,3 @@ export async function getActiveBundles(db: Db) {
     .where(eq(coinBundles.isActive, true))
     .orderBy(coinBundles.displayOrder);
 }
-

@@ -33,7 +33,11 @@ export async function applyBadge(
 ): Promise<{ applicationId: string; newBalance: number }> {
   // Verify post exists and get author
   const post = await db
-    .select({ authorId: posts.authorId, communityId: posts.communityId, removedAt: posts.removedAt })
+    .select({
+      authorId: posts.authorId,
+      communityId: posts.communityId,
+      removedAt: posts.removedAt,
+    })
     .from(posts)
     .where(eq(posts.id, postId))
     .get();
@@ -46,7 +50,9 @@ export async function applyBadge(
   const badgeDef = await db
     .select()
     .from(postBadgeDefinitions)
-    .where(and(eq(postBadgeDefinitions.id, badgeDefinitionId), eq(postBadgeDefinitions.isActive, true)))
+    .where(
+      and(eq(postBadgeDefinitions.id, badgeDefinitionId), eq(postBadgeDefinitions.isActive, true)),
+    )
     .get();
 
   if (!badgeDef) throw new Error("BADGE_NOT_FOUND");
@@ -117,7 +123,10 @@ export async function getPostBadgeSummary(db: Db, postId: string) {
       displayOrder: postBadgeDefinitions.displayOrder,
     })
     .from(postBadgeApplications)
-    .innerJoin(postBadgeDefinitions, eq(postBadgeApplications.badgeDefinitionId, postBadgeDefinitions.id))
+    .innerJoin(
+      postBadgeDefinitions,
+      eq(postBadgeApplications.badgeDefinitionId, postBadgeDefinitions.id),
+    )
     .where(eq(postBadgeApplications.postId, postId))
     .groupBy(postBadgeApplications.badgeDefinitionId)
     .orderBy(postBadgeDefinitions.displayOrder);
@@ -126,10 +135,18 @@ export async function getPostBadgeSummary(db: Db, postId: string) {
 }
 
 // Verify user has enough coins for a badge
-export async function canAffordBadge(db: Db, userId: string, badgeDefinitionId: string): Promise<boolean> {
-  const [wallet, badge] = await Promise.all([
-    db.select({ balance: users.id }).from(users).where(eq(users.id, userId)).get(), // just checking existence
-    db.select({ coinCost: postBadgeDefinitions.coinCost }).from(postBadgeDefinitions).where(eq(postBadgeDefinitions.id, badgeDefinitionId)).get(),
+export async function canAffordBadge(
+  db: Db,
+  userId: string,
+  badgeDefinitionId: string,
+): Promise<boolean> {
+  const [, badge] = await Promise.all([
+    db.select({ id: users.id }).from(users).where(eq(users.id, userId)).get(),
+    db
+      .select({ coinCost: postBadgeDefinitions.coinCost })
+      .from(postBadgeDefinitions)
+      .where(eq(postBadgeDefinitions.id, badgeDefinitionId))
+      .get(),
   ]);
   if (!badge) return false;
   const { getBalance } = await import("~/lib/coins.server");

@@ -37,26 +37,58 @@ export async function action({ request, context }: ActionFunctionArgs) {
   if (intent === "verify" || intent === "unverify") {
     const handle = (form.get("handle") as string | null)?.trim().toLowerCase() ?? "";
     if (!handle) return { error: "Handle is required." };
-    const target = await db.query.users.findFirst({ where: eq(users.handle, handle), columns: { id: true, handle: true } });
+    const target = await db.query.users.findFirst({
+      where: eq(users.handle, handle),
+      columns: { id: true, handle: true },
+    });
     if (!target) return { error: `No user found with handle @${handle}.` };
-    await db.update(users).set({ isVerifiedStreamer: intent === "verify" }).where(eq(users.id, target.id));
-    return { ok: true, msg: `@${target.handle} is now ${intent === "verify" ? "verified ✓" : "unverified"}.` };
+    await db
+      .update(users)
+      .set({ isVerifiedStreamer: intent === "verify" })
+      .where(eq(users.id, target.id));
+    return {
+      ok: true,
+      msg: `@${target.handle} is now ${intent === "verify" ? "verified ✓" : "unverified"}.`,
+    };
   }
 
   if (intent === "coin_credit" || intent === "coin_debit") {
     const handle = (form.get("coinHandle") as string | null)?.trim().toLowerCase() ?? "";
     const amount = Number(form.get("coinAmount") ?? 0);
     const note = (form.get("coinNote") as string | null)?.trim() ?? "";
-    if (!handle || !amount || amount <= 0) return { error: "Handle and positive amount are required." };
-    const target = await db.query.users.findFirst({ where: eq(users.handle, handle), columns: { id: true, handle: true } });
+    if (!handle || !amount || amount <= 0)
+      return { error: "Handle and positive amount are required." };
+    const target = await db.query.users.findFirst({
+      where: eq(users.handle, handle),
+      columns: { id: true, handle: true },
+    });
     if (!target) return { error: `No user found with handle @${handle}.` };
     try {
       if (intent === "coin_credit") {
-        await creditCoins(db, target.id, amount, "admin_credit", "admin", currentUser.id, note || `Admin credit by ${currentUser.handle}`);
+        await creditCoins(
+          db,
+          target.id,
+          amount,
+          "admin_credit",
+          "admin",
+          currentUser.id,
+          note || `Admin credit by ${currentUser.handle}`,
+        );
       } else {
-        await debitCoins(db, target.id, amount, "admin_debit", "admin", currentUser.id, note || `Admin debit by ${currentUser.handle}`);
+        await debitCoins(
+          db,
+          target.id,
+          amount,
+          "admin_debit",
+          "admin",
+          currentUser.id,
+          note || `Admin debit by ${currentUser.handle}`,
+        );
       }
-      return { ok: true, msg: `${intent === "coin_credit" ? "Credited" : "Debited"} ${amount} coins ${intent === "coin_credit" ? "to" : "from"} @${target.handle}.` };
+      return {
+        ok: true,
+        msg: `${intent === "coin_credit" ? "Credited" : "Debited"} ${amount} coins ${intent === "coin_credit" ? "to" : "from"} @${target.handle}.`,
+      };
     } catch (err) {
       return { error: err instanceof Error ? err.message : "Failed." };
     }
@@ -65,18 +97,32 @@ export async function action({ request, context }: ActionFunctionArgs) {
   if (intent === "bundle_toggle") {
     const bundleId = form.get("bundleId") as string | null;
     if (!bundleId) return { error: "Missing bundleId." };
-    const bundle = await db.select({ isActive: coinBundles.isActive }).from(coinBundles).where(eq(coinBundles.id, bundleId)).get();
+    const bundle = await db
+      .select({ isActive: coinBundles.isActive })
+      .from(coinBundles)
+      .where(eq(coinBundles.id, bundleId))
+      .get();
     if (!bundle) return { error: "Bundle not found." };
-    await db.update(coinBundles).set({ isActive: !bundle.isActive }).where(eq(coinBundles.id, bundleId));
+    await db
+      .update(coinBundles)
+      .set({ isActive: !bundle.isActive })
+      .where(eq(coinBundles.id, bundleId));
     return { ok: true, msg: `Bundle ${bundle.isActive ? "deactivated" : "activated"}.` };
   }
 
   if (intent === "badge_toggle") {
     const badgeId = form.get("badgeId") as string | null;
     if (!badgeId) return { error: "Missing badgeId." };
-    const badge = await db.select({ isActive: postBadgeDefinitions.isActive }).from(postBadgeDefinitions).where(eq(postBadgeDefinitions.id, badgeId)).get();
+    const badge = await db
+      .select({ isActive: postBadgeDefinitions.isActive })
+      .from(postBadgeDefinitions)
+      .where(eq(postBadgeDefinitions.id, badgeId))
+      .get();
     if (!badge) return { error: "Badge not found." };
-    await db.update(postBadgeDefinitions).set({ isActive: !badge.isActive }).where(eq(postBadgeDefinitions.id, badgeId));
+    await db
+      .update(postBadgeDefinitions)
+      .set({ isActive: !badge.isActive })
+      .where(eq(postBadgeDefinitions.id, badgeId));
     return { ok: true, msg: `Badge ${badge.isActive ? "deactivated" : "activated"}.` };
   }
 
@@ -178,7 +224,10 @@ export default function AdminPage() {
           {/* Coin management */}
           <div
             className="rounded-lg p-5 mt-6"
-            style={{ background: "var(--color-bg-elev-1)", border: "1px solid var(--color-border)" }}
+            style={{
+              background: "var(--color-bg-elev-1)",
+              border: "1px solid var(--color-border)",
+            }}
           >
             <h2 className="text-sm font-semibold mb-4" style={{ color: "var(--color-text)" }}>
               Adjust User Coins
@@ -190,7 +239,12 @@ export default function AdminPage() {
                 placeholder="Handle (without @)"
                 required
                 className="w-full rounded-md px-3 py-2 text-sm"
-                style={{ background: "var(--color-bg-elev-2)", border: "1px solid var(--color-border)", color: "var(--color-text)", outline: "none" }}
+                style={{
+                  background: "var(--color-bg-elev-2)",
+                  border: "1px solid var(--color-border)",
+                  color: "var(--color-text)",
+                  outline: "none",
+                }}
               />
               <input
                 name="coinAmount"
@@ -199,24 +253,44 @@ export default function AdminPage() {
                 min={1}
                 required
                 className="w-full rounded-md px-3 py-2 text-sm"
-                style={{ background: "var(--color-bg-elev-2)", border: "1px solid var(--color-border)", color: "var(--color-text)", outline: "none" }}
+                style={{
+                  background: "var(--color-bg-elev-2)",
+                  border: "1px solid var(--color-border)",
+                  color: "var(--color-text)",
+                  outline: "none",
+                }}
               />
               <input
                 name="coinNote"
                 type="text"
                 placeholder="Note (optional)"
                 className="w-full rounded-md px-3 py-2 text-sm"
-                style={{ background: "var(--color-bg-elev-2)", border: "1px solid var(--color-border)", color: "var(--color-text)", outline: "none" }}
+                style={{
+                  background: "var(--color-bg-elev-2)",
+                  border: "1px solid var(--color-border)",
+                  color: "var(--color-text)",
+                  outline: "none",
+                }}
               />
               <div className="flex gap-2">
-                <button type="submit" name="intent" value="coin_credit" disabled={submitting}
+                <button
+                  type="submit"
+                  name="intent"
+                  value="coin_credit"
+                  disabled={submitting}
                   className="px-4 py-1.5 text-sm font-medium rounded-md disabled:opacity-60"
-                  style={{ background: "var(--color-success)", color: "#000" }}>
+                  style={{ background: "var(--color-success)", color: "#000" }}
+                >
                   Credit
                 </button>
-                <button type="submit" name="intent" value="coin_debit" disabled={submitting}
+                <button
+                  type="submit"
+                  name="intent"
+                  value="coin_debit"
+                  disabled={submitting}
                   className="px-4 py-1.5 text-sm font-medium rounded-md disabled:opacity-60"
-                  style={{ background: "var(--color-danger)", color: "#fff" }}>
+                  style={{ background: "var(--color-danger)", color: "#fff" }}
+                >
                   Debit
                 </button>
               </div>
@@ -226,7 +300,10 @@ export default function AdminPage() {
           {/* Bundle management */}
           <div
             className="rounded-lg p-5 mt-6"
-            style={{ background: "var(--color-bg-elev-1)", border: "1px solid var(--color-border)" }}
+            style={{
+              background: "var(--color-bg-elev-1)",
+              border: "1px solid var(--color-border)",
+            }}
           >
             <h2 className="text-sm font-semibold mb-4" style={{ color: "var(--color-text)" }}>
               Coin Bundles
@@ -239,9 +316,17 @@ export default function AdminPage() {
                   </span>
                   <Form method="post">
                     <input type="hidden" name="bundleId" value={b.id} />
-                    <button type="submit" name="intent" value="bundle_toggle"
+                    <button
+                      type="submit"
+                      name="intent"
+                      value="bundle_toggle"
                       className="text-xs px-3 py-1 rounded-md"
-                      style={{ background: "var(--color-bg-elev-2)", border: "1px solid var(--color-border)", color: b.isActive ? "var(--color-success)" : "var(--color-text-faint)" }}>
+                      style={{
+                        background: "var(--color-bg-elev-2)",
+                        border: "1px solid var(--color-border)",
+                        color: b.isActive ? "var(--color-success)" : "var(--color-text-faint)",
+                      }}
+                    >
                       {b.isActive ? "Active" : "Inactive"}
                     </button>
                   </Form>
@@ -253,7 +338,10 @@ export default function AdminPage() {
           {/* Badge definition management */}
           <div
             className="rounded-lg p-5 mt-6"
-            style={{ background: "var(--color-bg-elev-1)", border: "1px solid var(--color-border)" }}
+            style={{
+              background: "var(--color-bg-elev-1)",
+              border: "1px solid var(--color-border)",
+            }}
           >
             <h2 className="text-sm font-semibold mb-4" style={{ color: "var(--color-text)" }}>
               Badge Definitions
@@ -266,9 +354,17 @@ export default function AdminPage() {
                   </span>
                   <Form method="post">
                     <input type="hidden" name="badgeId" value={b.id} />
-                    <button type="submit" name="intent" value="badge_toggle"
+                    <button
+                      type="submit"
+                      name="intent"
+                      value="badge_toggle"
                       className="text-xs px-3 py-1 rounded-md"
-                      style={{ background: "var(--color-bg-elev-2)", border: "1px solid var(--color-border)", color: b.isActive ? "var(--color-success)" : "var(--color-text-faint)" }}>
+                      style={{
+                        background: "var(--color-bg-elev-2)",
+                        border: "1px solid var(--color-border)",
+                        color: b.isActive ? "var(--color-success)" : "var(--color-text-faint)",
+                      }}
+                    >
                       {b.isActive ? "Active" : "Inactive"}
                     </button>
                   </Form>

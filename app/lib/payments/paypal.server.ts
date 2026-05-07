@@ -25,7 +25,10 @@ async function getAccessToken(env: PayPalEnv): Promise<string> {
   const creds = btoa(`${env.PAYPAL_CLIENT_ID}:${env.PAYPAL_CLIENT_SECRET}`);
   const res = await fetch(`${baseUrl(env)}/v1/oauth2/token`, {
     method: "POST",
-    headers: { Authorization: `Basic ${creds}`, "Content-Type": "application/x-www-form-urlencoded" },
+    headers: {
+      Authorization: `Basic ${creds}`,
+      "Content-Type": "application/x-www-form-urlencoded",
+    },
     body: "grant_type=client_credentials",
   });
   if (!res.ok) throw new Error(`PayPal auth failed: ${res.status}`);
@@ -124,14 +127,11 @@ export async function verifyWebhookSignature(
   };
 
   try {
-    const res = await fetch(
-      `${baseUrl(env)}/v1/notifications/verify-webhook-signature`,
-      {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      },
-    );
+    const res = await fetch(`${baseUrl(env)}/v1/notifications/verify-webhook-signature`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
     if (!res.ok) return false;
     const data = (await res.json()) as { verification_status: string };
     return data.verification_status === "SUCCESS";

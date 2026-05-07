@@ -20,7 +20,14 @@ export async function action({ request, context }: ActionFunctionArgs) {
     return new Response("Forbidden", { status: 403 });
   }
 
-  let event: { payment_id: string; payment_status: string; order_id?: string; price_amount?: number; pay_amount?: number; pay_currency?: string };
+  let event: {
+    payment_id: string;
+    payment_status: string;
+    order_id?: string;
+    price_amount?: number;
+    pay_amount?: number;
+    pay_currency?: string;
+  };
   try {
     event = JSON.parse(rawBody);
   } catch {
@@ -63,8 +70,24 @@ export async function action({ request, context }: ActionFunctionArgs) {
         .get();
 
       if (order && order.status === "pending") {
-        await db.update(paymentOrders).set({ status: "completed", providerTxId: eventId, completedAt: new Date(), updatedAt: new Date() }).where(eq(paymentOrders.id, order.id));
-        await creditCoins(db, order.userId, order.coinAmount, "purchase", "payment_order", order.id, `Crypto webhook: ${order.coinAmount} coins`);
+        await db
+          .update(paymentOrders)
+          .set({
+            status: "completed",
+            providerTxId: eventId,
+            completedAt: new Date(),
+            updatedAt: new Date(),
+          })
+          .where(eq(paymentOrders.id, order.id));
+        await creditCoins(
+          db,
+          order.userId,
+          order.coinAmount,
+          "purchase",
+          "payment_order",
+          order.id,
+          `Crypto webhook: ${order.coinAmount} coins`,
+        );
         await db.insert(adminMoneyLogs).values({
           id: crypto.randomUUID(),
           adminUserId: order.userId,
@@ -78,10 +101,16 @@ export async function action({ request, context }: ActionFunctionArgs) {
       }
     }
 
-    await db.update(paymentWebhookEvents).set({ processed: true }).where(eq(paymentWebhookEvents.id, webhookRowId));
+    await db
+      .update(paymentWebhookEvents)
+      .set({ processed: true })
+      .where(eq(paymentWebhookEvents.id, webhookRowId));
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    await db.update(paymentWebhookEvents).set({ error: msg }).where(eq(paymentWebhookEvents.id, webhookRowId));
+    await db
+      .update(paymentWebhookEvents)
+      .set({ error: msg })
+      .where(eq(paymentWebhookEvents.id, webhookRowId));
     console.error("Crypto webhook processing error:", err);
   }
 

@@ -1,7 +1,6 @@
 import type { ActionFunctionArgs } from "@remix-run/cloudflare";
 import { eq } from "drizzle-orm";
 import { getCurrentUser } from "~/lib/auth/user.server";
-import { getActiveBundles } from "~/lib/coins.server";
 import { createDb } from "~/lib/db/index";
 import type { PayPalEnv } from "~/lib/payments/paypal.server";
 import { createOrder } from "~/lib/payments/paypal.server";
@@ -15,8 +14,9 @@ export async function action({ request, context }: ActionFunctionArgs) {
   // Rate limit: 5 payment initiations per 10 min
   const rlKey = `rl:paypal:create:${user.id}`;
   const rl = await env.KV.get(rlKey);
-  if (rl && Number(rl) >= 5) return Response.json({ error: "Too many requests. Try again later." }, { status: 429 });
-  await env.KV.put(rlKey, String((Number(rl ?? 0)) + 1), { expirationTtl: 600 });
+  if (rl && Number(rl) >= 5)
+    return Response.json({ error: "Too many requests. Try again later." }, { status: 429 });
+  await env.KV.put(rlKey, String(Number(rl ?? 0) + 1), { expirationTtl: 600 });
 
   const form = await request.formData();
   const bundleId = form.get("bundleId") as string | null;
@@ -24,7 +24,8 @@ export async function action({ request, context }: ActionFunctionArgs) {
 
   const db = createDb(env.DB);
   const bundle = await db.select().from(coinBundles).where(eq(coinBundles.id, bundleId)).get();
-  if (!bundle || !bundle.isActive) return Response.json({ error: "Invalid bundle" }, { status: 400 });
+  if (!bundle || !bundle.isActive)
+    return Response.json({ error: "Invalid bundle" }, { status: 400 });
 
   const orderId = crypto.randomUUID();
   const origin = new URL(request.url).origin;
@@ -49,7 +50,8 @@ export async function action({ request, context }: ActionFunctionArgs) {
       provider: "paypal",
       providerOrderId,
       status: "pending",
-      ipAddress: request.headers.get("cf-connecting-ip") ?? request.headers.get("x-forwarded-for") ?? "",
+      ipAddress:
+        request.headers.get("cf-connecting-ip") ?? request.headers.get("x-forwarded-for") ?? "",
       createdAt: new Date(),
       updatedAt: new Date(),
     });

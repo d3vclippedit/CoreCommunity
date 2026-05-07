@@ -1,16 +1,14 @@
 import type { LoaderFunctionArgs, MetaFunction } from "@remix-run/cloudflare";
 import { redirect, useLoaderData, useRouteLoaderData } from "@remix-run/react";
-import { getCurrentUser } from "~/lib/auth/user.server";
-import { createDb } from "~/lib/db/index";
-import { checkEligibility, getPayoutHistory } from "~/lib/monetization.server";
 import { AppShell } from "~/components/layout/AppShell";
 import { Footer } from "~/components/layout/Footer";
 import { Header } from "~/components/layout/Header";
+import { getCurrentUser } from "~/lib/auth/user.server";
+import { createDb } from "~/lib/db/index";
+import { checkEligibility, getPayoutHistory } from "~/lib/monetization.server";
 import type { loader as rootLoader } from "~/root";
 
-export const meta: MetaFunction = () => [
-  { title: "Creator Monetization — CORE" },
-];
+export const meta: MetaFunction = () => [{ title: "Creator Monetization — CORE" }];
 
 export async function loader({ request, context }: LoaderFunctionArgs) {
   const { env } = context.cloudflare;
@@ -32,15 +30,26 @@ function ProgressBar({ value, max, label }: { value: number; max: number; label:
   return (
     <div className="flex flex-col gap-1.5">
       <div className="flex items-center justify-between">
-        <span className="text-xs" style={{ color: "var(--color-text-dim)" }}>{label}</span>
-        <span className="text-xs font-medium" style={{ color: done ? "var(--color-success)" : "var(--color-text-dim)" }}>
+        <span className="text-xs" style={{ color: "var(--color-text-dim)" }}>
+          {label}
+        </span>
+        <span
+          className="text-xs font-medium"
+          style={{ color: done ? "var(--color-success)" : "var(--color-text-dim)" }}
+        >
           {done ? "✓ Done" : `${value} / ${max}`}
         </span>
       </div>
-      <div className="h-1.5 w-full rounded-full overflow-hidden" style={{ background: "var(--color-bg-elev-2)" }}>
+      <div
+        className="h-1.5 w-full rounded-full overflow-hidden"
+        style={{ background: "var(--color-bg-elev-2)" }}
+      >
         <div
           className="h-full rounded-full transition-all"
-          style={{ width: `${pct}%`, background: done ? "var(--color-success)" : "var(--color-text)" }}
+          style={{
+            width: `${pct}%`,
+            background: done ? "var(--color-success)" : "var(--color-text)",
+          }}
         />
       </div>
     </div>
@@ -48,7 +57,7 @@ function ProgressBar({ value, max, label }: { value: number; max: number; label:
 }
 
 export default function MonetizationPage() {
-  const { user, eligibility, payoutHistory } = useLoaderData<typeof loader>();
+  const { eligibility, payoutHistory } = useLoaderData<typeof loader>();
   const root = useRouteLoaderData<typeof rootLoader>("root");
   const rootUser = root?.user ?? null;
 
@@ -74,12 +83,17 @@ export default function MonetizationPage() {
           {/* Eligibility status */}
           <div
             className="rounded-xl p-5 mb-5"
-            style={{ background: "var(--color-bg-elev-1)", border: `1px solid ${eligibility.isEligible ? "var(--color-success)" : "var(--color-border)"}` }}
+            style={{
+              background: "var(--color-bg-elev-1)",
+              border: `1px solid ${eligibility.isEligible ? "var(--color-success)" : "var(--color-border)"}`,
+            }}
           >
             <div className="flex items-center gap-2 mb-4">
               <span className="text-lg">{eligibility.isEligible ? "✅" : "⏳"}</span>
               <h2 className="text-sm font-semibold" style={{ color: "var(--color-text)" }}>
-                {eligibility.isEligible ? "You're eligible for payouts!" : "Requirements to unlock payouts"}
+                {eligibility.isEligible
+                  ? "You're eligible for payouts!"
+                  : "Requirements to unlock payouts"}
               </h2>
             </div>
 
@@ -87,24 +101,41 @@ export default function MonetizationPage() {
               <ProgressBar
                 value={eligibility.followerCount}
                 max={eligibility.followerGoal}
-                label={`Followers (last 28 days)`}
+                label="Followers (last 28 days)"
               />
               <ProgressBar
                 value={eligibility.postCount}
                 max={eligibility.postGoal}
-                label={`Posts (last 28 days)`}
+                label="Posts (last 28 days)"
               />
               <div className="flex flex-col gap-1.5">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs" style={{ color: "var(--color-text-dim)" }}>Badge earnings threshold</span>
-                  <span className="text-xs font-medium" style={{ color: eligibility.badgeValueMet ? "var(--color-success)" : "var(--color-text-dim)" }}>
+                  <span className="text-xs" style={{ color: "var(--color-text-dim)" }}>
+                    Badge earnings threshold
+                  </span>
+                  <span
+                    className="text-xs font-medium"
+                    style={{
+                      color: eligibility.badgeValueMet
+                        ? "var(--color-success)"
+                        : "var(--color-text-dim)",
+                    }}
+                  >
                     {eligibility.badgeValueMet ? "✓ Met" : "Not yet met"}
                   </span>
                 </div>
-                <div className="h-1.5 w-full rounded-full overflow-hidden" style={{ background: "var(--color-bg-elev-2)" }}>
+                <div
+                  className="h-1.5 w-full rounded-full overflow-hidden"
+                  style={{ background: "var(--color-bg-elev-2)" }}
+                >
                   <div
                     className="h-full rounded-full"
-                    style={{ width: eligibility.badgeValueMet ? "100%" : "0%", background: eligibility.badgeValueMet ? "var(--color-success)" : "var(--color-text)" }}
+                    style={{
+                      width: eligibility.badgeValueMet ? "100%" : "0%",
+                      background: eligibility.badgeValueMet
+                        ? "var(--color-success)"
+                        : "var(--color-text)",
+                    }}
                   />
                 </div>
               </div>
@@ -120,9 +151,14 @@ export default function MonetizationPage() {
           {/* How payouts work */}
           <div
             className="rounded-xl p-5 mb-5"
-            style={{ background: "var(--color-bg-elev-1)", border: "1px solid var(--color-border)" }}
+            style={{
+              background: "var(--color-bg-elev-1)",
+              border: "1px solid var(--color-border)",
+            }}
           >
-            <h2 className="text-sm font-semibold mb-3" style={{ color: "var(--color-text)" }}>How payouts work</h2>
+            <h2 className="text-sm font-semibold mb-3" style={{ color: "var(--color-text)" }}>
+              How payouts work
+            </h2>
             <ul className="flex flex-col gap-2">
               {[
                 "When viewers give your posts badges, you earn a share of the coins spent.",
@@ -132,25 +168,37 @@ export default function MonetizationPage() {
               ].map((item) => (
                 <li key={item} className="flex items-start gap-2">
                   <span style={{ color: "var(--color-text-faint)", flexShrink: 0 }}>·</span>
-                  <span className="text-sm" style={{ color: "var(--color-text-dim)" }}>{item}</span>
+                  <span className="text-sm" style={{ color: "var(--color-text-dim)" }}>
+                    {item}
+                  </span>
                 </li>
               ))}
             </ul>
           </div>
 
           {/* Payout history */}
-          <h2 className="text-sm font-semibold mb-3" style={{ color: "var(--color-text)" }}>Payout history</h2>
+          <h2 className="text-sm font-semibold mb-3" style={{ color: "var(--color-text)" }}>
+            Payout history
+          </h2>
           {payoutHistory.length === 0 ? (
             <div
               className="rounded-xl p-5 text-center"
-              style={{ background: "var(--color-bg-elev-1)", border: "1px solid var(--color-border)" }}
+              style={{
+                background: "var(--color-bg-elev-1)",
+                border: "1px solid var(--color-border)",
+              }}
             >
-              <p className="text-sm" style={{ color: "var(--color-text-faint)" }}>No payouts yet.</p>
+              <p className="text-sm" style={{ color: "var(--color-text-faint)" }}>
+                No payouts yet.
+              </p>
             </div>
           ) : (
             <div
               className="rounded-xl overflow-hidden"
-              style={{ background: "var(--color-bg-elev-1)", border: "1px solid var(--color-border)" }}
+              style={{
+                background: "var(--color-bg-elev-1)",
+                border: "1px solid var(--color-border)",
+              }}
             >
               {payoutHistory.map((payout, i) => (
                 <div
@@ -163,12 +211,21 @@ export default function MonetizationPage() {
                       {PAYOUT_STATUS_LABELS[payout.status] ?? payout.status}
                     </p>
                     <p className="text-xs mt-0.5" style={{ color: "var(--color-text-faint)" }}>
-                      {new Date(payout.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                      {new Date(payout.createdAt).toLocaleDateString("en-US", {
+                        month: "short",
+                        day: "numeric",
+                        year: "numeric",
+                      })}
                     </p>
                   </div>
                   <span
                     className="text-sm font-semibold"
-                    style={{ color: payout.status === "completed" ? "var(--color-success)" : "var(--color-text-dim)" }}
+                    style={{
+                      color:
+                        payout.status === "completed"
+                          ? "var(--color-success)"
+                          : "var(--color-text-dim)",
+                    }}
                   >
                     {PAYOUT_STATUS_LABELS[payout.status] ?? payout.status}
                   </span>
