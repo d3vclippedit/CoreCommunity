@@ -116,6 +116,7 @@ export async function action({ params, request, context }: ActionFunctionArgs) {
     const iconUrl = (form.get("iconUrl") as string | null)?.trim() ?? "";
     const bannerUrl = (form.get("bannerUrl") as string | null)?.trim() ?? "";
     const backgroundCss = (form.get("backgroundCss") as string | null)?.trim() ?? "";
+    const twitchChannel = (form.get("twitchChannel") as string | null)?.trim() ?? "";
     const memberCanPostLinks = form.get("memberCanPostLinks") === "1";
     const memberCanPostImages = form.get("memberCanPostImages") === "1";
     const memberCanPostVideos = form.get("memberCanPostVideos") === "1";
@@ -146,6 +147,7 @@ export async function action({ params, request, context }: ActionFunctionArgs) {
         iconUrl: iconUrl || null,
         bannerUrl: bannerUrl || null,
         backgroundCss: backgroundCss || null,
+        twitchChannel: twitchChannel || null,
         memberCanPostLinks,
         memberCanPostImages,
         memberCanPostVideos,
@@ -527,6 +529,34 @@ export default function ModSettings() {
                 communitySlug={community.slug}
                 defaultValue={community.backgroundCss}
               />
+
+              {/* Twitch channel */}
+              <div className="flex flex-col gap-1.5">
+                <label
+                  htmlFor="twitchChannel"
+                  className="text-sm font-medium"
+                  style={{ color: "var(--color-text)" }}
+                >
+                  Twitch channel
+                </label>
+                <input
+                  type="text"
+                  id="twitchChannel"
+                  name="twitchChannel"
+                  defaultValue={community.twitchChannel ?? ""}
+                  placeholder="e.g. xqc"
+                  className="rounded-md px-3 py-2 text-sm"
+                  style={{
+                    background: "var(--color-bg-elev-2)",
+                    border: "1px solid var(--color-border)",
+                    color: "var(--color-text)",
+                    outline: "none",
+                  }}
+                />
+                <p className="text-xs" style={{ color: "var(--color-text-faint)" }}>
+                  Your Twitch username. Enables live stream + chat embed in the community sidebar.
+                </p>
+              </div>
 
               <div className="flex flex-col gap-1.5">
                 <label

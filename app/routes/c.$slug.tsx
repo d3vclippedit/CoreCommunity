@@ -7,7 +7,7 @@ import {
   useLoaderData,
   useRouteLoaderData,
 } from "@remix-run/react";
-import { and, eq, isNull } from "drizzle-orm";
+import { and, eq, isNull, ne } from "drizzle-orm";
 import type React from "react";
 import { AppShell } from "~/components/layout/AppShell";
 import { Footer } from "~/components/layout/Footer";
@@ -15,7 +15,7 @@ import { Header } from "~/components/layout/Header";
 import { getCurrentUser } from "~/lib/auth/user.server";
 import { createDb } from "~/lib/db/index";
 import type { loader as rootLoader } from "~/root";
-import { communities, communityMemberships } from "../../db/schema";
+import { communities, communityMemberships, users } from "../../db/schema";
 import { CommunityAvatar } from "./communities._index";
 
 export async function loader({ params, request, context }: LoaderFunctionArgs) {
@@ -40,16 +40,51 @@ export async function loader({ params, request, context }: LoaderFunctionArgs) {
     });
   }
 
-  return { community, membership: membership ?? null, user };
+  // Staff members (everyone with a non-member role) + owner user info
+  const staffRows = await db
+    .select({
+      userId: communityMemberships.userId,
+      role: communityMemberships.role,
+      handle: users.handle,
+      displayName: users.displayName,
+      avatarUrl: users.avatarUrl,
+    })
+    .from(communityMemberships)
+    .innerJoin(users, eq(communityMemberships.userId, users.id))
+    .where(
+      and(
+        eq(communityMemberships.communityId, community.id),
+        ne(communityMemberships.role, "member"),
+      ),
+    );
+
+  // Owner user (may or may not have a membership row — always show in Streamer section)
+  const ownerUser = await db.query.users.findFirst({
+    where: eq(users.id, community.ownerId),
+    columns: { id: true, handle: true, displayName: true, avatarUrl: true },
+  });
+
+  const host = new URL(request.url).hostname;
+
+  return {
+    community,
+    membership: membership ?? null,
+    user,
+    staffRows,
+    ownerUser: ownerUser ?? null,
+    host,
+  };
 }
 
 export default function CommunityHub() {
-  const { community, membership } = useLoaderData<typeof loader>();
+  const { community, membership, staffRows, ownerUser, host } = useLoaderData<typeof loader>();
   const root = useRouteLoaderData<typeof rootLoader>("root");
   const rootUser = root?.user ?? null;
 
   const isMod =
     membership?.role === "mod" || membership?.role === "senior_mod" || membership?.role === "admin";
+
+  const twitchChannel = community.twitchChannel;
 
   const leftNav = (
     <nav className="flex flex-col gap-1" aria-label="Community navigation">
@@ -89,39 +124,170 @@ export default function CommunityHub() {
           user={rootUser}
         />
       </div>
+
+      {/* Live stream embed */}
+      {twitchChannel && (
+        <div className="mt-4 flex flex-col gap-2">
+          <p
+            className="text-xs font-semibold uppercase tracking-wide"
+            style={{ color: "var(--color-text-faint)" }}
+          >
+            Live stream
+          </p>
+          <div
+            className="rounded-md overflow-hidden"
+            style={{ border: "1px solid var(--color-border)" }}
+          >
+            <iframe
+              src={`https://player.twitch.tv/?channel=${twitchChannel}&parent=${host}&muted=true`}
+              title={`${community.name} live stream`}
+              width="100%"
+              height="160"
+              allowFullScreen
+              style={{ display: "block" }}
+            />
+          </div>
+
+          {/* Live chat embed */}
+          <p
+            className="text-xs font-semibold uppercase tracking-wide mt-1"
+            style={{ color: "var(--color-text-faint)" }}
+          >
+            Live chat
+          </p>
+          <div
+            className="rounded-md overflow-hidden"
+            style={{ border: "1px solid var(--color-border)" }}
+          >
+            <iframe
+              src={`https://www.twitch.tv/embed/${twitchChannel}/chat?parent=${host}&darkpopout`}
+              title={`${community.name} live chat`}
+              width="100%"
+              height="400"
+              style={{ display: "block" }}
+            />
+          </div>
+        </div>
+      )}
     </nav>
   );
 
+  // Group staff by role for the members rail
+  const admins = staffRows.filter((s) => s.role === "admin");
+  const seniorMods = staffRows.filter((s) => s.role === "senior_mod");
+  const mods = staffRows.filter((s) => s.role === "mod");
+
   const rightRail = (
-    <div
-      className="rounded-lg p-4"
-      style={{ background: "var(--color-bg-elev-1)", border: "1px solid var(--color-border)" }}
-    >
-      <h2 className="text-sm font-semibold mb-1" style={{ color: "var(--color-text)" }}>
-        {community.name}
-      </h2>
-      {(community.tagline || community.description) && (
-        <p className="text-xs leading-relaxed mb-3" style={{ color: "var(--color-text-dim)" }}>
-          {community.tagline || community.description}
-        </p>
-      )}
-      <div className="flex flex-col gap-1.5">
-        <div className="flex justify-between text-xs" style={{ color: "var(--color-text-faint)" }}>
-          <span>Members</span>
-          <span className="font-medium" style={{ color: "var(--color-text)" }}>
-            {community.memberCount.toLocaleString()}
-          </span>
+    <div className="flex flex-col gap-4">
+      {/* Community info card */}
+      <div
+        className="rounded-lg p-4"
+        style={{ background: "var(--color-bg-elev-1)", border: "1px solid var(--color-border)" }}
+      >
+        <h2 className="text-sm font-semibold mb-1" style={{ color: "var(--color-text)" }}>
+          {community.name}
+        </h2>
+        {(community.tagline || community.description) && (
+          <p className="text-xs leading-relaxed mb-3" style={{ color: "var(--color-text-dim)" }}>
+            {community.tagline || community.description}
+          </p>
+        )}
+        <div className="flex flex-col gap-1.5">
+          <div
+            className="flex justify-between text-xs"
+            style={{ color: "var(--color-text-faint)" }}
+          >
+            <span>Members</span>
+            <span className="font-medium" style={{ color: "var(--color-text)" }}>
+              {community.memberCount.toLocaleString()}
+            </span>
+          </div>
+        </div>
+        {community.bannerUrl && (
+          <img
+            src={community.bannerUrl}
+            alt=""
+            aria-hidden="true"
+            className="w-full rounded-md mt-3 object-cover"
+            style={{ height: "80px" }}
+          />
+        )}
+      </div>
+
+      {/* Members list card */}
+      <div
+        className="rounded-lg p-4"
+        style={{ background: "var(--color-bg-elev-1)", border: "1px solid var(--color-border)" }}
+      >
+        <h2 className="text-sm font-semibold mb-3" style={{ color: "var(--color-text)" }}>
+          Members
+        </h2>
+
+        {ownerUser && (
+          <MemberSection label="Streamer / Owner">
+            <MemberRow
+              handle={ownerUser.handle}
+              displayName={ownerUser.displayName}
+              avatarUrl={ownerUser.avatarUrl}
+            />
+          </MemberSection>
+        )}
+
+        {admins.length > 0 && (
+          <MemberSection label="Admins">
+            {admins.map((m) => (
+              <MemberRow
+                key={m.userId}
+                handle={m.handle}
+                displayName={m.displayName}
+                avatarUrl={m.avatarUrl}
+              />
+            ))}
+          </MemberSection>
+        )}
+
+        {seniorMods.length > 0 && (
+          <MemberSection label="Senior Mods">
+            {seniorMods.map((m) => (
+              <MemberRow
+                key={m.userId}
+                handle={m.handle}
+                displayName={m.displayName}
+                avatarUrl={m.avatarUrl}
+              />
+            ))}
+          </MemberSection>
+        )}
+
+        {mods.length > 0 && (
+          <MemberSection label="Mods">
+            {mods.map((m) => (
+              <MemberRow
+                key={m.userId}
+                handle={m.handle}
+                displayName={m.displayName}
+                avatarUrl={m.avatarUrl}
+              />
+            ))}
+          </MemberSection>
+        )}
+
+        <div className="mt-3 pt-3" style={{ borderTop: "1px solid var(--color-border)" }}>
+          <div
+            className="flex justify-between text-xs"
+            style={{ color: "var(--color-text-faint)" }}
+          >
+            <span>Members</span>
+            <Link
+              to={`/c/${community.slug}/members`}
+              className="no-underline hover:underline"
+              style={{ color: "var(--color-text-faint)" }}
+            >
+              {community.memberCount.toLocaleString()} total →
+            </Link>
+          </div>
         </div>
       </div>
-      {community.bannerUrl && (
-        <img
-          src={community.bannerUrl}
-          alt=""
-          aria-hidden="true"
-          className="w-full rounded-md mt-3 object-cover"
-          style={{ height: "80px" }}
-        />
-      )}
     </div>
   );
 
@@ -141,6 +307,60 @@ export default function CommunityHub() {
       </AppShell>
       <Footer />
     </div>
+  );
+}
+
+function MemberSection({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="mb-3">
+      <p
+        className="text-xs font-semibold uppercase tracking-wide mb-1.5"
+        style={{ color: "var(--color-text-faint)" }}
+      >
+        {label}
+      </p>
+      <div className="flex flex-col gap-1">{children}</div>
+    </div>
+  );
+}
+
+function MemberRow({
+  handle,
+  displayName,
+  avatarUrl,
+}: {
+  handle: string;
+  displayName: string;
+  avatarUrl: string | null | undefined;
+}) {
+  return (
+    <Link
+      to={`/u/${handle}`}
+      className="flex items-center gap-2 no-underline rounded-md px-1.5 py-1 transition-colors hover:bg-[var(--color-bg-elev-2)]"
+    >
+      <div
+        className="w-6 h-6 rounded-full flex-shrink-0 flex items-center justify-center text-xs font-semibold"
+        style={{
+          background: avatarUrl ? undefined : "var(--color-bg-elev-2)",
+          border: "1px solid var(--color-border)",
+          backgroundImage: avatarUrl ? `url(${avatarUrl})` : undefined,
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+          color: "var(--color-text-dim)",
+        }}
+      >
+        {!avatarUrl && displayName[0]?.toUpperCase()}
+      </div>
+      <span className="text-xs truncate" style={{ color: "var(--color-text-dim)" }}>
+        {displayName}
+      </span>
+    </Link>
   );
 }
 
