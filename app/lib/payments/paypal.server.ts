@@ -67,7 +67,7 @@ export async function createOrder(
         return_url: returnUrl,
         cancel_url: cancelUrl,
         brand_name: "CORE",
-        landing_page: "NO_PREFERENCE",
+        landing_page: "LOGIN",
         user_action: "PAY_NOW",
       },
     }),
