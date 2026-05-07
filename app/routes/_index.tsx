@@ -561,12 +561,12 @@ function LandingPage() {
             </div>
           </div>
 
-          {/* Right: animated logo */}
+          {/* Right: interactive network */}
           <div
             className="hidden lg:flex flex-shrink-0 items-center justify-center"
             style={{ width: "46%", maxWidth: "660px" }}
           >
-            <CoreLogo className="w-full h-auto" />
+            <CoreLogo className="w-full" style={{ height: "min(580px, 70vh)" }} />
           </div>
         </div>
       </div>
