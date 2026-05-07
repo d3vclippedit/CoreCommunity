@@ -398,11 +398,16 @@ export default function ModSettings() {
 
           {/* ── General settings ── */}
           <div className="rounded-lg p-6" style={cardStyle}>
-            <h2 className="text-sm font-semibold mb-4" style={{ color: "var(--color-text)" }}>
-              General
-            </h2>
             <Form method="post" className="flex flex-col gap-4">
               <input type="hidden" name="_intent" value="settings" />
+              <div className="flex items-center justify-between">
+                <h2 className="text-sm font-semibold" style={{ color: "var(--color-text)" }}>
+                  General
+                </h2>
+                <Button type="submit" loading={submittingIntent === "settings" && isSubmitting}>
+                  Save settings
+                </Button>
+              </div>
               <Input
                 id="name"
                 name="name"
