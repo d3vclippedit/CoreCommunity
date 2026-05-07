@@ -21,10 +21,21 @@ export function AppShell({ leftNav, rightRail, children, className, transparent 
       style={{ background: transparent ? "transparent" : "var(--color-bg)" }}
     >
       <div className="mx-auto w-full px-4 md:px-6" style={{ maxWidth: "1280px" }}>
-        {/* When a community has a custom background the flex row is the unified dark container */}
+        {/* When transparent, the flex row becomes one unified floating dark card */}
         <div
-          className={cn("flex gap-6 pb-16", transparent ? "mt-6 pt-4" : "pt-6")}
-          style={transparent ? { background: "var(--color-bg)" } : undefined}
+          className={cn(
+            "flex gap-6 pb-16",
+            transparent ? "mt-8 mb-8 pt-6 px-6 md:px-8 mx-2 md:mx-4" : "pt-6",
+          )}
+          style={
+            transparent
+              ? {
+                  background: "var(--color-bg)",
+                  borderRadius: "14px",
+                  boxShadow: "0 8px 48px rgba(0,0,0,0.65), inset 0 1px 0 rgba(255,255,255,0.05)",
+                }
+              : undefined
+          }
         >
           {/* Left nav — hidden on mobile, shown as drawer trigger */}
           {leftNav && (
