@@ -1,8 +1,9 @@
 import { useEffect, useRef } from "react";
 
-const SAMPLE_STEP = 5;
-const MAX_NODES = 380;
-const CONNECT_DIST = 22;
+// Finer step captures Pacifico's thin script strokes
+const SAMPLE_STEP = 4;
+const MAX_NODES = 420;
+const CONNECT_DIST = 20;
 const CONNECT_DIST_SQ = CONNECT_DIST * CONNECT_DIST;
 const GRAVITY_DIST = 145;
 const GRAVITY_DIST_SQ = GRAVITY_DIST * GRAVITY_DIST;
@@ -35,24 +36,28 @@ function buildParticles(w: number, h: number): Particle[] {
   oc.textAlign = "center";
   oc.textBaseline = "middle";
 
-  // CORE — large, upper word
-  const coreFs = Math.round(Math.min(w * 0.28, h * 0.26));
-  // COMMUNITIES — independently sized to fill ~80% of width, not just a ratio of CORE
-  const commFs = Math.round(Math.min(w * 0.14, h * 0.13));
-  // Gap between the two words' bounding boxes
-  const textGap = Math.round(coreFs * 0.3);
+  // Adaptively size each word to fill a target fraction of canvas width.
+  // measureText handles Pacifico's irregular script character widths correctly.
+  let coreFs = 40;
+  oc.font = `${coreFs}px "Pacifico",cursive`;
+  while (oc.measureText("Core").width < w * 0.54 && coreFs < 300) coreFs += 3;
 
-  // Vertically center both words as a group
+  let commFs = 30;
+  oc.font = `${commFs}px "Pacifico",cursive`;
+  while (oc.measureText("Communities").width < w * 0.86 && commFs < 200) commFs += 3;
+
+  // Vertical centering — script fonts need more gap for ascenders/descenders
+  const textGap = Math.round(coreFs * 0.35);
   const totalH = coreFs + textGap + commFs;
   const groupTop = (h - totalH) / 2;
   const coreCenterY = Math.round(groupTop + coreFs / 2);
   const commCenterY = Math.round(groupTop + coreFs + textGap + commFs / 2);
 
-  oc.font = `900 ${coreFs}px "Inter",system-ui,sans-serif`;
-  oc.fillText("CORE", w / 2, coreCenterY);
+  oc.font = `${coreFs}px "Pacifico",cursive`;
+  oc.fillText("Core", w / 2, coreCenterY);
 
-  oc.font = `800 ${commFs}px "Inter",system-ui,sans-serif`;
-  oc.fillText("COMMUNITIES", w / 2, commCenterY);
+  oc.font = `${commFs}px "Pacifico",cursive`;
+  oc.fillText("Communities", w / 2, commCenterY);
 
   const { data } = oc.getImageData(0, 0, w, h);
   const raw: { bx: number; by: number }[] = [];
@@ -240,7 +245,9 @@ export function CoreLogo({
       }
     }
 
-    document.fonts.ready.then(init);
+    // Explicitly wait for Pacifico — document.fonts.ready doesn't guarantee
+    // late-loaded script fonts are measured correctly in the offscreen canvas.
+    document.fonts.load('48px "Pacifico"').then(init);
 
     const ro = new ResizeObserver(() => {
       if (!started) return;
@@ -287,9 +294,9 @@ export function CoreLogo({
 }
 
 /**
- * Debug view — renders the raw offscreen text sampling so you can verify
- * font sizes, spacing and letter shapes before particles are applied.
- * Drop this into the landing page temporarily: <CoreLogoDebug className="w-full" style={{ height: "min(580px, 70vh)" }} />
+ * Shows the raw Pacifico text + red sample-dot overlay so font sizing
+ * and particle density can be verified before the animation goes live.
+ * Usage: swap CoreLogo for CoreLogoDebug in _index.tsx temporarily.
  */
 export function CoreLogoDebug({
   className,
@@ -303,7 +310,6 @@ export function CoreLogoDebug({
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-
     const el: HTMLCanvasElement = canvas;
 
     function render() {
@@ -311,38 +317,39 @@ export function CoreLogoDebug({
       const w = el.offsetWidth;
       const h = el.offsetHeight;
       if (!w || !h) return;
-
       el.width = Math.round(w * dpr);
       el.height = Math.round(h * dpr);
       const ctx = el.getContext("2d");
       if (!ctx) return;
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-      // Dark background matching site
       ctx.fillStyle = "#0A0A0C";
       ctx.fillRect(0, 0, w, h);
-
       ctx.fillStyle = "#F5F5F7";
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
 
-      const coreFs = Math.round(Math.min(w * 0.28, h * 0.26));
-      const commFs = Math.round(Math.min(w * 0.14, h * 0.13));
-      const textGap = Math.round(coreFs * 0.3);
+      let coreFs = 40;
+      ctx.font = `${coreFs}px "Pacifico",cursive`;
+      while (ctx.measureText("Core").width < w * 0.54 && coreFs < 300) coreFs += 3;
 
+      let commFs = 30;
+      ctx.font = `${commFs}px "Pacifico",cursive`;
+      while (ctx.measureText("Communities").width < w * 0.86 && commFs < 200) commFs += 3;
+
+      const textGap = Math.round(coreFs * 0.35);
       const totalH = coreFs + textGap + commFs;
       const groupTop = (h - totalH) / 2;
       const coreCenterY = Math.round(groupTop + coreFs / 2);
       const commCenterY = Math.round(groupTop + coreFs + textGap + commFs / 2);
 
-      ctx.font = `900 ${coreFs}px "Inter",system-ui,sans-serif`;
-      ctx.fillText("CORE", w / 2, coreCenterY);
+      ctx.font = `${coreFs}px "Pacifico",cursive`;
+      ctx.fillText("Core", w / 2, coreCenterY);
+      ctx.font = `${commFs}px "Pacifico",cursive`;
+      ctx.fillText("Communities", w / 2, commCenterY);
 
-      ctx.font = `800 ${commFs}px "Inter",system-ui,sans-serif`;
-      ctx.fillText("COMMUNITIES", w / 2, commCenterY);
-
-      // Sample dots overlay — shows exactly what the particle sampler sees
-      ctx.fillStyle = "rgba(239,68,68,0.8)";
+      // Red dots showing the exact pixel positions the particle sampler will use
+      ctx.fillStyle = "rgba(239,68,68,0.85)";
       const { data } = ctx.getImageData(0, 0, el.width, el.height);
       for (let y = 0; y < h; y += SAMPLE_STEP) {
         for (let x = 0; x < w; x += SAMPLE_STEP) {
@@ -356,18 +363,17 @@ export function CoreLogoDebug({
         }
       }
 
-      // Labels
       ctx.font = `500 11px "Inter",system-ui,sans-serif`;
       ctx.fillStyle = "rgba(245,245,247,0.4)";
       ctx.textAlign = "left";
       ctx.fillText(
-        `CORE: ${coreFs}px  |  COMMUNITIES: ${commFs}px  |  step: ${SAMPLE_STEP}  |  max: ${MAX_NODES}`,
+        `Core: ${coreFs}px  |  Communities: ${commFs}px  |  step: ${SAMPLE_STEP}  |  max: ${MAX_NODES}`,
         12,
         h - 12,
       );
     }
 
-    document.fonts.ready.then(render);
+    document.fonts.load('48px "Pacifico"').then(render);
   }, []);
 
   return <canvas ref={canvasRef} className={className} style={{ display: "block", ...style }} />;
