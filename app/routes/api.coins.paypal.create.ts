@@ -16,7 +16,7 @@ export async function action({ request, context }: ActionFunctionArgs) {
   const rl = await env.KV.get(rlKey);
   if (rl && Number(rl) >= 5)
     return Response.json({ error: "Too many requests. Try again later." }, { status: 429 });
-  await env.KV.put(rlKey, String(Number(rl ?? 0) + 1), { expirationTtl: 600 });
+  await env.KV.put(rlKey, String(Number(rl ?? 0) + 1), { expirationTtl: 60 });
 
   const form = await request.formData();
   const bundleId = form.get("bundleId") as string | null;

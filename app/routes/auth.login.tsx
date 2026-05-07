@@ -27,7 +27,7 @@ export async function loader({ request, context }: LoaderFunctionArgs) {
 export async function action({ request, context }: ActionFunctionArgs) {
   const { env } = context.cloudflare;
 
-  const ipRl = await checkRateLimit(env.KV, "login_ip", getIp(request), 10, 600);
+  const ipRl = await checkRateLimit(env.KV, "login_ip", getIp(request), 5, 30);
   if (!ipRl.allowed) {
     return {
       error: `Too many attempts. Try again in ${Math.ceil(ipRl.retryAfterSeconds / 60)} minutes.`,
@@ -61,7 +61,7 @@ export async function action({ request, context }: ActionFunctionArgs) {
   });
 
   // Rate limit per email too
-  const emailRl = await checkRateLimit(env.KV, "login_email", cleanIdentifier, 5, 3600);
+  const emailRl = await checkRateLimit(env.KV, "login_email", cleanIdentifier, 5, 30);
 
   // First-login password setup: D3V founder account only
   if (
