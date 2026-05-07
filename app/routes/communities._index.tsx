@@ -12,6 +12,9 @@ import { communities, communityMemberships } from "../../db/schema";
 export const meta: MetaFunction = () => [
   { title: "Communities — CORE" },
   { name: "description", content: "Browse all creator communities on CORE." },
+  { property: "og:title", content: "Communities — CORE" },
+  { property: "og:description", content: "Browse all creator communities on CORE." },
+  { property: "og:type", content: "website" },
 ];
 
 export async function loader({ request, context }: LoaderFunctionArgs) {

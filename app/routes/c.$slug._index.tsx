@@ -5,9 +5,20 @@ import { getCurrentUser } from "~/lib/auth/user.server";
 import { createDb } from "~/lib/db/index";
 import { communities, posts, users } from "../../db/schema";
 
-export const meta: MetaFunction<typeof loader> = ({ data }) => [
-  { title: data ? `c/${data.community.slug} — CORE` : "CORE" },
-];
+export const meta: MetaFunction<typeof loader> = ({ data }) => {
+  if (!data) return [{ title: "CORE" }];
+  const description =
+    data.community.tagline ||
+    data.community.description ||
+    `Posts in c/${data.community.slug} on CORE`;
+  return [
+    { title: `c/${data.community.slug} — CORE` },
+    { name: "description", content: description },
+    { property: "og:title", content: `c/${data.community.slug} — CORE` },
+    { property: "og:description", content: description },
+    { property: "og:type", content: "website" },
+  ];
+};
 
 export async function loader({ params, request, context }: LoaderFunctionArgs) {
   const { env } = context.cloudflare;
@@ -17,7 +28,7 @@ export async function loader({ params, request, context }: LoaderFunctionArgs) {
 
   const community = await db.query.communities.findFirst({
     where: and(eq(communities.slug, params.slug ?? ""), isNull(communities.deletedAt)),
-    columns: { id: true, slug: true, name: true },
+    columns: { id: true, slug: true, name: true, description: true, tagline: true },
   });
   if (!community) throw new Response("Community not found", { status: 404 });
 

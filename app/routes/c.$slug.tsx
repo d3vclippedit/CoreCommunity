@@ -7,6 +7,7 @@ import {
   useLoaderData,
   useRouteLoaderData,
 } from "@remix-run/react";
+import type React from "react";
 import { and, eq, isNull } from "drizzle-orm";
 import { AppShell } from "~/components/layout/AppShell";
 import { Footer } from "~/components/layout/Footer";
@@ -96,12 +97,12 @@ export default function CommunityHub() {
       className="rounded-lg p-4"
       style={{ background: "var(--color-bg-elev-1)", border: "1px solid var(--color-border)" }}
     >
-      <h2 className="text-sm font-semibold mb-2" style={{ color: "var(--color-text)" }}>
+      <h2 className="text-sm font-semibold mb-1" style={{ color: "var(--color-text)" }}>
         {community.name}
       </h2>
-      {community.description && (
-        <p className="text-sm leading-relaxed mb-3" style={{ color: "var(--color-text-dim)" }}>
-          {community.description}
+      {(community.tagline || community.description) && (
+        <p className="text-xs leading-relaxed mb-3" style={{ color: "var(--color-text-dim)" }}>
+          {community.tagline || community.description}
         </p>
       )}
       <div className="flex flex-col gap-1.5">
@@ -125,7 +126,15 @@ export default function CommunityHub() {
   );
 
   return (
-    <div className="flex flex-col min-h-screen" style={{ background: "var(--color-bg)" }}>
+    <div
+      className="flex flex-col min-h-screen"
+      style={
+        {
+          background: "var(--color-bg)",
+          ...(community.accentColor ? { "--color-accent": community.accentColor } : {}),
+        } as React.CSSProperties
+      }
+    >
       <Header user={rootUser} />
       <AppShell leftNav={leftNav} rightRail={rightRail}>
         <Outlet />

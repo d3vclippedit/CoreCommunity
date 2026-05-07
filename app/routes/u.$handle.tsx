@@ -8,10 +8,17 @@ import { createDb } from "~/lib/db/index";
 import type { loader as rootLoader } from "~/root";
 import { communities, communityMemberships, posts, users } from "../../db/schema";
 
-export const meta: MetaFunction<typeof loader> = ({ data }) => [
-  { title: data ? `@${data.user.handle} — CORE` : "CORE" },
-  { name: "description", content: data ? `${data.user.displayName}'s profile on CORE.` : "" },
-];
+export const meta: MetaFunction<typeof loader> = ({ data }) => {
+  if (!data) return [{ title: "CORE" }];
+  const description = `${data.user.displayName}'s profile on CORE.`;
+  return [
+    { title: `@${data.user.handle} — CORE` },
+    { name: "description", content: description },
+    { property: "og:title", content: `@${data.user.handle} — CORE` },
+    { property: "og:description", content: description },
+    { property: "og:type", content: "profile" },
+  ];
+};
 
 export async function loader({ params, context }: LoaderFunctionArgs) {
   const db = createDb(context.cloudflare.env.DB);

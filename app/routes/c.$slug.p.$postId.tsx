@@ -7,6 +7,7 @@ import { Header } from "~/components/layout/Header";
 import { getCurrentUser } from "~/lib/auth/user.server";
 import { createDb } from "~/lib/db/index";
 import { getEmbedSrc } from "~/lib/embeds";
+import { type OgPreview, getOgPreview } from "~/lib/og.server";
 import { canFeaturePost, canPinPost } from "~/lib/permissions";
 import { checkRateLimit } from "~/lib/ratelimit";
 import { sanitizeHtml } from "~/lib/sanitize";
@@ -102,7 +103,14 @@ export async function loader({ params, request, context }: LoaderFunctionArgs) {
   }
 
   const host = new URL(request.url).hostname;
-  return { community, post, author, comments: topComments, userVote, memberRole, host };
+
+  // For link posts without a native embed, fetch OG preview data (cached in KV)
+  let ogPreview = null;
+  if (post.type === "link" && post.url && !post.embedKind) {
+    ogPreview = await getOgPreview(post.url, env.KV);
+  }
+
+  return { community, post, author, comments: topComments, userVote, memberRole, host, ogPreview };
 }
 
 export async function action({ params, request, context }: ActionFunctionArgs) {
@@ -176,6 +184,7 @@ export default function PostPermalink() {
     userVote,
     memberRole,
     host,
+    ogPreview,
   } = useLoaderData<typeof loader>();
   const root = useRouteLoaderData<typeof rootLoader>("root");
   const rootUser = root?.user ?? null;
@@ -249,6 +258,9 @@ export default function PostPermalink() {
                   >
                     {new URL(post.url).hostname}
                   </a>
+                )}
+                {post.type === "link" && post.url && !post.embedKind && ogPreview && (
+                  <OgPreviewCard preview={ogPreview} url={post.url} />
                 )}
                 {post.embedKind && post.embedRef && (
                   <div className="mb-3 rounded-md overflow-hidden" style={{ aspectRatio: "16/9" }}>
@@ -569,6 +581,49 @@ function VoteWidget({
         </button>
       </fetcher.Form>
     </div>
+  );
+}
+
+function OgPreviewCard({ preview, url }: { preview: OgPreview; url: string }) {
+  const hasContent = preview.title || preview.description || preview.image;
+  if (!hasContent) return null;
+
+  return (
+    <a
+      href={url}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="mb-3 rounded-md overflow-hidden flex no-underline block"
+      style={{
+        background: "var(--color-bg-elev-2)",
+        border: "1px solid var(--color-border)",
+      }}
+    >
+      {preview.image && (
+        <img
+          src={preview.image}
+          alt=""
+          aria-hidden="true"
+          className="object-cover flex-shrink-0"
+          style={{ width: "120px", height: "80px" }}
+        />
+      )}
+      <div className="flex flex-col justify-center px-3 py-2 min-w-0">
+        {preview.title && (
+          <p
+            className="text-xs font-semibold leading-snug line-clamp-2"
+            style={{ color: "var(--color-text)" }}
+          >
+            {preview.title}
+          </p>
+        )}
+        {preview.description && (
+          <p className="text-xs mt-0.5 line-clamp-2" style={{ color: "var(--color-text-dim)" }}>
+            {preview.description}
+          </p>
+        )}
+      </div>
+    </a>
   );
 }
 
