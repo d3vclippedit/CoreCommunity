@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Skill(update-config)",
+      "Bash(gh auth *)",
+      "Bash(git ls-remote *)",
+      "Bash(echo \"Exit: $?\")",
+      "Bash(git config *)",
+      "PowerShell(gh auth *)",
+      "PowerShell(git config *)"
+    ]
+  }
+}

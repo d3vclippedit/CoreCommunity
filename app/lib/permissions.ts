@@ -45,6 +45,10 @@ export function canManageRules(role: CommunityRole | null | undefined): boolean 
   return roleAtLeast(role, "senior_mod");
 }
 
+export function canManageStaff(role: CommunityRole | null | undefined): boolean {
+  return roleAtLeast(role, "senior_mod");
+}
+
 export function canCustomizeTheme(role: CommunityRole | null | undefined): boolean {
   return roleAtLeast(role, "admin");
 }

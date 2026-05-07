@@ -85,3 +85,153 @@ body {
   font-weight: 700;
   letter-spacing: -0.02em;
 }
+
+/* ── Tiptap rich-text editor ─────────────────────────────────────────────── */
+.prose-editor {
+  outline: none;
+  min-height: 120px;
+  font-size: 0.875rem;
+  line-height: 1.65;
+  color: var(--color-text);
+}
+.prose-editor > * + * {
+  margin-top: 0.5rem;
+}
+.prose-editor p:last-child {
+  margin-bottom: 0;
+}
+.prose-editor strong {
+  font-weight: 600;
+}
+.prose-editor em {
+  font-style: italic;
+}
+.prose-editor s {
+  text-decoration: line-through;
+}
+.prose-editor code {
+  font-family: var(--font-mono);
+  font-size: 0.8em;
+  background: var(--color-bg-elev-2);
+  border-radius: 3px;
+  padding: 0.1em 0.35em;
+}
+.prose-editor pre {
+  background: var(--color-bg-elev-2);
+  border-radius: var(--radius-sm);
+  padding: 0.75rem 1rem;
+  overflow-x: auto;
+}
+.prose-editor pre code {
+  background: none;
+  padding: 0;
+  font-size: 0.85em;
+}
+.prose-editor ul,
+.prose-editor ol {
+  padding-left: 1.5rem;
+}
+.prose-editor li + li {
+  margin-top: 0.2rem;
+}
+.prose-editor blockquote {
+  border-left: 2px solid var(--color-border);
+  padding-left: 0.75rem;
+  color: var(--color-text-dim);
+}
+.prose-editor h1 {
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+.prose-editor h2 {
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+.prose-editor h3 {
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+.prose-editor a {
+  color: var(--color-accent);
+  text-decoration: underline;
+}
+/* Tiptap placeholder */
+.prose-editor p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  color: var(--color-text-faint);
+  pointer-events: none;
+  float: left;
+  height: 0;
+}
+
+/* ── Rendered HTML post/comment body ─────────────────────────────────────── */
+.prose-body {
+  font-size: 0.875rem;
+  line-height: 1.65;
+  color: var(--color-text-dim);
+}
+.prose-body > * + * {
+  margin-top: 0.5rem;
+}
+.prose-body p:last-child {
+  margin-bottom: 0;
+}
+.prose-body strong {
+  font-weight: 600;
+  color: var(--color-text);
+}
+.prose-body em {
+  font-style: italic;
+}
+.prose-body s {
+  text-decoration: line-through;
+}
+.prose-body code {
+  font-family: var(--font-mono);
+  font-size: 0.8em;
+  background: var(--color-bg-elev-2);
+  border-radius: 3px;
+  padding: 0.1em 0.35em;
+}
+.prose-body pre {
+  background: var(--color-bg-elev-2);
+  border-radius: var(--radius-sm);
+  padding: 0.75rem 1rem;
+  overflow-x: auto;
+}
+.prose-body pre code {
+  background: none;
+  padding: 0;
+  font-size: 0.85em;
+}
+.prose-body ul,
+.prose-body ol {
+  padding-left: 1.5rem;
+}
+.prose-body li + li {
+  margin-top: 0.2rem;
+}
+.prose-body blockquote {
+  border-left: 2px solid var(--color-border);
+  padding-left: 0.75rem;
+  color: var(--color-text-dim);
+}
+.prose-body h1 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--color-text);
+}
+.prose-body h2 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--color-text);
+}
+.prose-body h3 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--color-text);
+}
+.prose-body a {
+  color: var(--color-accent);
+  text-decoration: underline;
+}

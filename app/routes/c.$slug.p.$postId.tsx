@@ -6,8 +6,10 @@ import { Footer } from "~/components/layout/Footer";
 import { Header } from "~/components/layout/Header";
 import { getCurrentUser } from "~/lib/auth/user.server";
 import { createDb } from "~/lib/db/index";
+import { getEmbedSrc } from "~/lib/embeds";
 import { canFeaturePost, canPinPost } from "~/lib/permissions";
 import { checkRateLimit } from "~/lib/ratelimit";
+import { sanitizeHtml } from "~/lib/sanitize";
 import { generateId } from "~/lib/utils";
 import type { loader as rootLoader } from "~/root";
 import {
@@ -21,9 +23,19 @@ import {
 } from "../../db/schema";
 import { CommunityAvatar } from "./communities._index";
 
-export const meta: MetaFunction<typeof loader> = ({ data }) => [
-  { title: data ? `${data.post.title} — CORE` : "CORE" },
-];
+export const meta: MetaFunction<typeof loader> = ({ data }) => {
+  if (!data) return [{ title: "CORE" }];
+  const description = data.post.body
+    ? data.post.body.replace(/<[^>]+>/g, "").slice(0, 160)
+    : `Discussion in c/${data.community.slug} on CORE`;
+  return [
+    { title: `${data.post.title} — CORE` },
+    { name: "description", content: description },
+    { property: "og:title", content: data.post.title },
+    { property: "og:description", content: description },
+    { property: "og:type", content: "article" },
+  ];
+};
 
 export async function loader({ params, request, context }: LoaderFunctionArgs) {
   const { env } = context.cloudflare;
@@ -89,7 +101,8 @@ export async function loader({ params, request, context }: LoaderFunctionArgs) {
     memberRole = mem?.role ?? null;
   }
 
-  return { community, post, author, comments: topComments, userVote, memberRole };
+  const host = new URL(request.url).hostname;
+  return { community, post, author, comments: topComments, userVote, memberRole, host };
 }
 
 export async function action({ params, request, context }: ActionFunctionArgs) {
@@ -162,6 +175,7 @@ export default function PostPermalink() {
     comments: allComments,
     userVote,
     memberRole,
+    host,
   } = useLoaderData<typeof loader>();
   const root = useRouteLoaderData<typeof rootLoader>("root");
   const rootUser = root?.user ?? null;
@@ -225,13 +239,35 @@ export default function PostPermalink() {
                 >
                   {post.title}
                 </h1>
-                {post.body && (
-                  <p
-                    className="text-sm leading-relaxed mb-3 whitespace-pre-wrap"
-                    style={{ color: "var(--color-text-dim)" }}
+                {post.type === "link" && post.url && (
+                  <a
+                    href={post.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs mb-2 block truncate no-underline hover:underline"
+                    style={{ color: "var(--color-text-faint)" }}
                   >
-                    {post.body}
-                  </p>
+                    {new URL(post.url).hostname}
+                  </a>
+                )}
+                {post.embedKind && post.embedRef && (
+                  <div className="mb-3 rounded-md overflow-hidden" style={{ aspectRatio: "16/9" }}>
+                    <iframe
+                      src={getEmbedSrc(post.embedKind, post.embedRef, host)}
+                      title="Embedded video"
+                      allowFullScreen
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      className="w-full h-full"
+                      style={{ border: "none" }}
+                    />
+                  </div>
+                )}
+                {post.body && (
+                  <div
+                    className="prose-body mb-3"
+                    // biome-ignore lint/security/noDangerouslySetInnerHtml: sanitized server-side
+                    dangerouslySetInnerHTML={{ __html: sanitizeHtml(post.body) }}
+                  />
                 )}
                 <div
                   className="flex items-center gap-3 text-xs flex-wrap"
