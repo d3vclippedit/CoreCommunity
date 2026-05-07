@@ -12,8 +12,8 @@ const ALLOWED_TYPES: Record<string, string> = {
 };
 
 const MAX_BYTES: Record<string, number> = {
-  icon: 2 * 1024 * 1024,       // 2 MB
-  banner: 4 * 1024 * 1024,     // 4 MB
+  icon: 2 * 1024 * 1024, // 2 MB
+  banner: 4 * 1024 * 1024, // 4 MB
   background: 8 * 1024 * 1024, // 8 MB
 };
 
@@ -37,7 +37,10 @@ export async function action({ request, context }: ActionFunctionArgs) {
 
   const ext = ALLOWED_TYPES[file.type];
   if (!ext) {
-    return Response.json({ error: "Only PNG, JPG, and WebP images are supported." }, { status: 400 });
+    return Response.json(
+      { error: "Only PNG, JPG, and WebP images are supported." },
+      { status: 400 },
+    );
   }
 
   const maxBytes = MAX_BYTES[imageType];

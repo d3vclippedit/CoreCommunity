@@ -209,7 +209,6 @@ export default function PostPermalink() {
     badgeSummary,
     badgeDefs,
     userCoinBalance,
-    isPostAuthor,
   } = useLoaderData<typeof loader>();
   const root = useRouteLoaderData<typeof rootLoader>("root");
   const rootUser = root?.user ?? null;
