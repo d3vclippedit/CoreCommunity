@@ -197,7 +197,7 @@ function CommunityCard({
 
   return (
     <div
-      className="flex flex-col overflow-hidden rounded-xl md:h-[329px]"
+      className="flex flex-col overflow-hidden rounded-xl"
       style={{
         background: accent ? `${accent}12` : "var(--color-bg-elev-1)",
         border: `1px solid ${accent ? `${accent}40` : "var(--color-border)"}`,
@@ -240,7 +240,7 @@ function CommunityCard({
       </Link>
 
       {/* ── Identity row ── */}
-      <div className="px-3 pt-7 pb-1 md:pt-6 md:pb-2">
+      <div className="px-3 pt-7 pb-2">
         <Link to={`/c/${c.slug}`} className="no-underline block">
           <p
             className="text-sm font-semibold leading-tight truncate"
@@ -256,13 +256,13 @@ function CommunityCard({
 
       {/* ── Stats grid ── */}
       <div
-        className="mx-2 md:mx-3 rounded-lg px-2 py-2 md:px-3 md:py-2.5"
+        className="mx-3 rounded-lg px-3 py-2.5"
         style={{
           background: accent ? `${accent}10` : "var(--color-bg-elev-2)",
           border: `1px solid ${accent ? `${accent}25` : "var(--color-border)"}`,
         }}
       >
-        <div className="grid grid-cols-2 gap-x-2 gap-y-1 md:gap-x-4 md:gap-y-1.5">
+        <div className="grid grid-cols-2 gap-x-4 gap-y-1.5">
           {[
             { label: "Members", value: formatCount(c.memberCount) },
             { label: "Badges", value: c.badgeCount > 0 ? String(c.badgeCount) : "—" },
@@ -290,7 +290,7 @@ function CommunityCard({
       </div>
 
       {/* ── Join / Joined button ── */}
-      <div className="mt-2 md:mt-auto px-2 md:px-3 pb-2 md:pb-3 pt-1 md:pt-2">
+      <div className="mt-3 px-3 pb-3 pt-1">
         {user ? (
           <fetcher.Form method="post" action={`/c/${c.slug}/join`}>
             <input type="hidden" name="communityId" value={c.id} />
