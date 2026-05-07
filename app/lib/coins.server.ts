@@ -38,49 +38,48 @@ export async function creditCoins(
 ): Promise<number> {
   if (amount <= 0) throw new Error("Credit amount must be positive");
 
-  return await db.transaction(async (tx) => {
-    await tx
-      .insert(coinWallets)
-      .values({
-        userId,
-        balance: amount,
-        totalPurchased: type === "purchase" ? amount : 0,
-        totalSpent: 0,
-        updatedAt: new Date(),
-      })
-      .onConflictDoUpdate({
-        target: coinWallets.userId,
-        set: {
-          balance: sql`${coinWallets.balance} + ${amount}`,
-          totalPurchased:
-            type === "purchase"
-              ? sql`${coinWallets.totalPurchased} + ${amount}`
-              : coinWallets.totalPurchased,
-          updatedAt: new Date(),
-        },
-      });
-
-    const after = await tx
-      .select({ b: coinWallets.balance })
-      .from(coinWallets)
-      .where(eq(coinWallets.userId, userId))
-      .get();
-    const balanceAfter = after?.b ?? 0;
-
-    await tx.insert(coinTransactions).values({
-      id: crypto.randomUUID(),
+  // D1 does not support interactive transactions — use atomic upsert + sequential reads
+  await db
+    .insert(coinWallets)
+    .values({
       userId,
-      type,
-      amount,
-      balanceAfter,
-      refType,
-      refId,
-      note,
-      createdAt: new Date(),
+      balance: amount,
+      totalPurchased: type === "purchase" ? amount : 0,
+      totalSpent: 0,
+      updatedAt: new Date(),
+    })
+    .onConflictDoUpdate({
+      target: coinWallets.userId,
+      set: {
+        balance: sql`${coinWallets.balance} + ${amount}`,
+        totalPurchased:
+          type === "purchase"
+            ? sql`${coinWallets.totalPurchased} + ${amount}`
+            : coinWallets.totalPurchased,
+        updatedAt: new Date(),
+      },
     });
 
-    return balanceAfter;
+  const after = await db
+    .select({ b: coinWallets.balance })
+    .from(coinWallets)
+    .where(eq(coinWallets.userId, userId))
+    .get();
+  const balanceAfter = after?.b ?? 0;
+
+  await db.insert(coinTransactions).values({
+    id: crypto.randomUUID(),
+    userId,
+    type,
+    amount,
+    balanceAfter,
+    refType,
+    refId,
+    note,
+    createdAt: new Date(),
   });
+
+  return balanceAfter;
 }
 
 // Returns new balance or throws "INSUFFICIENT_BALANCE"
@@ -95,45 +94,41 @@ export async function debitCoins(
 ): Promise<number> {
   if (amount <= 0) throw new Error("Debit amount must be positive");
 
-  return await db.transaction(async (tx) => {
-    const wallet = await tx
-      .select({ balance: coinWallets.balance })
-      .from(coinWallets)
-      .where(eq(coinWallets.userId, userId))
-      .get();
-    if (!wallet || wallet.balance < amount) throw new Error("INSUFFICIENT_BALANCE");
+  // Check balance before deducting
+  const wallet = await db
+    .select({ balance: coinWallets.balance })
+    .from(coinWallets)
+    .where(eq(coinWallets.userId, userId))
+    .get();
+  if (!wallet || wallet.balance < amount) throw new Error("INSUFFICIENT_BALANCE");
 
-    await tx
-      .update(coinWallets)
-      .set({
-        balance: sql`${coinWallets.balance} - ${amount}`,
-        totalSpent: sql`${coinWallets.totalSpent} + ${amount}`,
-        updatedAt: new Date(),
-      })
-      .where(and(eq(coinWallets.userId, userId), sql`${coinWallets.balance} >= ${amount}`));
+  // Atomic deduct — WHERE balance >= amount prevents overdraft even under concurrency
+  const result = await db
+    .update(coinWallets)
+    .set({
+      balance: sql`${coinWallets.balance} - ${amount}`,
+      totalSpent: sql`${coinWallets.totalSpent} + ${amount}`,
+      updatedAt: new Date(),
+    })
+    .where(and(eq(coinWallets.userId, userId), sql`${coinWallets.balance} >= ${amount}`))
+    .returning({ balance: coinWallets.balance });
 
-    const after = await tx
-      .select({ b: coinWallets.balance })
-      .from(coinWallets)
-      .where(eq(coinWallets.userId, userId))
-      .get();
-    const balanceAfter = after?.b ?? 0;
-    if (balanceAfter < 0) throw new Error("BALANCE_WENT_NEGATIVE");
+  if (!result.length) throw new Error("INSUFFICIENT_BALANCE");
+  const balanceAfter = result[0].balance;
 
-    await tx.insert(coinTransactions).values({
-      id: crypto.randomUUID(),
-      userId,
-      type,
-      amount: -amount,
-      balanceAfter,
-      refType,
-      refId,
-      note,
-      createdAt: new Date(),
-    });
-
-    return balanceAfter;
+  await db.insert(coinTransactions).values({
+    id: crypto.randomUUID(),
+    userId,
+    type,
+    amount: -amount,
+    balanceAfter,
+    refType,
+    refId,
+    note,
+    createdAt: new Date(),
   });
+
+  return balanceAfter;
 }
 
 export async function getTransactionHistory(db: Db, userId: string, limit = 50) {
