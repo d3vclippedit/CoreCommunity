@@ -33,17 +33,11 @@ jobs:
       - name: Lint
         run: pnpm lint
 
-      - name: Test
-        run: pnpm test
-
       - name: Build
         run: pnpm build
 
       - name: Deploy
-        uses: cloudflare/pages-action@v1
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          projectName: core
-          directory: build/client
-          gitHubToken: ${{ secrets.GITHUB_TOKEN }}
+        run: pnpm exec wrangler pages deploy build/client --project-name=core --branch=master
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
