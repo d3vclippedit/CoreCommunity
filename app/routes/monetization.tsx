@@ -107,8 +107,8 @@ const BADGE_DISPLAY = [
   { name: "Hype", icon: "🔥", coins: 100 },
   { name: "Clip It", icon: "🎬", coins: 250 },
   { name: "W Post", icon: "🏆", coins: 500 },
-  { name: "Poggers", icon: "😮", coins: 1000 },
-  { name: "Banger", icon: "💥", coins: 2500 },
+  { name: "Goated", icon: "🐐", coins: 1000 },
+  { name: "Viral", icon: "💥", coins: 2500 },
   { name: "Legend", icon: "⭐", coins: 5000 },
   { name: "Core", icon: "💎", coins: 10000 },
 ];
