@@ -9,6 +9,8 @@ import {
   useRouteError,
 } from "@remix-run/react";
 import { getCurrentUser } from "~/lib/auth/user.server";
+import { getBalance } from "~/lib/coins.server";
+import { createDb } from "~/lib/db/index";
 import tailwindStyles from "~/styles/tailwind.css?url";
 
 export const links: LinksFunction = () => [
@@ -27,8 +29,17 @@ export const links: LinksFunction = () => [
 ];
 
 export async function loader({ request, context }: LoaderFunctionArgs) {
-  const user = await getCurrentUser(request, context.cloudflare.env);
-  return { user };
+  const { env } = context.cloudflare;
+  const user = await getCurrentUser(request, env);
+  let coinBalance = 0;
+  if (user) {
+    try {
+      coinBalance = await getBalance(createDb(env.DB), user.id);
+    } catch {
+      // coins table not yet migrated
+    }
+  }
+  return { user, coinBalance };
 }
 
 export function Layout({ children }: { children: React.ReactNode }) {

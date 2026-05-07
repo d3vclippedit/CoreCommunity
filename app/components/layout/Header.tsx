@@ -1,5 +1,8 @@
-import { Form, Link, useLocation } from "@remix-run/react";
+import { Form, Link, useLocation, useRouteLoaderData } from "@remix-run/react";
+import { Coins } from "lucide-react";
 import { cn } from "~/lib/cn";
+import { formatCoins } from "~/lib/coins";
+import type { loader as rootLoader } from "~/root";
 
 interface HeaderProps {
   user?: {
@@ -11,6 +14,8 @@ interface HeaderProps {
 
 export function Header({ user }: HeaderProps) {
   const location = useLocation();
+  const root = useRouteLoaderData<typeof rootLoader>("root");
+  const coinBalance = root?.coinBalance ?? 0;
 
   return (
     <header
@@ -36,13 +41,51 @@ export function Header({ user }: HeaderProps) {
 
         {/* Nav links */}
         <nav className="hidden md:flex items-center gap-1 flex-1" aria-label="Main navigation">
-          {user && <NavLink to="/" current={location.pathname} label="Feed" exact />}
-          <NavLink to="/communities" current={location.pathname} label="Communities" />
-          {user && <NavLink to="/monetization" current={location.pathname} label="Monetisation" />}
+          {user && <NavLink to="/" label="Feed" exact />}
+          <NavLink to="/communities" label="Communities" />
+          {user && <NavLink to="/monetization" label="Core Coins" excludeSearch="tab=earn" />}
+          {user && (
+            <NavLink to="/monetization?tab=earn" label="Creator Earnings" matchSearch="tab=earn" />
+          )}
         </nav>
 
-        {/* Auth / user area */}
-        <div className="flex items-center gap-2 ml-auto">
+        {/* Right side — coins + auth/user */}
+        <div className="flex items-center gap-3 ml-auto">
+          {user && (
+            <Link
+              to="/monetization"
+              className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg no-underline transition-colors hover:opacity-80"
+              style={{
+                background: "var(--color-bg-elev-1)",
+                border: "1px solid var(--color-border)",
+              }}
+              aria-label="Core Coins balance"
+            >
+              {/* Emblem placeholder — swap for real logo asset when ready */}
+              <span
+                className="flex items-center justify-center rounded-md flex-shrink-0"
+                style={{
+                  width: 22,
+                  height: 22,
+                  background: "var(--color-bg-elev-2)",
+                  border: "1px solid var(--color-border)",
+                }}
+                aria-hidden="true"
+              >
+                <Coins size={13} style={{ color: "var(--color-text-dim)" }} />
+              </span>
+              <span
+                className="text-xs font-semibold tabular-nums"
+                style={{ color: "var(--color-text)" }}
+              >
+                {formatCoins(coinBalance)}
+              </span>
+              <span className="text-xs" style={{ color: "var(--color-text-faint)" }}>
+                cc
+              </span>
+            </Link>
+          )}
+
           {user ? (
             <UserMenu user={user} />
           ) : (
@@ -74,16 +117,32 @@ export function Header({ user }: HeaderProps) {
 
 function NavLink({
   to,
-  current,
   label,
   exact,
+  matchSearch,
+  excludeSearch,
 }: {
   to: string;
-  current: string;
   label: string;
   exact?: boolean;
+  matchSearch?: string;
+  excludeSearch?: string;
 }) {
-  const active = exact ? current === to : current.startsWith(to);
+  const location = useLocation();
+  const pathname = to.split("?")[0];
+  const pathActive = exact
+    ? location.pathname === pathname
+    : location.pathname.startsWith(pathname);
+
+  let active: boolean;
+  if (matchSearch) {
+    active = pathActive && location.search.includes(matchSearch);
+  } else if (excludeSearch) {
+    active = pathActive && !location.search.includes(excludeSearch);
+  } else {
+    active = pathActive;
+  }
+
   return (
     <Link
       to={to}

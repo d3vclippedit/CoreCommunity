@@ -31,6 +31,7 @@
     "@tiptap/starter-kit": "^3.22.5",
     "drizzle-orm": "^0.36.4",
     "isbot": "^4.1.0",
+    "lucide-react": "^1.14.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },
@@ -56,6 +57,11 @@
     "pnpm": ">=9.0.0"
   },
   "pnpm": {
-    "onlyBuiltDependencies": ["@biomejs/biome", "esbuild", "sharp", "workerd"]
+    "onlyBuiltDependencies": [
+      "@biomejs/biome",
+      "esbuild",
+      "sharp",
+      "workerd"
+    ]
   }
 }
