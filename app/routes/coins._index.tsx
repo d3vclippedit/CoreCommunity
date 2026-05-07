@@ -38,7 +38,6 @@ export default function CoinsPage() {
   const rootUser = root?.user ?? null;
   const [params] = useSearchParams();
   const paypalStatus = params.get("paypal");
-  const cryptoStatus = params.get("crypto");
 
   return (
     <div className="flex flex-col min-h-screen" style={{ background: "var(--color-bg)" }}>
@@ -69,7 +68,7 @@ export default function CoinsPage() {
           )}
 
           {/* Status banners */}
-          {(paypalStatus === "success" || cryptoStatus === "success") && (
+          {paypalStatus === "success" && (
             <div
               className="rounded-lg px-4 py-3 mb-5 text-sm font-medium"
               style={{
@@ -81,7 +80,7 @@ export default function CoinsPage() {
               Payment confirmed! Coins have been added to your wallet.
             </div>
           )}
-          {(paypalStatus === "cancelled" || cryptoStatus === "cancelled") && (
+          {paypalStatus === "cancelled" && (
             <div
               className="rounded-lg px-4 py-3 mb-5 text-sm"
               style={{
@@ -144,7 +143,7 @@ export default function CoinsPage() {
             </h2>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               {[
-                { step: "1", text: "Buy a coin bundle below using PayPal or crypto." },
+                { step: "1", text: "Buy a coin bundle below using PayPal." },
                 { step: "2", text: "Visit any post and give it a badge using your coins." },
                 { step: "3", text: "The creator earns a cut. The post gets a visibility boost." },
               ].map(({ step, text }) => (
@@ -253,21 +252,15 @@ type Bundle = {
 
 function BundleCard({ bundle }: { bundle: Bundle }) {
   const paypalFetcher = useFetcher<{ approvalUrl?: string; error?: string }>();
-  const cryptoFetcher = useFetcher<{ paymentUrl?: string; error?: string }>();
 
   const usdDisplay = `$${(bundle.usdPriceCents / 100).toFixed(2)}`;
   const approvalUrl = paypalFetcher.data?.approvalUrl;
-  const paymentUrl = cryptoFetcher.data?.paymentUrl;
 
   useEffect(() => {
     if (approvalUrl) window.location.href = approvalUrl;
   }, [approvalUrl]);
 
-  useEffect(() => {
-    if (paymentUrl) window.location.href = paymentUrl;
-  }, [paymentUrl]);
-
-  const isSubmitting = paypalFetcher.state !== "idle" || cryptoFetcher.state !== "idle";
+  const isSubmitting = paypalFetcher.state !== "idle";
 
   return (
     <div
@@ -294,9 +287,9 @@ function BundleCard({ bundle }: { bundle: Bundle }) {
         </p>
       </div>
 
-      {(paypalFetcher.data?.error || cryptoFetcher.data?.error) && (
+      {paypalFetcher.data?.error && (
         <p className="text-xs" style={{ color: "var(--color-danger)" }}>
-          {paypalFetcher.data?.error ?? cryptoFetcher.data?.error}
+          {paypalFetcher.data.error}
         </p>
       )}
 
@@ -312,22 +305,6 @@ function BundleCard({ bundle }: { bundle: Bundle }) {
             {paypalFetcher.state !== "idle" ? "Redirecting…" : "Buy with PayPal"}
           </button>
         </paypalFetcher.Form>
-
-        <cryptoFetcher.Form method="post" action="/api/coins/crypto/create">
-          <input type="hidden" name="bundleId" value={bundle.id} />
-          <button
-            type="submit"
-            disabled={isSubmitting}
-            className="w-full py-2 text-sm font-medium rounded-lg transition-opacity hover:opacity-80 disabled:opacity-50"
-            style={{
-              background: "var(--color-bg-elev-2)",
-              border: "1px solid var(--color-border)",
-              color: "var(--color-text-dim)",
-            }}
-          >
-            {cryptoFetcher.state !== "idle" ? "Redirecting…" : "Buy with Crypto"}
-          </button>
-        </cryptoFetcher.Form>
       </div>
     </div>
   );
