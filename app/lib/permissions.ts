@@ -1,4 +1,48 @@
-import type { CommunityRole } from "../../db/schema";
+import type { CommunityRole, communities, communityCustomRoles } from "../../db/schema";
+
+const SYSTEM_DEFAULT_POSTS_PER_HOUR = 10;
+
+type Community = Pick<
+  typeof communities.$inferSelect,
+  "memberCanPostLinks" | "memberCanPostImages" | "memberCanPostVideos" | "memberPostsPerHour"
+>;
+type CustomRole = Pick<
+  typeof communityCustomRoles.$inferSelect,
+  "canPostLinks" | "canPostImages" | "canPostVideos" | "postsPerHour"
+> | null;
+
+export type PostPerms = {
+  canPostLinks: boolean;
+  canPostImages: boolean;
+  canPostVideos: boolean;
+  postsPerHour: number; // 0 = unlimited
+};
+
+export function resolvePostPerms(
+  staffRole: CommunityRole | null | undefined,
+  community: Community,
+  customRole: CustomRole,
+): PostPerms {
+  // Staff always get full access with no rate limit
+  if (staffRole && staffRole !== "member") {
+    return { canPostLinks: true, canPostImages: true, canPostVideos: true, postsPerHour: 0 };
+  }
+  if (customRole) {
+    return {
+      canPostLinks: customRole.canPostLinks,
+      canPostImages: customRole.canPostImages,
+      canPostVideos: customRole.canPostVideos,
+      postsPerHour:
+        customRole.postsPerHour ?? community.memberPostsPerHour ?? SYSTEM_DEFAULT_POSTS_PER_HOUR,
+    };
+  }
+  return {
+    canPostLinks: community.memberCanPostLinks,
+    canPostImages: community.memberCanPostImages,
+    canPostVideos: community.memberCanPostVideos,
+    postsPerHour: community.memberPostsPerHour ?? SYSTEM_DEFAULT_POSTS_PER_HOUR,
+  };
+}
 
 const ROLE_RANK: Record<CommunityRole, number> = {
   member: 0,

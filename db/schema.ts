@@ -73,6 +73,10 @@ export const communities = sqliteTable("communities", {
   iconUrl: text("icon_url"),
   accentColor: text("accent_color"), // hex, e.g. "#3DD68C"
   backgroundCss: text("background_css"), // e.g. "#1a1a2e" or "linear-gradient(...)" or url(...)
+  memberCanPostLinks: integer("member_can_post_links", { mode: "boolean" }).notNull().default(true),
+  memberCanPostImages: integer("member_can_post_images", { mode: "boolean" }).notNull().default(true),
+  memberCanPostVideos: integer("member_can_post_videos", { mode: "boolean" }).notNull().default(true),
+  memberPostsPerHour: integer("member_posts_per_hour"), // null = system default (10)
   ownerId: text("owner_id")
     .notNull()
     .references(() => users.id),
@@ -96,6 +100,11 @@ export const communityCustomRoles = sqliteTable("community_custom_roles", {
   name: text("name").notNull(),
   color: text("color"), // hex, shown as role badge color
   baseRole: text("base_role").$type<CustomRoleBase>().notNull().default("member"),
+  // Content permissions — override community member defaults for this role
+  canPostLinks: integer("can_post_links", { mode: "boolean" }).notNull().default(true),
+  canPostImages: integer("can_post_images", { mode: "boolean" }).notNull().default(true),
+  canPostVideos: integer("can_post_videos", { mode: "boolean" }).notNull().default(true),
+  postsPerHour: integer("posts_per_hour"), // null = use community default
   displayOrder: integer("display_order").notNull().default(0),
   createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
   updatedAt: integer("updated_at", { mode: "timestamp" }).notNull(),

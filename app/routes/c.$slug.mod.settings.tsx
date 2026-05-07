@@ -114,12 +114,19 @@ export async function action({ params, request, context }: ActionFunctionArgs) {
     const accentColor = (form.get("accentColor") as string | null)?.trim() ?? "";
     const iconUrl = (form.get("iconUrl") as string | null)?.trim() ?? "";
     const backgroundCss = (form.get("backgroundCss") as string | null)?.trim() ?? "";
+    const memberCanPostLinks = form.get("memberCanPostLinks") === "1";
+    const memberCanPostImages = form.get("memberCanPostImages") === "1";
+    const memberCanPostVideos = form.get("memberCanPostVideos") === "1";
+    const memberPostsPerHourRaw = (form.get("memberPostsPerHour") as string | null)?.trim() ?? "";
+    const memberPostsPerHour = memberPostsPerHourRaw === "" ? null : Number(memberPostsPerHourRaw);
 
     if (!name || name.length < 2 || name.length > 64)
       return { error: "Name must be between 2 and 64 characters.", intent };
     if (tagline.length > 120) return { error: "Tagline must be under 120 characters.", intent };
     if (accentColor && !/^#[0-9a-fA-F]{6}$/.test(accentColor))
       return { error: "Accent color must be a valid hex color like #3DD68C.", intent };
+    if (memberPostsPerHour !== null && (Number.isNaN(memberPostsPerHour) || memberPostsPerHour < 0))
+      return { error: "Posts per hour must be a positive number or blank for no limit.", intent };
 
     const rulesArray = rules
       .split("\n")
@@ -136,6 +143,10 @@ export async function action({ params, request, context }: ActionFunctionArgs) {
         accentColor: accentColor || null,
         iconUrl: iconUrl || null,
         backgroundCss: backgroundCss || null,
+        memberCanPostLinks,
+        memberCanPostImages,
+        memberCanPostVideos,
+        memberPostsPerHour,
         updatedAt: new Date(),
       })
       .where(eq(communities.id, community.id));
@@ -156,15 +167,22 @@ export async function action({ params, request, context }: ActionFunctionArgs) {
     const roleName = (form.get("roleName") as string | null)?.trim() ?? "";
     const roleColor = (form.get("roleColor") as string | null)?.trim() ?? "";
     const baseRole = (form.get("baseRole") as string | null) ?? "member";
+    const canPostLinks = form.get("canPostLinks") === "1";
+    const canPostImages = form.get("canPostImages") === "1";
+    const canPostVideos = form.get("canPostVideos") === "1";
+    const postsPerHourRaw = (form.get("postsPerHour") as string | null)?.trim() ?? "";
+    const postsPerHour = postsPerHourRaw === "" ? null : Number(postsPerHourRaw);
 
     if (!roleName || roleName.length < 1 || roleName.length > 32)
       return { error: "Role name must be 1–32 characters.", intent };
     if (roleColor && !/^#[0-9a-fA-F]{6}$/.test(roleColor))
       return { error: "Role color must be a valid hex color.", intent };
+    if (postsPerHour !== null && (Number.isNaN(postsPerHour) || postsPerHour < 0))
+      return { error: "Posts per hour must be a positive number or blank for no limit.", intent };
 
     const validBases: CustomRoleBase[] = ["member", "mod", "senior_mod", "admin"];
     if (!validBases.includes(baseRole as CustomRoleBase))
-      return { error: "Invalid permission level.", intent };
+      return { error: "Invalid moderation level.", intent };
 
     const now = new Date();
     await db.insert(communityCustomRoles).values({
@@ -173,6 +191,10 @@ export async function action({ params, request, context }: ActionFunctionArgs) {
       name: roleName,
       color: roleColor || null,
       baseRole: baseRole as CustomRoleBase,
+      canPostLinks,
+      canPostImages,
+      canPostVideos,
+      postsPerHour,
       displayOrder: 0,
       createdAt: now,
       updatedAt: now,
@@ -338,10 +360,10 @@ export default function ModSettings() {
   };
 
   const BASE_ROLE_LABELS: Record<string, string> = {
-    member: "Member (read + post)",
-    mod: "Mod (remove + timeout)",
-    senior_mod: "Senior Mod (ban + feature)",
-    admin: "Admin (full access)",
+    member: "No mod access",
+    mod: "Mod",
+    senior_mod: "Senior Mod",
+    admin: "Admin",
   };
 
   const cardStyle = {
@@ -537,6 +559,69 @@ export default function ModSettings() {
                   }}
                 />
               </div>
+
+              {/* ── Member post permissions ── */}
+              <div
+                className="rounded-md p-4 flex flex-col gap-3"
+                style={{
+                  background: "var(--color-bg-elev-2)",
+                  border: "1px solid var(--color-border)",
+                }}
+              >
+                <p
+                  className="text-xs font-semibold uppercase tracking-wide"
+                  style={{ color: "var(--color-text-faint)" }}
+                >
+                  Default member permissions
+                </p>
+                <p className="text-xs" style={{ color: "var(--color-text-faint)" }}>
+                  What regular members (no custom role) can post. Staff always bypass these.
+                </p>
+                <PermissionCheckbox
+                  name="memberCanPostLinks"
+                  label="Can post links"
+                  defaultChecked={community.memberCanPostLinks}
+                />
+                <PermissionCheckbox
+                  name="memberCanPostImages"
+                  label="Can post images"
+                  defaultChecked={community.memberCanPostImages}
+                />
+                <PermissionCheckbox
+                  name="memberCanPostVideos"
+                  label="Can post videos"
+                  defaultChecked={community.memberCanPostVideos}
+                />
+                <div className="flex items-center gap-3">
+                  <label
+                    htmlFor="memberPostsPerHour"
+                    className="text-sm"
+                    style={{ color: "var(--color-text-dim)" }}
+                  >
+                    Post rate limit
+                  </label>
+                  <input
+                    id="memberPostsPerHour"
+                    type="number"
+                    name="memberPostsPerHour"
+                    min={0}
+                    step={1}
+                    defaultValue={community.memberPostsPerHour ?? ""}
+                    placeholder="No limit"
+                    className="w-24 rounded-md px-2 py-1.5 text-sm"
+                    style={{
+                      background: "var(--color-bg-elev-1)",
+                      border: "1px solid var(--color-border)",
+                      color: "var(--color-text)",
+                      outline: "none",
+                    }}
+                  />
+                  <span className="text-xs" style={{ color: "var(--color-text-faint)" }}>
+                    posts / hour
+                  </span>
+                </div>
+              </div>
+
               <Button
                 type="submit"
                 loading={submittingIntent === "settings" && isSubmitting}
@@ -553,8 +638,8 @@ export default function ModSettings() {
               Custom member roles
             </h2>
             <p className="text-xs mb-4" style={{ color: "var(--color-text-faint)" }}>
-              Create display roles like "VIP" or "Content Creator". Each role has a permission level
-              that determines what actions members with that role can take.
+              Create roles like "VIP" or "Content Creator". Each role can unlock specific post types
+              and get a boosted post rate limit.
             </p>
 
             {customRoles.length === 0 ? (
@@ -567,10 +652,10 @@ export default function ModSettings() {
                 style={{ borderColor: "var(--color-border)" }}
               >
                 {customRoles.map((role) => (
-                  <div key={role.id} className="flex items-center justify-between py-3">
-                    <div className="flex items-center gap-2">
+                  <div key={role.id} className="flex items-start justify-between py-3 gap-3">
+                    <div className="flex flex-col gap-1.5 min-w-0">
                       <span
-                        className="text-xs px-2 py-0.5 rounded-full font-medium"
+                        className="text-xs px-2 py-0.5 rounded-full font-medium self-start"
                         style={{
                           background: role.color ? `${role.color}22` : "var(--color-bg-elev-2)",
                           color: role.color ?? "var(--color-text-dim)",
@@ -579,11 +664,29 @@ export default function ModSettings() {
                       >
                         {role.name}
                       </span>
-                      <span className="text-xs" style={{ color: "var(--color-text-faint)" }}>
-                        {BASE_ROLE_LABELS[role.baseRole] ?? role.baseRole}
-                      </span>
+                      <div className="flex flex-wrap gap-1">
+                        <PermTag active={true} label="Text" />
+                        <PermTag active={role.canPostLinks} label="Links" />
+                        <PermTag active={role.canPostImages} label="Images" />
+                        <PermTag active={role.canPostVideos} label="Videos" />
+                        {role.postsPerHour !== null && role.postsPerHour !== undefined ? (
+                          <PermTag active={true} label={`${role.postsPerHour}/hr`} />
+                        ) : (
+                          <PermTag active={false} label="default rate" faint />
+                        )}
+                        <span
+                          className="text-xs px-1.5 py-0.5 rounded"
+                          style={{
+                            background: "var(--color-bg-elev-2)",
+                            color: "var(--color-text-faint)",
+                            border: "1px solid var(--color-border)",
+                          }}
+                        >
+                          {BASE_ROLE_LABELS[role.baseRole]}
+                        </span>
+                      </div>
                     </div>
-                    <Form method="post">
+                    <Form method="post" className="flex-shrink-0">
                       <input type="hidden" name="_intent" value="delete_role" />
                       <input type="hidden" name="roleId" value={role.id} />
                       <button
@@ -603,8 +706,9 @@ export default function ModSettings() {
             )}
 
             {/* Create role form */}
-            <Form method="post" className="flex flex-col gap-3">
+            <Form method="post" className="flex flex-col gap-4">
               <input type="hidden" name="_intent" value="create_role" />
+
               <div className="flex gap-2 items-end">
                 <div className="flex-1">
                   <Input
@@ -664,13 +768,76 @@ export default function ModSettings() {
                   </div>
                 </div>
               </div>
+
+              {/* Permission checklist */}
+              <div
+                className="rounded-md p-4 flex flex-col gap-3"
+                style={{
+                  background: "var(--color-bg-elev-2)",
+                  border: "1px solid var(--color-border)",
+                }}
+              >
+                <p
+                  className="text-xs font-semibold uppercase tracking-wide"
+                  style={{ color: "var(--color-text-faint)" }}
+                >
+                  Content permissions
+                </p>
+                <PermissionCheckbox
+                  name="canPostLinks"
+                  label="Can post links"
+                  defaultChecked={true}
+                />
+                <PermissionCheckbox
+                  name="canPostImages"
+                  label="Can post images"
+                  defaultChecked={true}
+                />
+                <PermissionCheckbox
+                  name="canPostVideos"
+                  label="Can post videos"
+                  defaultChecked={true}
+                />
+                <div
+                  className="flex items-center gap-3 pt-1"
+                  style={{ borderTop: "1px solid var(--color-border)" }}
+                >
+                  <label
+                    htmlFor="postsPerHour"
+                    className="text-sm"
+                    style={{ color: "var(--color-text-dim)" }}
+                  >
+                    Post rate limit
+                  </label>
+                  <input
+                    id="postsPerHour"
+                    type="number"
+                    name="postsPerHour"
+                    min={0}
+                    step={1}
+                    placeholder="No limit"
+                    className="w-24 rounded-md px-2 py-1.5 text-sm"
+                    style={{
+                      background: "var(--color-bg-elev-1)",
+                      border: "1px solid var(--color-border)",
+                      color: "var(--color-text)",
+                      outline: "none",
+                    }}
+                  />
+                  <span className="text-xs" style={{ color: "var(--color-text-faint)" }}>
+                    posts / hour (blank = no limit)
+                  </span>
+                </div>
+              </div>
+
+              {/* Moderation access */}
               <div className="flex flex-col gap-1.5">
                 <label
                   htmlFor="baseRole"
                   className="text-sm font-medium"
                   style={{ color: "var(--color-text)" }}
                 >
-                  Permission level
+                  Moderation access
                 </label>
                 <select
                   id="baseRole"
@@ -683,12 +850,16 @@ export default function ModSettings() {
                     outline: "none",
                   }}
                 >
-                  <option value="member">Member — read + post</option>
+                  <option value="member">None — regular member</option>
                   <option value="mod">Mod — remove posts + timeout users</option>
                   <option value="senior_mod">Senior Mod — ban + feature posts</option>
                   <option value="admin">Admin — full community access</option>
                 </select>
+                <p className="text-xs" style={{ color: "var(--color-text-faint)" }}>
+                  Controls whether this role can take moderation actions.
+                </p>
               </div>
+
               <Button
                 type="submit"
                 variant="secondary"
@@ -804,5 +975,42 @@ export default function ModSettings() {
       </AppShell>
       <Footer />
     </div>
+  );
+}
+
+function PermissionCheckbox({
+  name,
+  label,
+  defaultChecked,
+}: { name: string; label: string; defaultChecked: boolean }) {
+  return (
+    <label className="flex items-center gap-3 cursor-pointer select-none">
+      <input
+        type="checkbox"
+        name={name}
+        value="1"
+        defaultChecked={defaultChecked}
+        className="w-4 h-4 rounded cursor-pointer"
+      />
+      <span className="text-sm" style={{ color: "var(--color-text-dim)" }}>
+        {label}
+      </span>
+    </label>
+  );
+}
+
+function PermTag({ active, label, faint }: { active: boolean; label: string; faint?: boolean }) {
+  return (
+    <span
+      className="text-xs px-1.5 py-0.5 rounded"
+      style={{
+        background: active && !faint ? "var(--color-success)22" : "var(--color-bg-elev-2)",
+        color: active && !faint ? "var(--color-success)" : "var(--color-text-faint)",
+        border: `1px solid ${active && !faint ? "var(--color-success)44" : "var(--color-border)"}`,
+        textDecoration: !active && !faint ? "line-through" : undefined,
+      }}
+    >
+      {label}
+    </span>
   );
 }

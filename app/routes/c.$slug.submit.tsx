@@ -16,13 +16,52 @@ import { Input } from "~/components/ui/Input";
 import { getCurrentUser } from "~/lib/auth/user.server";
 import { createDb } from "~/lib/db/index";
 import { parseEmbed } from "~/lib/embeds";
+import { resolvePostPerms } from "~/lib/permissions";
 import { checkRateLimit } from "~/lib/ratelimit";
 import { generateId } from "~/lib/utils";
-import { communities, communitySections, posts } from "../../db/schema";
+import {
+  communities,
+  communityCustomRoles,
+  communityMemberships,
+  communitySections,
+  posts,
+} from "../../db/schema";
 
 export const meta: MetaFunction<typeof loader> = ({ data }) => [
   { title: data ? `Submit to c/${data.slug} — CORE` : "CORE" },
 ];
+
+async function loadPerms(
+  db: ReturnType<typeof import("~/lib/db/index").createDb>,
+  userId: string,
+  communityId: string,
+  community: typeof communities.$inferSelect,
+) {
+  const membership = await db.query.communityMemberships.findFirst({
+    where: and(
+      eq(communityMemberships.userId, userId),
+      eq(communityMemberships.communityId, communityId),
+    ),
+    columns: { role: true, customRoleId: true },
+  });
+
+  let customRole = null;
+  if (membership?.customRoleId) {
+    customRole =
+      (await db
+        .select({
+          canPostLinks: communityCustomRoles.canPostLinks,
+          canPostImages: communityCustomRoles.canPostImages,
+          canPostVideos: communityCustomRoles.canPostVideos,
+          postsPerHour: communityCustomRoles.postsPerHour,
+        })
+        .from(communityCustomRoles)
+        .where(eq(communityCustomRoles.id, membership.customRoleId))
+        .get()) ?? null;
+  }
+
+  return resolvePostPerms(membership?.role, community, customRole);
+}
 
 export async function loader({ params, request, context }: LoaderFunctionArgs) {
   const { env } = context.cloudflare;
@@ -32,11 +71,12 @@ export async function loader({ params, request, context }: LoaderFunctionArgs) {
   const db = createDb(env.DB);
   const community = await db.query.communities.findFirst({
     where: and(eq(communities.slug, params.slug ?? ""), isNull(communities.deletedAt)),
-    columns: { id: true, slug: true, name: true },
   });
   if (!community) throw new Response("Community not found", { status: 404 });
 
-  return { slug: community.slug, name: community.name };
+  const perms = await loadPerms(db, user.id, community.id, community);
+
+  return { slug: community.slug, name: community.name, perms };
 }
 
 export async function action({ params, request, context }: ActionFunctionArgs) {
@@ -45,15 +85,22 @@ export async function action({ params, request, context }: ActionFunctionArgs) {
   if (!user) return redirect("/auth/login");
   if (!user.emailVerifiedAt) return { error: "You must verify your email before posting." };
 
-  const rl = await checkRateLimit(env.KV, "post", user.id, 10, 3600);
-  if (!rl.allowed) return { error: "Too many posts. Try again later." };
-
   const db = createDb(env.DB);
   const community = await db.query.communities.findFirst({
     where: and(eq(communities.slug, params.slug ?? ""), isNull(communities.deletedAt)),
-    columns: { id: true, slug: true },
   });
   if (!community) throw new Response("Community not found", { status: 404 });
+
+  const perms = await loadPerms(db, user.id, community.id, community);
+
+  // Rate limit: 0 = unlimited
+  if (perms.postsPerHour > 0) {
+    const rl = await checkRateLimit(env.KV, "post", user.id, perms.postsPerHour, 3600);
+    if (!rl.allowed)
+      return {
+        error: `Post limit reached. You can post ${perms.postsPerHour} times per hour in this community.`,
+      };
+  }
 
   const form = await request.formData();
   const title = (form.get("title") as string | null)?.trim() ?? "";
@@ -65,12 +112,20 @@ export async function action({ params, request, context }: ActionFunctionArgs) {
   if (title.length > 300) return { error: "Title must be under 300 characters." };
 
   if (type === "link") {
+    if (!perms.canPostLinks)
+      return { error: "You don't have permission to post links in this community." };
     if (!url) return { error: "A URL is required for link posts." };
     try {
       new URL(url);
     } catch {
       return { error: "Enter a valid URL (include https://)." };
     }
+  }
+  if (type === "image" && !perms.canPostImages) {
+    return { error: "You don't have permission to post images in this community." };
+  }
+  if (type === "video" && !perms.canPostVideos) {
+    return { error: "You don't have permission to post videos in this community." };
   }
 
   let section = await db.query.communitySections.findFirst({
@@ -131,7 +186,7 @@ type TiptapEditorType = React.ComponentType<{
 }>;
 
 export default function Submit() {
-  const { slug } = useLoaderData<typeof loader>();
+  const { slug, perms } = useLoaderData<typeof loader>();
   const data = useActionData<typeof action>();
   const nav = useNavigation();
 
@@ -146,10 +201,10 @@ export default function Submit() {
     });
   }, []);
 
-  const tabs: { id: Tab; label: string; disabled?: boolean }[] = [
+  const tabs: { id: Tab; label: string; locked?: boolean; soon?: boolean }[] = [
     { id: "text", label: "Text" },
-    { id: "link", label: "Link" },
-    { id: "image", label: "Image", disabled: true },
+    { id: "link", label: "Link", locked: !perms.canPostLinks },
+    { id: "image", label: "Image", soon: true },
   ];
 
   return (
@@ -187,33 +242,41 @@ export default function Submit() {
         >
           {/* Tab bar */}
           <div className="flex" style={{ borderBottom: "1px solid var(--color-border)" }}>
-            {tabs.map((t) => (
-              <button
-                key={t.id}
-                type="button"
-                disabled={t.disabled}
-                onClick={() => !t.disabled && setTab(t.id)}
-                className="px-5 py-3 text-sm font-medium transition-colors relative"
-                style={{
-                  color: t.disabled
-                    ? "var(--color-text-faint)"
-                    : tab === t.id
-                      ? "var(--color-text)"
-                      : "var(--color-text-dim)",
-                  background: "transparent",
-                  cursor: t.disabled ? "not-allowed" : "pointer",
-                  borderBottom:
-                    tab === t.id ? "2px solid var(--color-text)" : "2px solid transparent",
-                }}
-              >
-                {t.label}
-                {t.disabled && (
-                  <span className="ml-1.5 text-xs" style={{ color: "var(--color-text-faint)" }}>
-                    soon
-                  </span>
-                )}
-              </button>
-            ))}
+            {tabs.map((t) => {
+              const disabled = t.locked || t.soon;
+              return (
+                <button
+                  key={t.id}
+                  type="button"
+                  disabled={disabled}
+                  onClick={() => !disabled && setTab(t.id)}
+                  className="px-5 py-3 text-sm font-medium transition-colors relative"
+                  style={{
+                    color: disabled
+                      ? "var(--color-text-faint)"
+                      : tab === t.id
+                        ? "var(--color-text)"
+                        : "var(--color-text-dim)",
+                    background: "transparent",
+                    cursor: disabled ? "not-allowed" : "pointer",
+                    borderBottom:
+                      tab === t.id ? "2px solid var(--color-text)" : "2px solid transparent",
+                  }}
+                >
+                  {t.label}
+                  {t.soon && (
+                    <span className="ml-1.5 text-xs" style={{ color: "var(--color-text-faint)" }}>
+                      soon
+                    </span>
+                  )}
+                  {t.locked && !t.soon && (
+                    <span className="ml-1.5 text-xs" style={{ color: "var(--color-text-faint)" }}>
+                      locked
+                    </span>
+                  )}
+                </button>
+              );
+            })}
           </div>
 
           {/* Form */}
@@ -333,6 +396,12 @@ export default function Submit() {
             </div>
           </Form>
         </div>
+
+        {perms.postsPerHour > 0 && (
+          <p className="text-xs mt-3 text-center" style={{ color: "var(--color-text-faint)" }}>
+            Post limit: {perms.postsPerHour} per hour in this community
+          </p>
+        )}
       </div>
     </div>
   );
