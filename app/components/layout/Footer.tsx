@@ -2,7 +2,13 @@ import { Link } from "@remix-run/react";
 
 export function Footer() {
   return (
-    <footer className="w-full mt-auto" style={{ borderTop: "1px solid var(--color-border)" }}>
+    <footer
+      className="w-full mt-auto"
+      style={{
+        background: "var(--color-bg-elev-1)",
+        borderTop: "1px solid var(--color-border)",
+      }}
+    >
       <div
         className="mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 px-4 md:px-6 py-6"
         style={{ maxWidth: "1280px" }}
