@@ -148,8 +148,8 @@ export default function CommunitiesIndex() {
             </div>
           ) : (
             <div
-              className="grid gap-4 justify-center"
-              style={{ gridTemplateColumns: "repeat(auto-fill, 245px)" }}
+              className="grid gap-4"
+              style={{ gridTemplateColumns: "repeat(auto-fill, minmax(245px, 1fr))" }}
             >
               {rows.map((c) => (
                 <CommunityCard
@@ -200,9 +200,8 @@ function CommunityCard({
 
   return (
     <div
-      className="flex flex-col overflow-hidden rounded-xl flex-shrink-0"
+      className="flex flex-col overflow-hidden rounded-xl"
       style={{
-        width: "245px",
         height: "329px",
         background: accent ? `${accent}12` : "var(--color-bg-elev-1)",
         border: `1px solid ${accent ? `${accent}40` : "var(--color-border)"}`,
