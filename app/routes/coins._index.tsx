@@ -1,5 +1,6 @@
 import type { LoaderFunctionArgs, MetaFunction } from "@remix-run/cloudflare";
 import { useFetcher, useLoaderData, useRouteLoaderData, useSearchParams } from "@remix-run/react";
+import { useEffect } from "react";
 import { AppShell } from "~/components/layout/AppShell";
 import { Footer } from "~/components/layout/Footer";
 import { Header } from "~/components/layout/Header";
@@ -22,14 +23,17 @@ export async function loader({ request, context }: LoaderFunctionArgs) {
   const user = await getCurrentUser(request, env);
 
   const db = createDb(env.DB);
-  const bundles = await getActiveBundles(db);
-  const balance = user ? await getBalance(db, user.id) : 0;
-
-  return { user, bundles, balance };
+  try {
+    const bundles = await getActiveBundles(db);
+    const balance = user ? await getBalance(db, user.id) : 0;
+    return { user, bundles, balance, dbReady: true };
+  } catch {
+    return { user, bundles: [], balance: 0, dbReady: false };
+  }
 }
 
 export default function CoinsPage() {
-  const { user, bundles, balance } = useLoaderData<typeof loader>();
+  const { user, bundles, balance, dbReady } = useLoaderData<typeof loader>();
   const root = useRouteLoaderData<typeof rootLoader>("root");
   const rootUser = root?.user ?? null;
   const [params] = useSearchParams();
@@ -49,6 +53,20 @@ export default function CoinsPage() {
               Give badges to posts you love. Support creators directly.
             </p>
           </div>
+
+          {/* Migration pending banner */}
+          {!dbReady && (
+            <div
+              className="rounded-lg px-4 py-3 mb-5 text-sm"
+              style={{
+                background: "rgba(229,72,77,0.1)",
+                border: "1px solid var(--color-danger)",
+                color: "var(--color-danger)",
+              }}
+            >
+              The coins database is not yet set up. Run the migration and try again.
+            </div>
+          )}
 
           {/* Status banners */}
           {(paypalStatus === "success" || cryptoStatus === "success") && (
@@ -238,14 +256,16 @@ function BundleCard({ bundle }: { bundle: Bundle }) {
   const cryptoFetcher = useFetcher<{ paymentUrl?: string; error?: string }>();
 
   const usdDisplay = `$${(bundle.usdPriceCents / 100).toFixed(2)}`;
+  const approvalUrl = paypalFetcher.data?.approvalUrl;
+  const paymentUrl = cryptoFetcher.data?.paymentUrl;
 
-  // Redirect to payment provider on URL received
-  if (paypalFetcher.data?.approvalUrl) {
-    window.location.href = paypalFetcher.data.approvalUrl;
-  }
-  if (cryptoFetcher.data?.paymentUrl) {
-    window.location.href = cryptoFetcher.data.paymentUrl;
-  }
+  useEffect(() => {
+    if (approvalUrl) window.location.href = approvalUrl;
+  }, [approvalUrl]);
+
+  useEffect(() => {
+    if (paymentUrl) window.location.href = paymentUrl;
+  }, [paymentUrl]);
 
   const isSubmitting = paypalFetcher.state !== "idle" || cryptoFetcher.state !== "idle";
 
