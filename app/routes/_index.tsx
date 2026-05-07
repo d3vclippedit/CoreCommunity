@@ -1,6 +1,7 @@
 import type { LoaderFunctionArgs, MetaFunction } from "@remix-run/cloudflare";
 import { Link, useLoaderData, useSearchParams } from "@remix-run/react";
 import { and, desc, eq, inArray, isNull } from "drizzle-orm";
+import { useEffect, useRef } from "react";
 import { CoreLogo } from "~/components/CoreLogo";
 import { AppShell } from "~/components/layout/AppShell";
 import { Footer } from "~/components/layout/Footer";
@@ -459,9 +460,50 @@ function EmptyFeed({ tab }: { tab: Tab }) {
   );
 }
 
+function PageCursorGlow() {
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const div = ref.current;
+    if (!div) return;
+    const onMove = (e: MouseEvent) => {
+      div.style.setProperty("--mx", `${e.clientX}px`);
+      div.style.setProperty("--my", `${e.clientY}px`);
+      div.style.opacity = "1";
+    };
+    const onLeave = () => {
+      if (div) div.style.opacity = "0";
+    };
+    window.addEventListener("mousemove", onMove);
+    document.documentElement.addEventListener("mouseleave", onLeave);
+    return () => {
+      window.removeEventListener("mousemove", onMove);
+      document.documentElement.removeEventListener("mouseleave", onLeave);
+    };
+  }, []);
+
+  return (
+    <div
+      ref={ref}
+      aria-hidden="true"
+      style={{
+        position: "fixed",
+        inset: 0,
+        pointerEvents: "none",
+        zIndex: 0,
+        opacity: 0,
+        transition: "opacity 0.6s ease",
+        background:
+          "radial-gradient(520px circle at var(--mx, -999px) var(--my, -999px), rgba(245,245,247,0.055), transparent 70%)",
+      }}
+    />
+  );
+}
+
 function LandingPage() {
   return (
     <div className="flex flex-col min-h-screen" style={{ background: "var(--color-bg)" }}>
+      <PageCursorGlow />
       <Header user={null} />
 
       {/* ── Hero — two-column ── */}
