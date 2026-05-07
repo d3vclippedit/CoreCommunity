@@ -39,7 +39,7 @@ export async function action({ request, context }: ActionFunctionArgs) {
       orderId,
       bundle.usdPriceCents,
       `${bundle.coinAmount} Core Coins — ${bundle.name}`,
-      `${origin}/coins?paypal=success&order=${orderId}`,
+      `${origin}/api/coins/paypal/capture?order=${orderId}`,
       `${origin}/coins?paypal=cancelled`,
     );
 

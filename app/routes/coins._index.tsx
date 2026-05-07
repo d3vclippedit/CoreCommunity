@@ -80,7 +80,7 @@ export default function CoinsPage() {
               Payment confirmed! Coins have been added to your wallet.
             </div>
           )}
-          {paypalStatus === "cancelled" && (
+          {(paypalStatus === "cancelled" || paypalStatus === "error") && (
             <div
               className="rounded-lg px-4 py-3 mb-5 text-sm"
               style={{
@@ -89,7 +89,9 @@ export default function CoinsPage() {
                 color: "var(--color-danger)",
               }}
             >
-              Payment cancelled. No charge was made.
+              {paypalStatus === "error"
+                ? "Payment failed. Contact support if you were charged."
+                : "Payment cancelled. No charge was made."}
             </div>
           )}
 
