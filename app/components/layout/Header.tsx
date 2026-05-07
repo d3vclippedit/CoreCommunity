@@ -1,5 +1,6 @@
 import { Form, Link, useLocation, useRouteLoaderData } from "@remix-run/react";
 import { Coins } from "lucide-react";
+import coreMiniUrl from "~/assets/coremini.png";
 import { cn } from "~/lib/cn";
 import { formatCoins } from "~/lib/coins";
 import type { loader as rootLoader } from "~/root";
@@ -30,13 +31,23 @@ export function Header({ user }: HeaderProps) {
         className="mx-auto flex h-14 items-center gap-6 px-4 md:px-6"
         style={{ maxWidth: "1280px" }}
       >
-        {/* CORE wordmark */}
+        {/* CORE mini logo */}
         <Link
           to="/"
-          className="flex-shrink-0 flex items-center gap-2 no-underline"
-          aria-label="CORE — home"
+          className="flex-shrink-0 flex items-center no-underline"
+          aria-label="CORE Communities — home"
         >
-          <CoreWordmark />
+          <img
+            src={coreMiniUrl}
+            alt="CORE Communities"
+            style={{
+              height: 36,
+              width: "auto",
+              mixBlendMode: "screen",
+              filter: "brightness(1.05)",
+              display: "block",
+            }}
+          />
         </Link>
 
         {/* Nav links */}
@@ -239,28 +250,3 @@ export function Avatar({
   );
 }
 
-function CoreWordmark() {
-  return (
-    <svg
-      width="72"
-      height="24"
-      viewBox="0 0 72 24"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      aria-label="CORE"
-      role="img"
-    >
-      <text
-        x="0"
-        y="19"
-        fontFamily="Inter, system-ui, sans-serif"
-        fontWeight="700"
-        fontSize="22"
-        letterSpacing="-0.44"
-        fill="#F5F5F7"
-      >
-        CORE
-      </text>
-    </svg>
-  );
-}
