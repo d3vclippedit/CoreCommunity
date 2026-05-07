@@ -1,7 +1,7 @@
 import type { LoaderFunctionArgs, MetaFunction } from "@remix-run/cloudflare";
 import { Link, useLoaderData, useSearchParams } from "@remix-run/react";
 import { and, desc, eq, inArray, isNull } from "drizzle-orm";
-import { CoreLogo } from "~/components/CoreLogo";
+import { CoreLogoDebug } from "~/components/CoreLogo";
 import { AppShell } from "~/components/layout/AppShell";
 import { Footer } from "~/components/layout/Footer";
 import { Header } from "~/components/layout/Header";
@@ -566,7 +566,7 @@ function LandingPage() {
             className="hidden lg:flex flex-shrink-0 items-center justify-center"
             style={{ width: "46%", maxWidth: "660px" }}
           >
-            <CoreLogo className="w-full" style={{ height: "min(580px, 70vh)" }} />
+            <CoreLogoDebug className="w-full" style={{ height: "min(580px, 70vh)" }} />
           </div>
         </div>
       </div>

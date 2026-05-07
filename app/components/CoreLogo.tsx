@@ -1,8 +1,8 @@
 import { useEffect, useRef } from "react";
 
-const SAMPLE_STEP = 7;
-const MAX_NODES = 210;
-const CONNECT_DIST = 24;
+const SAMPLE_STEP = 5;
+const MAX_NODES = 380;
+const CONNECT_DIST = 22;
 const CONNECT_DIST_SQ = CONNECT_DIST * CONNECT_DIST;
 const GRAVITY_DIST = 145;
 const GRAVITY_DIST_SQ = GRAVITY_DIST * GRAVITY_DIST;
@@ -35,15 +35,24 @@ function buildParticles(w: number, h: number): Particle[] {
   oc.textAlign = "center";
   oc.textBaseline = "middle";
 
-  // CORE — large, upper section
-  const coreFs = Math.round(Math.min(w * 0.3, h * 0.23));
-  oc.font = `900 ${coreFs}px "Inter",system-ui,sans-serif`;
-  oc.fillText("CORE", w / 2, h * 0.36);
+  // CORE — large, upper word
+  const coreFs = Math.round(Math.min(w * 0.28, h * 0.26));
+  // COMMUNITIES — independently sized to fill ~80% of width, not just a ratio of CORE
+  const commFs = Math.round(Math.min(w * 0.14, h * 0.13));
+  // Gap between the two words' bounding boxes
+  const textGap = Math.round(coreFs * 0.3);
 
-  // COMMUNITIES — smaller, lower section
-  const commFs = Math.round(coreFs * 0.4);
+  // Vertically center both words as a group
+  const totalH = coreFs + textGap + commFs;
+  const groupTop = (h - totalH) / 2;
+  const coreCenterY = Math.round(groupTop + coreFs / 2);
+  const commCenterY = Math.round(groupTop + coreFs + textGap + commFs / 2);
+
+  oc.font = `900 ${coreFs}px "Inter",system-ui,sans-serif`;
+  oc.fillText("CORE", w / 2, coreCenterY);
+
   oc.font = `800 ${commFs}px "Inter",system-ui,sans-serif`;
-  oc.fillText("COMMUNITIES", w / 2, h * 0.65);
+  oc.fillText("COMMUNITIES", w / 2, commCenterY);
 
   const { data } = oc.getImageData(0, 0, w, h);
   const raw: { bx: number; by: number }[] = [];
@@ -113,15 +122,12 @@ export function CoreLogo({
       g.clearRect(0, 0, w, h);
 
       for (const p of particles) {
-        // Home spring — keeps letters legible
         p.vx += (p.baseX - p.x) * HOME_FORCE;
         p.vy += (p.baseY - p.y) * HOME_FORCE;
 
-        // Ambient micro-drift for life
         p.vx += (Math.random() - 0.5) * 0.04;
         p.vy += (Math.random() - 0.5) * 0.04;
 
-        // Cursor gravity
         if (mouse.inside) {
           const dx = mouse.x - p.x;
           const dy = mouse.y - p.y;
@@ -148,7 +154,6 @@ export function CoreLogo({
         p.y += p.vy;
       }
 
-      // Connections — trace letter structure
       g.lineWidth = 0.5;
       for (let i = 0; i < particles.length; i++) {
         for (let j = i + 1; j < particles.length; j++) {
@@ -181,7 +186,6 @@ export function CoreLogo({
         }
       }
 
-      // Cursor glow
       if (mouse.inside) {
         const gr = g.createRadialGradient(
           mouse.x,
@@ -200,7 +204,6 @@ export function CoreLogo({
         g.fill();
       }
 
-      // Nodes
       for (const p of particles) {
         let alpha = p.opacity;
         let r = p.r;
@@ -237,7 +240,6 @@ export function CoreLogo({
       }
     }
 
-    // Wait for fonts so the offscreen text sampling uses the correct metrics
     document.fonts.ready.then(init);
 
     const ro = new ResizeObserver(() => {
@@ -276,11 +278,97 @@ export function CoreLogo({
       className={className}
       style={{
         display: "block",
-        // Fade edges so the canvas boundary is invisible
         maskImage: "radial-gradient(ellipse 95% 90% at 50% 50%, black 60%, transparent 100%)",
         WebkitMaskImage: "radial-gradient(ellipse 95% 90% at 50% 50%, black 60%, transparent 100%)",
         ...style,
       }}
     />
   );
+}
+
+/**
+ * Debug view — renders the raw offscreen text sampling so you can verify
+ * font sizes, spacing and letter shapes before particles are applied.
+ * Drop this into the landing page temporarily: <CoreLogoDebug className="w-full" style={{ height: "min(580px, 70vh)" }} />
+ */
+export function CoreLogoDebug({
+  className,
+  style,
+}: {
+  className?: string;
+  style?: React.CSSProperties;
+}) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const el: HTMLCanvasElement = canvas;
+
+    function render() {
+      const dpr = window.devicePixelRatio || 1;
+      const w = el.offsetWidth;
+      const h = el.offsetHeight;
+      if (!w || !h) return;
+
+      el.width = Math.round(w * dpr);
+      el.height = Math.round(h * dpr);
+      const ctx = el.getContext("2d");
+      if (!ctx) return;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+      // Dark background matching site
+      ctx.fillStyle = "#0A0A0C";
+      ctx.fillRect(0, 0, w, h);
+
+      ctx.fillStyle = "#F5F5F7";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+
+      const coreFs = Math.round(Math.min(w * 0.28, h * 0.26));
+      const commFs = Math.round(Math.min(w * 0.14, h * 0.13));
+      const textGap = Math.round(coreFs * 0.3);
+
+      const totalH = coreFs + textGap + commFs;
+      const groupTop = (h - totalH) / 2;
+      const coreCenterY = Math.round(groupTop + coreFs / 2);
+      const commCenterY = Math.round(groupTop + coreFs + textGap + commFs / 2);
+
+      ctx.font = `900 ${coreFs}px "Inter",system-ui,sans-serif`;
+      ctx.fillText("CORE", w / 2, coreCenterY);
+
+      ctx.font = `800 ${commFs}px "Inter",system-ui,sans-serif`;
+      ctx.fillText("COMMUNITIES", w / 2, commCenterY);
+
+      // Sample dots overlay — shows exactly what the particle sampler sees
+      ctx.fillStyle = "rgba(239,68,68,0.8)";
+      const { data } = ctx.getImageData(0, 0, el.width, el.height);
+      for (let y = 0; y < h; y += SAMPLE_STEP) {
+        for (let x = 0; x < w; x += SAMPLE_STEP) {
+          const px = Math.round(x * dpr);
+          const py = Math.round(y * dpr);
+          if (data[(py * el.width + px) * 4] > 100) {
+            ctx.beginPath();
+            ctx.arc(x, y, 2, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        }
+      }
+
+      // Labels
+      ctx.font = `500 11px "Inter",system-ui,sans-serif`;
+      ctx.fillStyle = "rgba(245,245,247,0.4)";
+      ctx.textAlign = "left";
+      ctx.fillText(
+        `CORE: ${coreFs}px  |  COMMUNITIES: ${commFs}px  |  step: ${SAMPLE_STEP}  |  max: ${MAX_NODES}`,
+        12,
+        h - 12,
+      );
+    }
+
+    document.fonts.ready.then(render);
+  }, []);
+
+  return <canvas ref={canvasRef} className={className} style={{ display: "block", ...style }} />;
 }
