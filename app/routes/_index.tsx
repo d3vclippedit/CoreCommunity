@@ -603,12 +603,9 @@ function LandingPage() {
             </div>
           </div>
 
-          {/* Right: interactive network */}
-          <div
-            className="hidden lg:flex flex-shrink-0 items-center justify-center"
-            style={{ width: "46%", maxWidth: "660px" }}
-          >
-            <CoreLogo className="w-full" style={{ height: "min(580px, 70vh)" }} />
+          {/* Right: logo — fills all remaining hero height/width with no box boundary */}
+          <div className="hidden lg:flex flex-1 self-stretch relative min-h-0">
+            <CoreLogo className="absolute inset-0" />
           </div>
         </div>
       </div>

@@ -35,6 +35,17 @@
   --shadow-1: 0 1px 0 rgba(255, 255, 255, 0.04) inset;
 }
 
+/* ── Core logo floating animation ────────────────────────────────────────── */
+@keyframes coreFloat {
+  0%,
+  100% {
+    transform: translateY(0px) scale(1);
+  }
+  50% {
+    transform: translateY(-10px) scale(1.01);
+  }
+}
+
 /* ── Role badge glow animation (admin / streamer) ─────────────────────────── */
 @keyframes glow-pulse {
   0%,
