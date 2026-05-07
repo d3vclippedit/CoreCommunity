@@ -1,5 +1,5 @@
 import type { LoaderFunctionArgs, MetaFunction } from "@remix-run/cloudflare";
-import { Link, useLoaderData, useRouteLoaderData } from "@remix-run/react";
+import { Form, Link, useLoaderData, useRouteLoaderData } from "@remix-run/react";
 import { and, eq, isNull } from "drizzle-orm";
 import { AppShell } from "~/components/layout/AppShell";
 import { Footer } from "~/components/layout/Footer";
@@ -119,7 +119,7 @@ export default function ModQueue() {
                   }}
                 >
                   <div className="flex items-start justify-between gap-3">
-                    <div>
+                    <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
                         <span
                           className="text-xs px-2 py-0.5 rounded capitalize"
@@ -146,7 +146,8 @@ export default function ModQueue() {
                         Reported by @{r.reporterHandle} · {relativeTime(r.createdAt)}
                       </p>
                     </div>
-                    <div className="flex gap-2 flex-shrink-0">
+
+                    <div className="flex gap-2 flex-shrink-0 flex-wrap justify-end">
                       <Link
                         to={r.targetType === "post" ? `/c/${slug}/p/${r.targetId}` : `/c/${slug}`}
                         className="px-3 py-1 text-xs rounded-md no-underline"
@@ -157,6 +158,42 @@ export default function ModQueue() {
                       >
                         View
                       </Link>
+
+                      {/* Remove content */}
+                      <Form method="post" action="/api/remove">
+                        <input type="hidden" name="targetType" value={r.targetType} />
+                        <input type="hidden" name="targetId" value={r.targetId} />
+                        <input type="hidden" name="communitySlug" value={slug} />
+                        <input type="hidden" name="redirectTo" value={`/c/${slug}/mod/queue`} />
+                        <button
+                          type="submit"
+                          className="px-3 py-1 text-xs rounded-md"
+                          style={{
+                            border: "1px solid var(--color-danger)",
+                            color: "var(--color-danger)",
+                          }}
+                        >
+                          Remove
+                        </button>
+                      </Form>
+
+                      {/* Dismiss report */}
+                      <Form method="post" action="/api/mod">
+                        <input type="hidden" name="action" value="dismiss_report" />
+                        <input type="hidden" name="reportId" value={r.id} />
+                        <input type="hidden" name="communitySlug" value={slug} />
+                        <input type="hidden" name="redirectTo" value={`/c/${slug}/mod/queue`} />
+                        <button
+                          type="submit"
+                          className="px-3 py-1 text-xs rounded-md"
+                          style={{
+                            border: "1px solid var(--color-border)",
+                            color: "var(--color-text-faint)",
+                          }}
+                        >
+                          Dismiss
+                        </button>
+                      </Form>
                     </div>
                   </div>
                 </div>

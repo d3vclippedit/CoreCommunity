@@ -1,15 +1,24 @@
 import type { ActionFunctionArgs, LoaderFunctionArgs, MetaFunction } from "@remix-run/cloudflare";
-import { Link, useFetcher, useLoaderData, useRouteLoaderData } from "@remix-run/react";
-import { and, desc, eq, isNull, sql } from "drizzle-orm";
+import { Form, Link, useFetcher, useLoaderData, useRouteLoaderData } from "@remix-run/react";
+import { and, desc, eq, gt, isNull, or, sql } from "drizzle-orm";
 import { AppShell } from "~/components/layout/AppShell";
 import { Footer } from "~/components/layout/Footer";
 import { Header } from "~/components/layout/Header";
 import { getCurrentUser } from "~/lib/auth/user.server";
 import { createDb } from "~/lib/db/index";
+import { canFeaturePost, canPinPost } from "~/lib/permissions";
 import { checkRateLimit } from "~/lib/ratelimit";
 import { generateId } from "~/lib/utils";
 import type { loader as rootLoader } from "~/root";
-import { comments, communities, posts, users, votes } from "../../db/schema";
+import {
+  bans,
+  comments,
+  communities,
+  communityMemberships,
+  posts,
+  users,
+  votes,
+} from "../../db/schema";
 import { CommunityAvatar } from "./communities._index";
 
 export const meta: MetaFunction<typeof loader> = ({ data }) => [
@@ -57,19 +66,30 @@ export async function loader({ params, request, context }: LoaderFunctionArgs) {
     .limit(200);
 
   let userVote: number | null = null;
+  let memberRole: string | null = null;
   if (user) {
-    const v = await db.query.votes.findFirst({
-      where: and(
-        eq(votes.userId, user.id),
-        eq(votes.targetType, "post"),
-        eq(votes.targetId, post.id),
-      ),
-      columns: { value: true },
-    });
+    const [v, mem] = await Promise.all([
+      db.query.votes.findFirst({
+        where: and(
+          eq(votes.userId, user.id),
+          eq(votes.targetType, "post"),
+          eq(votes.targetId, post.id),
+        ),
+        columns: { value: true },
+      }),
+      db.query.communityMemberships.findFirst({
+        where: and(
+          eq(communityMemberships.userId, user.id),
+          eq(communityMemberships.communityId, community.id),
+        ),
+        columns: { role: true },
+      }),
+    ]);
     userVote = v?.value ?? null;
+    memberRole = mem?.role ?? null;
   }
 
-  return { community, post, author, comments: topComments, userVote };
+  return { community, post, author, comments: topComments, userVote, memberRole };
 }
 
 export async function action({ params, request, context }: ActionFunctionArgs) {
@@ -94,6 +114,23 @@ export async function action({ params, request, context }: ActionFunctionArgs) {
     columns: { id: true, communityId: true },
   });
   if (!post) throw new Response("Post not found", { status: 404 });
+
+  // Check for active ban or timeout
+  const activeBan = await db.query.bans.findFirst({
+    where: and(
+      eq(bans.communityId, post.communityId),
+      eq(bans.userId, user.id),
+      or(isNull(bans.expiresAt), gt(bans.expiresAt, new Date())),
+    ),
+    columns: { type: true, expiresAt: true },
+  });
+  if (activeBan) {
+    const msg =
+      activeBan.type === "ban"
+        ? "You are banned from this community."
+        : `You are timed out${activeBan.expiresAt ? ` until ${activeBan.expiresAt.toLocaleString()}` : ""}.`;
+    return { error: msg };
+  }
 
   const now = new Date();
   await db.insert(comments).values({
@@ -124,10 +161,15 @@ export default function PostPermalink() {
     author,
     comments: allComments,
     userVote,
+    memberRole,
   } = useLoaderData<typeof loader>();
   const root = useRouteLoaderData<typeof rootLoader>("root");
   const rootUser = root?.user ?? null;
   const commentFetcher = useFetcher<typeof action>();
+  const modFetcher = useFetcher();
+  const isAdmin = rootUser?.isPlatformAdmin ?? false;
+  const canPin = canPinPost(memberRole as Parameters<typeof canPinPost>[0]) || isAdmin;
+  const canFeature = canFeaturePost(memberRole as Parameters<typeof canFeaturePost>[0]) || isAdmin;
 
   const topLevel = allComments.filter((c) => !c.parentCommentId);
   const byParent: Record<string, typeof allComments> = {};
@@ -192,7 +234,7 @@ export default function PostPermalink() {
                   </p>
                 )}
                 <div
-                  className="flex items-center gap-3 text-xs"
+                  className="flex items-center gap-3 text-xs flex-wrap"
                   style={{ color: "var(--color-text-faint)" }}
                 >
                   <span>
@@ -207,7 +249,77 @@ export default function PostPermalink() {
                   </span>
                   <span>{relativeTime(post.createdAt)}</span>
                   <span>{post.commentCount} comments</span>
+                  {post.isPinned && (
+                    <span style={{ color: "var(--color-success)" }}>📌 Pinned</span>
+                  )}
+                  {post.isFeatured && (
+                    <span style={{ color: "var(--color-text-dim)" }}>★ Featured</span>
+                  )}
                 </div>
+
+                {/* Mod actions */}
+                {(canPin || canFeature) && (
+                  <div className="flex items-center gap-2 mt-3 flex-wrap">
+                    {canPin && (
+                      <modFetcher.Form method="post" action="/api/mod">
+                        <input
+                          type="hidden"
+                          name="action"
+                          value={post.isPinned ? "unpin" : "pin"}
+                        />
+                        <input type="hidden" name="postId" value={post.id} />
+                        <input type="hidden" name="communitySlug" value={community.slug} />
+                        <button
+                          type="submit"
+                          className="text-xs px-2 py-1 rounded"
+                          style={{
+                            border: "1px solid var(--color-border)",
+                            color: "var(--color-text-faint)",
+                          }}
+                        >
+                          {post.isPinned ? "Unpin" : "Pin"}
+                        </button>
+                      </modFetcher.Form>
+                    )}
+                    {canFeature && (
+                      <modFetcher.Form method="post" action="/api/mod">
+                        <input
+                          type="hidden"
+                          name="action"
+                          value={post.isFeatured ? "unfeature" : "feature"}
+                        />
+                        <input type="hidden" name="postId" value={post.id} />
+                        <input type="hidden" name="communitySlug" value={community.slug} />
+                        <button
+                          type="submit"
+                          className="text-xs px-2 py-1 rounded"
+                          style={{
+                            border: "1px solid var(--color-border)",
+                            color: "var(--color-text-faint)",
+                          }}
+                        >
+                          {post.isFeatured ? "Unfeature" : "Feature"}
+                        </button>
+                      </modFetcher.Form>
+                    )}
+                    <Form method="post" action="/api/remove">
+                      <input type="hidden" name="targetType" value="post" />
+                      <input type="hidden" name="targetId" value={post.id} />
+                      <input type="hidden" name="communitySlug" value={community.slug} />
+                      <input type="hidden" name="redirectTo" value={`/c/${community.slug}`} />
+                      <button
+                        type="submit"
+                        className="text-xs px-2 py-1 rounded"
+                        style={{
+                          border: "1px solid var(--color-danger)",
+                          color: "var(--color-danger)",
+                        }}
+                      >
+                        Remove post
+                      </button>
+                    </Form>
+                  </div>
+                )}
               </div>
             </div>
           </div>

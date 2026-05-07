@@ -274,6 +274,20 @@ export const bans = sqliteTable("bans", {
   createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
 });
 
+// ─── Stream Snapshots ─────────────────────────────────────────────────────────
+// Periodic snapshots of CORE streamers' live status for the stats page.
+// Written every ~5 min when the homepage or /stats page is loaded.
+
+export const streamSnapshots = sqliteTable("stream_snapshots", {
+  id: text("id").primaryKey(),
+  streamerLogin: text("streamer_login").notNull(),
+  viewerCount: integer("viewer_count").notNull().default(0),
+  isLive: integer("is_live", { mode: "boolean" }).notNull().default(false),
+  streamTitle: text("stream_title"),
+  gameName: text("game_name"),
+  recordedAt: integer("recorded_at", { mode: "timestamp" }).notNull(),
+});
+
 // ─── V2 Stub Tables ───────────────────────────────────────────────────────────
 // Created but not wired to UI in V1. Leave // V2: comments at usage sites.
 
