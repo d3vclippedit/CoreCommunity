@@ -4,7 +4,12 @@ import { eq } from "drizzle-orm";
 import { Alert } from "~/components/ui/Alert";
 import { Button } from "~/components/ui/Button";
 import { Input } from "~/components/ui/Input";
-import { verifyPassword } from "~/lib/auth/password";
+import {
+  PASSWORD_ERROR_MESSAGES,
+  hashPassword,
+  validatePassword,
+  verifyPassword,
+} from "~/lib/auth/password";
 import { createSession, makeSessionCookie } from "~/lib/auth/session";
 import { getCurrentUser } from "~/lib/auth/user.server";
 import { createDb } from "~/lib/db/index";
@@ -49,6 +54,7 @@ export async function action({ request, context }: ActionFunctionArgs) {
     columns: {
       id: true,
       email: true,
+      handle: true,
       passwordHash: true,
       deletedAt: true,
     },
@@ -56,6 +62,26 @@ export async function action({ request, context }: ActionFunctionArgs) {
 
   // Rate limit per email too
   const emailRl = await checkRateLimit(env.KV, "login_email", cleanIdentifier, 5, 3600);
+
+  // First-login password setup: D3V founder account only
+  if (
+    user &&
+    !user.deletedAt &&
+    user.handle === "d3v" &&
+    user.passwordHash === "__founder_unset__"
+  ) {
+    const pwErr = validatePassword(password);
+    if (pwErr) return { error: PASSWORD_ERROR_MESSAGES[pwErr] };
+    const hash = await hashPassword(password);
+    await db
+      .update(users)
+      .set({ passwordHash: hash, updatedAt: new Date() })
+      .where(eq(users.id, user.id));
+    const token = await createSession(env.KV, user.id);
+    return redirect(redirectTo.startsWith("/") ? redirectTo : "/", {
+      headers: { "Set-Cookie": makeSessionCookie(token) },
+    });
+  }
 
   const valid = user && !user.deletedAt && (await verifyPassword(password, user.passwordHash));
 
