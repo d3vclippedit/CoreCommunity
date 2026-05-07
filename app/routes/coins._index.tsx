@@ -1,6 +1,6 @@
 import type { LoaderFunctionArgs, MetaFunction } from "@remix-run/cloudflare";
 import { useFetcher, useLoaderData, useRouteLoaderData, useSearchParams } from "@remix-run/react";
-import { useEffect } from "react";
+import { type FormEvent, useEffect } from "react";
 import { AppShell } from "~/components/layout/AppShell";
 import { Footer } from "~/components/layout/Footer";
 import { Header } from "~/components/layout/Header";
@@ -251,16 +251,22 @@ type Bundle = {
 };
 
 function BundleCard({ bundle }: { bundle: Bundle }) {
-  const paypalFetcher = useFetcher<{ approvalUrl?: string; error?: string }>();
+  const paypalFetcher = useFetcher<{ approvalUrl?: string; error?: string }>({
+    key: `paypal-${bundle.id}`,
+  });
 
   const usdDisplay = `$${(bundle.usdPriceCents / 100).toFixed(2)}`;
   const approvalUrl = paypalFetcher.data?.approvalUrl;
+  const isSubmitting = paypalFetcher.state !== "idle";
 
   useEffect(() => {
     if (approvalUrl) window.location.href = approvalUrl;
   }, [approvalUrl]);
 
-  const isSubmitting = paypalFetcher.state !== "idle";
+  function handleSubmit(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    paypalFetcher.submit(e.currentTarget);
+  }
 
   return (
     <div
@@ -294,7 +300,7 @@ function BundleCard({ bundle }: { bundle: Bundle }) {
       )}
 
       <div className="flex flex-col gap-2 mt-auto">
-        <paypalFetcher.Form method="post" action="/api/coins/paypal/create">
+        <form method="post" action="/api/coins/paypal/create" onSubmit={handleSubmit}>
           <input type="hidden" name="bundleId" value={bundle.id} />
           <button
             type="submit"
@@ -302,9 +308,9 @@ function BundleCard({ bundle }: { bundle: Bundle }) {
             className="w-full py-2 text-sm font-medium rounded-lg transition-opacity hover:opacity-80 disabled:opacity-50"
             style={{ background: "#0070BA", color: "#fff" }}
           >
-            {paypalFetcher.state !== "idle" ? "Redirecting…" : "Buy with PayPal"}
+            {isSubmitting ? "Redirecting…" : "Buy with PayPal"}
           </button>
-        </paypalFetcher.Form>
+        </form>
       </div>
     </div>
   );
