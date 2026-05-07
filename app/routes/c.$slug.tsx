@@ -7,8 +7,8 @@ import {
   useLoaderData,
   useRouteLoaderData,
 } from "@remix-run/react";
-import type React from "react";
 import { and, eq, isNull } from "drizzle-orm";
+import type React from "react";
 import { AppShell } from "~/components/layout/AppShell";
 import { Footer } from "~/components/layout/Footer";
 import { Header } from "~/components/layout/Header";
