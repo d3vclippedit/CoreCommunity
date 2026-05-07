@@ -35,6 +35,11 @@
   --shadow-1: 0 1px 0 rgba(255, 255, 255, 0.04) inset;
 }
 
+/* ── Core logo hover brightness ─────────────────────────────────────────── */
+.core-logo-img:hover {
+  filter: brightness(1.3) drop-shadow(0 0 48px rgba(245, 245, 247, 0.55)) !important;
+}
+
 /* ── Core logo floating animation ────────────────────────────────────────── */
 @keyframes coreFloat {
   0%,
