@@ -8,6 +8,7 @@ import {
   useRouteLoaderData,
 } from "@remix-run/react";
 import { and, asc, eq, isNull, ne } from "drizzle-orm";
+import { useRef, useState } from "react";
 import { AppShell } from "~/components/layout/AppShell";
 import { Footer } from "~/components/layout/Footer";
 import { Alert } from "~/components/ui/Alert";
@@ -113,6 +114,7 @@ export async function action({ params, request, context }: ActionFunctionArgs) {
     const rules = (form.get("rules") as string | null)?.trim() ?? "";
     const accentColor = (form.get("accentColor") as string | null)?.trim() ?? "";
     const iconUrl = (form.get("iconUrl") as string | null)?.trim() ?? "";
+    const bannerUrl = (form.get("bannerUrl") as string | null)?.trim() ?? "";
     const backgroundCss = (form.get("backgroundCss") as string | null)?.trim() ?? "";
     const memberCanPostLinks = form.get("memberCanPostLinks") === "1";
     const memberCanPostImages = form.get("memberCanPostImages") === "1";
@@ -142,6 +144,7 @@ export async function action({ params, request, context }: ActionFunctionArgs) {
         rules: rulesArray.length ? JSON.stringify(rulesArray) : null,
         accentColor: accentColor || null,
         iconUrl: iconUrl || null,
+        bannerUrl: bannerUrl || null,
         backgroundCss: backgroundCss || null,
         memberCanPostLinks,
         memberCanPostImages,
@@ -440,15 +443,24 @@ export default function ModSettings() {
                 />
               </div>
 
-              {/* Community icon URL */}
-              <Input
-                id="iconUrl"
+              {/* Community icon */}
+              <ImageUploadField
                 name="iconUrl"
-                type="url"
-                label="Community icon URL"
-                placeholder="https://example.com/icon.png"
-                defaultValue={community.iconUrl ?? ""}
-                hint="Square image shown in the community header and directory card."
+                label="Community icon"
+                hint="256×256px recommended · Square · PNG, JPG, or WebP · Max 2 MB"
+                imageType="icon"
+                communitySlug={community.slug}
+                currentUrl={community.iconUrl}
+              />
+
+              {/* Hero banner */}
+              <ImageUploadField
+                name="bannerUrl"
+                label="Hero banner"
+                hint="1200×400px recommended · 3:1 ratio · PNG, JPG, or WebP · Max 4 MB"
+                imageType="banner"
+                communitySlug={community.slug}
+                currentUrl={community.bannerUrl}
               />
 
               {/* Accent color */}
@@ -506,33 +518,10 @@ export default function ModSettings() {
               </div>
 
               {/* Background */}
-              <div className="flex flex-col gap-1.5">
-                <label
-                  htmlFor="backgroundCss"
-                  className="text-sm font-medium"
-                  style={{ color: "var(--color-text)" }}
-                >
-                  Page background
-                </label>
-                <input
-                  type="text"
-                  id="backgroundCss"
-                  name="backgroundCss"
-                  defaultValue={community.backgroundCss ?? ""}
-                  placeholder="#1a1a2e  or  linear-gradient(135deg, #0f0c29, #302b63)  or  url(https://...)"
-                  className="w-full rounded-md px-3 py-2 text-sm font-mono"
-                  style={{
-                    background: "var(--color-bg-elev-2)",
-                    border: "1px solid var(--color-border)",
-                    color: "var(--color-text)",
-                    outline: "none",
-                  }}
-                />
-                <p className="text-xs" style={{ color: "var(--color-text-faint)" }}>
-                  Any valid CSS <code>background</code> value — solid color, gradient, or image URL.
-                  Leave blank for the default dark background.
-                </p>
-              </div>
+              <BackgroundEditor
+                communitySlug={community.slug}
+                defaultValue={community.backgroundCss}
+              />
 
               <div className="flex flex-col gap-1.5">
                 <label
@@ -974,6 +963,488 @@ export default function ModSettings() {
         </div>
       </AppShell>
       <Footer />
+    </div>
+  );
+}
+
+function ImageUploadField({
+  name,
+  label,
+  hint,
+  imageType,
+  communitySlug,
+  currentUrl,
+}: {
+  name: string;
+  label: string;
+  hint: string;
+  imageType: "icon" | "banner";
+  communitySlug: string;
+  currentUrl?: string | null;
+}) {
+  const [url, setUrl] = useState(currentUrl ?? "");
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  async function handleFile(file: File) {
+    setError(null);
+    setUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      fd.append("communitySlug", communitySlug);
+      fd.append("imageType", imageType);
+      const res = await fetch("/api/upload/community-image", { method: "POST", body: fd });
+      const json = (await res.json()) as { url?: string; error?: string };
+      if (!res.ok || !json.url) {
+        setError(json.error ?? "Upload failed");
+      } else {
+        setUrl(json.url);
+      }
+    } catch {
+      setError("Upload failed. Check your connection.");
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  const previewW = imageType === "icon" ? 48 : 96;
+  const previewH = imageType === "icon" ? 48 : 32;
+
+  return (
+    <div className="flex flex-col gap-1.5">
+      <span className="text-sm font-medium" style={{ color: "var(--color-text)" }}>
+        {label}
+      </span>
+      <input type="hidden" name={name} value={url} />
+      <input
+        ref={fileRef}
+        type="file"
+        accept="image/png,image/jpeg,image/webp"
+        className="hidden"
+        onChange={(e) => {
+          const f = e.target.files?.[0];
+          if (f) handleFile(f);
+          e.target.value = "";
+        }}
+      />
+      <div className="flex items-center gap-3">
+        {url && (
+          <img
+            src={url}
+            alt=""
+            className="rounded object-cover flex-shrink-0"
+            style={{ width: previewW, height: previewH, border: "1px solid var(--color-border)" }}
+          />
+        )}
+        <button
+          type="button"
+          disabled={uploading}
+          onClick={() => fileRef.current?.click()}
+          className="px-3 py-1.5 text-sm rounded-md transition-colors"
+          style={{
+            background: "var(--color-bg-elev-2)",
+            border: "1px solid var(--color-border)",
+            color: uploading ? "var(--color-text-faint)" : "var(--color-text)",
+            cursor: uploading ? "not-allowed" : "pointer",
+          }}
+        >
+          {uploading ? "Uploading…" : url ? "Change image" : "Upload image"}
+        </button>
+        {url && (
+          <button
+            type="button"
+            onClick={() => setUrl("")}
+            style={{
+              background: "none",
+              border: "none",
+              cursor: "pointer",
+              color: "var(--color-text-faint)",
+              fontSize: "0.75rem",
+            }}
+          >
+            Remove
+          </button>
+        )}
+      </div>
+      {error && (
+        <p className="text-xs" style={{ color: "var(--color-danger)" }}>
+          {error}
+        </p>
+      )}
+      <p className="text-xs" style={{ color: "var(--color-text-faint)" }}>
+        {hint}
+      </p>
+    </div>
+  );
+}
+
+type BgTab = "none" | "color" | "gradient" | "image";
+
+function parseBgCss(css: string | null | undefined): {
+  tab: BgTab;
+  color: string;
+  gradStop1: string;
+  gradStop2: string;
+  gradAngle: number;
+  imageUrl: string;
+} {
+  const v = (css ?? "").trim();
+  if (!v)
+    return {
+      tab: "none",
+      color: "#0a0a0c",
+      gradStop1: "#0f0c29",
+      gradStop2: "#302b63",
+      gradAngle: 135,
+      imageUrl: "",
+    };
+  if (v.startsWith("#"))
+    return {
+      tab: "color",
+      color: v,
+      gradStop1: "#0f0c29",
+      gradStop2: "#302b63",
+      gradAngle: 135,
+      imageUrl: "",
+    };
+  const gradMatch = v.match(
+    /^linear-gradient\((\d+)deg,\s*(#[0-9a-fA-F]{6}),\s*(#[0-9a-fA-F]{6})\)/,
+  );
+  if (gradMatch)
+    return {
+      tab: "gradient",
+      color: "#0a0a0c",
+      gradStop1: gradMatch[2],
+      gradStop2: gradMatch[3],
+      gradAngle: Number(gradMatch[1]),
+      imageUrl: "",
+    };
+  if (v.startsWith("linear-gradient"))
+    return {
+      tab: "gradient",
+      color: "#0a0a0c",
+      gradStop1: "#0f0c29",
+      gradStop2: "#302b63",
+      gradAngle: 135,
+      imageUrl: "",
+    };
+  const urlMatch = v.match(/^url\(['"]?([^'")\s]+)['"]?\)/);
+  if (urlMatch)
+    return {
+      tab: "image",
+      color: "#0a0a0c",
+      gradStop1: "#0f0c29",
+      gradStop2: "#302b63",
+      gradAngle: 135,
+      imageUrl: urlMatch[1],
+    };
+  return {
+    tab: "none",
+    color: "#0a0a0c",
+    gradStop1: "#0f0c29",
+    gradStop2: "#302b63",
+    gradAngle: 135,
+    imageUrl: "",
+  };
+}
+
+const ANGLES = [0, 45, 90, 135, 180, 225, 270, 315];
+const ANGLE_ARROWS: Record<number, string> = {
+  0: "↑",
+  45: "↗",
+  90: "→",
+  135: "↘",
+  180: "↓",
+  225: "↙",
+  270: "←",
+  315: "↖",
+};
+
+function BackgroundEditor({
+  communitySlug,
+  defaultValue,
+}: { communitySlug: string; defaultValue: string | null | undefined }) {
+  const parsed = parseBgCss(defaultValue);
+  const [tab, setTab] = useState<BgTab>(parsed.tab);
+  const [color, setColor] = useState(parsed.color);
+  const [gradStop1, setGradStop1] = useState(parsed.gradStop1);
+  const [gradStop2, setGradStop2] = useState(parsed.gradStop2);
+  const [gradAngle, setGradAngle] = useState(parsed.gradAngle);
+  const [imageUrl, setImageUrl] = useState(parsed.imageUrl);
+  const [bgUploading, setBgUploading] = useState(false);
+  const [bgUploadError, setBgUploadError] = useState<string | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  let bgCss = "";
+  if (tab === "color") bgCss = color;
+  else if (tab === "gradient")
+    bgCss = `linear-gradient(${gradAngle}deg, ${gradStop1}, ${gradStop2})`;
+  else if (tab === "image" && imageUrl) bgCss = `url(${imageUrl}) center/cover no-repeat fixed`;
+
+  async function handleBgFile(file: File) {
+    setBgUploadError(null);
+    setBgUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      fd.append("communitySlug", communitySlug);
+      fd.append("imageType", "background");
+      const res = await fetch("/api/upload/community-image", { method: "POST", body: fd });
+      const json = (await res.json()) as { url?: string; error?: string };
+      if (!res.ok || !json.url) {
+        setBgUploadError(json.error ?? "Upload failed");
+      } else {
+        setImageUrl(json.url);
+      }
+    } catch {
+      setBgUploadError("Upload failed. Check your connection.");
+    } finally {
+      setBgUploading(false);
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-2">
+      <span className="text-sm font-medium" style={{ color: "var(--color-text)" }}>
+        Page background
+      </span>
+      <input type="hidden" name="backgroundCss" value={bgCss} />
+      <div
+        className="flex rounded-md overflow-hidden"
+        style={{ border: "1px solid var(--color-border)" }}
+      >
+        {(["none", "color", "gradient", "image"] as BgTab[]).map((t) => (
+          <button
+            key={t}
+            type="button"
+            onClick={() => setTab(t)}
+            className="flex-1 py-1.5 text-xs capitalize transition-colors"
+            style={{
+              background: tab === t ? "var(--color-bg-elev-2)" : "transparent",
+              border: "none",
+              color: tab === t ? "var(--color-text)" : "var(--color-text-faint)",
+              cursor: "pointer",
+              fontWeight: tab === t ? 600 : 400,
+            }}
+          >
+            {t}
+          </button>
+        ))}
+      </div>
+
+      {tab === "none" && (
+        <p className="text-xs" style={{ color: "var(--color-text-faint)" }}>
+          Default dark background — no custom background applied.
+        </p>
+      )}
+
+      {tab === "color" && (
+        <div className="flex flex-col gap-2">
+          <div className="flex items-center gap-2">
+            <input
+              type="color"
+              value={color}
+              onChange={(e) => setColor(e.target.value)}
+              className="w-10 h-9 rounded cursor-pointer"
+              style={{
+                border: "1px solid var(--color-border)",
+                padding: "2px",
+                background: "var(--color-bg-elev-2)",
+              }}
+            />
+            <input
+              type="text"
+              value={color}
+              placeholder="#0a0a0c"
+              pattern="#[0-9a-fA-F]{6}"
+              className="flex-1 rounded-md px-3 py-2 text-sm font-mono"
+              style={{
+                background: "var(--color-bg-elev-2)",
+                border: "1px solid var(--color-border)",
+                color: "var(--color-text)",
+                outline: "none",
+              }}
+              onChange={(e) => {
+                if (/^#[0-9a-fA-F]{6}$/.test(e.target.value)) setColor(e.target.value);
+              }}
+            />
+          </div>
+          <div
+            className="h-8 rounded-md"
+            style={{ background: color, border: "1px solid var(--color-border)" }}
+          />
+        </div>
+      )}
+
+      {tab === "gradient" && (
+        <div className="flex flex-col gap-3">
+          <div className="flex gap-3">
+            <div className="flex flex-col gap-1 flex-1">
+              <span className="text-xs" style={{ color: "var(--color-text-faint)" }}>
+                Stop 1
+              </span>
+              <div className="flex items-center gap-1.5">
+                <input
+                  type="color"
+                  value={gradStop1}
+                  onChange={(e) => setGradStop1(e.target.value)}
+                  className="w-9 h-8 rounded cursor-pointer flex-shrink-0"
+                  style={{
+                    border: "1px solid var(--color-border)",
+                    padding: "2px",
+                    background: "var(--color-bg-elev-2)",
+                  }}
+                />
+                <input
+                  type="text"
+                  value={gradStop1}
+                  placeholder="#0f0c29"
+                  className="flex-1 min-w-0 rounded-md px-2 py-1.5 text-xs font-mono"
+                  style={{
+                    background: "var(--color-bg-elev-2)",
+                    border: "1px solid var(--color-border)",
+                    color: "var(--color-text)",
+                    outline: "none",
+                  }}
+                  onChange={(e) => {
+                    if (/^#[0-9a-fA-F]{6}$/.test(e.target.value)) setGradStop1(e.target.value);
+                  }}
+                />
+              </div>
+            </div>
+            <div className="flex flex-col gap-1 flex-1">
+              <span className="text-xs" style={{ color: "var(--color-text-faint)" }}>
+                Stop 2
+              </span>
+              <div className="flex items-center gap-1.5">
+                <input
+                  type="color"
+                  value={gradStop2}
+                  onChange={(e) => setGradStop2(e.target.value)}
+                  className="w-9 h-8 rounded cursor-pointer flex-shrink-0"
+                  style={{
+                    border: "1px solid var(--color-border)",
+                    padding: "2px",
+                    background: "var(--color-bg-elev-2)",
+                  }}
+                />
+                <input
+                  type="text"
+                  value={gradStop2}
+                  placeholder="#302b63"
+                  className="flex-1 min-w-0 rounded-md px-2 py-1.5 text-xs font-mono"
+                  style={{
+                    background: "var(--color-bg-elev-2)",
+                    border: "1px solid var(--color-border)",
+                    color: "var(--color-text)",
+                    outline: "none",
+                  }}
+                  onChange={(e) => {
+                    if (/^#[0-9a-fA-F]{6}$/.test(e.target.value)) setGradStop2(e.target.value);
+                  }}
+                />
+              </div>
+            </div>
+          </div>
+          <div className="flex flex-col gap-1">
+            <span className="text-xs" style={{ color: "var(--color-text-faint)" }}>
+              Direction
+            </span>
+            <div className="flex gap-0.5">
+              {ANGLES.map((a) => (
+                <button
+                  key={a}
+                  type="button"
+                  onClick={() => setGradAngle(a)}
+                  className="w-8 h-8 text-sm rounded transition-colors"
+                  style={{
+                    background: gradAngle === a ? "var(--color-bg-elev-2)" : "transparent",
+                    border:
+                      gradAngle === a ? "1px solid var(--color-border)" : "1px solid transparent",
+                    color: gradAngle === a ? "var(--color-text)" : "var(--color-text-faint)",
+                    cursor: "pointer",
+                  }}
+                >
+                  {ANGLE_ARROWS[a]}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div
+            className="h-8 rounded-md"
+            style={{
+              background: `linear-gradient(${gradAngle}deg, ${gradStop1}, ${gradStop2})`,
+              border: "1px solid var(--color-border)",
+            }}
+          />
+        </div>
+      )}
+
+      {tab === "image" && (
+        <div className="flex flex-col gap-2">
+          <input
+            ref={fileRef}
+            type="file"
+            accept="image/png,image/jpeg,image/webp"
+            className="hidden"
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              if (f) handleBgFile(f);
+              e.target.value = "";
+            }}
+          />
+          <div className="flex items-center gap-3">
+            {imageUrl && (
+              <img
+                src={imageUrl}
+                alt=""
+                className="rounded object-cover flex-shrink-0"
+                style={{ width: 80, height: 40, border: "1px solid var(--color-border)" }}
+              />
+            )}
+            <button
+              type="button"
+              disabled={bgUploading}
+              onClick={() => fileRef.current?.click()}
+              className="px-3 py-1.5 text-sm rounded-md transition-colors"
+              style={{
+                background: "var(--color-bg-elev-2)",
+                border: "1px solid var(--color-border)",
+                color: bgUploading ? "var(--color-text-faint)" : "var(--color-text)",
+                cursor: bgUploading ? "not-allowed" : "pointer",
+              }}
+            >
+              {bgUploading ? "Uploading…" : imageUrl ? "Change image" : "Upload image"}
+            </button>
+            {imageUrl && (
+              <button
+                type="button"
+                onClick={() => setImageUrl("")}
+                style={{
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  color: "var(--color-text-faint)",
+                  fontSize: "0.75rem",
+                }}
+              >
+                Remove
+              </button>
+            )}
+          </div>
+          {bgUploadError && (
+            <p className="text-xs" style={{ color: "var(--color-danger)" }}>
+              {bgUploadError}
+            </p>
+          )}
+          <p className="text-xs" style={{ color: "var(--color-text-faint)" }}>
+            Recommended 1920×1080px or wider · PNG, JPG, or WebP · Max 8 MB · Fills the page
+            background
+          </p>
+        </div>
+      )}
     </div>
   );
 }
