@@ -74,8 +74,12 @@ export const communities = sqliteTable("communities", {
   accentColor: text("accent_color"), // hex, e.g. "#3DD68C"
   backgroundCss: text("background_css"), // e.g. "#1a1a2e" or "linear-gradient(...)" or url(...)
   memberCanPostLinks: integer("member_can_post_links", { mode: "boolean" }).notNull().default(true),
-  memberCanPostImages: integer("member_can_post_images", { mode: "boolean" }).notNull().default(true),
-  memberCanPostVideos: integer("member_can_post_videos", { mode: "boolean" }).notNull().default(true),
+  memberCanPostImages: integer("member_can_post_images", { mode: "boolean" })
+    .notNull()
+    .default(true),
+  memberCanPostVideos: integer("member_can_post_videos", { mode: "boolean" })
+    .notNull()
+    .default(true),
   memberPostsPerHour: integer("member_posts_per_hour"), // null = system default (10)
   ownerId: text("owner_id")
     .notNull()
