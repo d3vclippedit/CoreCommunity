@@ -99,7 +99,7 @@ export default function Stats() {
     <div className="flex flex-col min-h-screen" style={{ background: "var(--color-bg)" }}>
       <Header user={user} />
       <AppShell>
-        <div className="py-8 max-w-2xl">
+        <div className="py-8">
           {/* Page header */}
           <div className="mb-8">
             <div className="flex items-center gap-3 mb-2">

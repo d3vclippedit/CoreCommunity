@@ -1,6 +1,6 @@
 import type { ActionFunctionArgs, LoaderFunctionArgs, MetaFunction } from "@remix-run/cloudflare";
 import { Form, Link, redirect, useActionData, useNavigation } from "@remix-run/react";
-import { eq } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import { Alert } from "~/components/ui/Alert";
 import { Button } from "~/components/ui/Button";
 import { Input } from "~/components/ui/Input";
@@ -64,8 +64,25 @@ export async function action({ request, context }: ActionFunctionArgs) {
   ]);
 
   if (existingEmail) errors.email = "An account with this email already exists.";
-  if (existingHandle) errors.handle = HANDLE_ERROR_MESSAGES.taken;
-  if (Object.keys(errors).length > 0) return { errors };
+
+  if (existingHandle) {
+    errors.handle = HANDLE_ERROR_MESSAGES.taken;
+    const candidates = Array.from({ length: 10 }, (_, i) => `${handle}${i + 1}`).filter(
+      (c) => validateHandle(c) === null,
+    );
+    const takenRows =
+      candidates.length > 0
+        ? await db.query.users.findMany({
+            where: inArray(users.handle, candidates),
+            columns: { handle: true },
+          })
+        : [];
+    const takenSet = new Set(takenRows.map((u) => u.handle));
+    const suggestions = candidates.filter((c) => !takenSet.has(c)).slice(0, 3);
+    return { errors, suggestions };
+  }
+
+  if (Object.keys(errors).length > 0) return { errors, suggestions: [] as string[] };
 
   const [userId, verificationToken, passwordHash] = await Promise.all([
     generateId(),
@@ -114,6 +131,7 @@ export default function Signup() {
   const nav = useNavigation();
   const loading = nav.state === "submitting";
   const errors = actionData?.errors ?? {};
+  const suggestions = actionData?.suggestions ?? [];
 
   return (
     <div
@@ -155,17 +173,42 @@ export default function Signup() {
               required
               error={errors.email}
             />
-            <Input
-              id="handle"
-              name="handle"
-              type="text"
-              label="Handle"
-              placeholder="yourhandle"
-              autoComplete="username"
-              hint="Letters, numbers, underscores. 3–20 characters."
-              required
-              error={errors.handle}
-            />
+            <div>
+              <Input
+                id="handle"
+                name="handle"
+                type="text"
+                label="Handle"
+                placeholder="yourhandle"
+                autoComplete="username"
+                hint="Letters, numbers, underscores. 3–20 characters."
+                required
+                error={errors.handle}
+              />
+              {suggestions.length > 0 && (
+                <div className="flex gap-2 flex-wrap mt-1.5">
+                  {suggestions.map((s) => (
+                    <button
+                      key={s}
+                      type="button"
+                      onClick={() => {
+                        const el = document.getElementById("handle") as HTMLInputElement | null;
+                        if (el) el.value = s;
+                      }}
+                      className="px-2 py-0.5 rounded text-xs font-medium transition-colors hover:opacity-80"
+                      style={{
+                        background: "var(--color-bg-elev-2)",
+                        border: "1px solid var(--color-border)",
+                        color: "var(--color-text-dim)",
+                        cursor: "pointer",
+                      }}
+                    >
+                      @{s}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
             <Input
               id="displayName"
               name="displayName"
@@ -181,9 +224,9 @@ export default function Signup() {
               name="password"
               type="password"
               label="Password"
-              placeholder="Min 10 characters"
+              placeholder="Min 8 characters"
               autoComplete="new-password"
-              hint="At least 10 characters with 3 of: lowercase, uppercase, numbers, symbols."
+              hint="At least 8 characters with 3 of: lowercase, uppercase, numbers, symbols."
               required
               error={errors.password}
             />

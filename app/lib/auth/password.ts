@@ -75,7 +75,7 @@ const COMMON_PASSWORDS = new Set([
 export type PasswordError = "too_short" | "too_weak" | "too_common";
 
 export function validatePassword(password: string): PasswordError | null {
-  if (password.length < 10) return "too_short";
+  if (password.length < 8) return "too_short";
   if (COMMON_PASSWORDS.has(password.toLowerCase())) return "too_common";
   let score = 0;
   if (/[a-z]/.test(password)) score++;
@@ -87,7 +87,7 @@ export function validatePassword(password: string): PasswordError | null {
 }
 
 export const PASSWORD_ERROR_MESSAGES: Record<PasswordError, string> = {
-  too_short: "Password must be at least 10 characters.",
+  too_short: "Password must be at least 8 characters.",
   too_weak: "Password must include at least 3 of: lowercase, uppercase, numbers, symbols.",
   too_common: "That password is too common. Please choose a stronger one.",
 };

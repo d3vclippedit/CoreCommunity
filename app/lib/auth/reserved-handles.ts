@@ -16,7 +16,6 @@ export const RESERVED_HANDLES = new Set([
   "auth",
   "settings",
   "d3vclippedit",
-  "d3v",
   "system",
   "root",
   "null",
