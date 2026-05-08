@@ -1,6 +1,6 @@
 import { Form, Link, useLocation, useRouteLoaderData } from "@remix-run/react";
 import { Coins } from "lucide-react";
-import coreMiniUrl from "~/assets/coremini2.png";
+import coreMiniUrl from "~/assets/CormunitiesTop.png";
 import { cn } from "~/lib/cn";
 import { formatCoins } from "~/lib/coins";
 import type { loader as rootLoader } from "~/root";
@@ -249,4 +249,3 @@ export function Avatar({
     </div>
   );
 }
-

@@ -38,10 +38,10 @@ export function AppShell({ leftNav, rightRail, children, className, transparent 
           >
             {leftNav && (
               <aside
-                className="hidden lg:flex flex-col flex-shrink-0 w-64 xl:w-80 overflow-y-auto"
+                className="hidden lg:flex flex-col flex-shrink-0 w-72 xl:w-80 overflow-y-auto"
                 aria-label="Community navigation"
               >
-                <div className="pb-8">{leftNav}</div>
+                <div className="pb-8 pr-4">{leftNav}</div>
               </aside>
             )}
 
