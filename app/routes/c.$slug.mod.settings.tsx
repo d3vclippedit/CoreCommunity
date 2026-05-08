@@ -6,6 +6,7 @@ import {
   useLoaderData,
   useNavigation,
   useRouteLoaderData,
+  useSearchParams,
 } from "@remix-run/react";
 import { and, asc, eq, isNull, ne } from "drizzle-orm";
 import { useRef, useState } from "react";
@@ -106,43 +107,16 @@ export async function action({ params, request, context }: ActionFunctionArgs) {
   const form = await request.formData();
   const intent = (form.get("_intent") as string | null) ?? "settings";
 
-  // ── Community settings ────────────────────────────────────────────────────
-  if (intent === "settings") {
+  // ── General settings ─────────────────────────────────────────────────────
+  if (intent === "settings_general") {
     const name = (form.get("name") as string | null)?.trim() ?? "";
     const tagline = (form.get("tagline") as string | null)?.trim() ?? "";
     const description = (form.get("description") as string | null)?.trim() ?? "";
     const rules = (form.get("rules") as string | null)?.trim() ?? "";
-    const accentColor = (form.get("accentColor") as string | null)?.trim() ?? "";
-    const iconUrl = (form.get("iconUrl") as string | null)?.trim() ?? "";
-    const bannerUrl = (form.get("bannerUrl") as string | null)?.trim() ?? "";
-    const backgroundCss = (form.get("backgroundCss") as string | null)?.trim() ?? "";
-    const twitchChannel = (form.get("twitchChannel") as string | null)?.trim() ?? "";
-    const roleColorStreamer = (form.get("roleColorStreamer") as string | null)?.trim() ?? "";
-    const roleColorAdmin = (form.get("roleColorAdmin") as string | null)?.trim() ?? "";
-    const roleColorSeniorMod = (form.get("roleColorSeniorMod") as string | null)?.trim() ?? "";
-    const roleColorMod = (form.get("roleColorMod") as string | null)?.trim() ?? "";
-    const memberCanPostLinks = form.get("memberCanPostLinks") === "1";
-    const memberCanPostImages = form.get("memberCanPostImages") === "1";
-    const memberCanPostVideos = form.get("memberCanPostVideos") === "1";
-    const memberPostsPerHourRaw = (form.get("memberPostsPerHour") as string | null)?.trim() ?? "";
-    const memberPostsPerHour = memberPostsPerHourRaw === "" ? null : Number(memberPostsPerHourRaw);
 
     if (!name || name.length < 2 || name.length > 64)
       return { error: "Name must be between 2 and 64 characters.", intent };
     if (tagline.length > 120) return { error: "Tagline must be under 120 characters.", intent };
-    if (accentColor && !/^#[0-9a-fA-F]{6}$/.test(accentColor))
-      return { error: "Accent color must be a valid hex color like #3DD68C.", intent };
-    for (const [field, val] of [
-      ["Streamer color", roleColorStreamer],
-      ["Admin color", roleColorAdmin],
-      ["Senior Mod color", roleColorSeniorMod],
-      ["Mod color", roleColorMod],
-    ] as [string, string][]) {
-      if (val && !/^#[0-9a-fA-F]{6}$/.test(val))
-        return { error: `${field} must be a valid hex color.`, intent };
-    }
-    if (memberPostsPerHour !== null && (Number.isNaN(memberPostsPerHour) || memberPostsPerHour < 0))
-      return { error: "Posts per hour must be a positive number or blank for no limit.", intent };
 
     const rulesArray = rules
       .split("\n")
@@ -156,6 +130,48 @@ export async function action({ params, request, context }: ActionFunctionArgs) {
         tagline: tagline || null,
         description: description || null,
         rules: rulesArray.length ? JSON.stringify(rulesArray) : null,
+        updatedAt: new Date(),
+      })
+      .where(eq(communities.id, community.id));
+
+    await db.insert(moderationActions).values({
+      id: generateId(),
+      communityId: community.id,
+      actorId: user.id,
+      action: "settings_change",
+      createdAt: new Date(),
+    });
+
+    return { ok: true, intent };
+  }
+
+  // ── Appearance settings ───────────────────────────────────────────────────
+  if (intent === "settings_appearance") {
+    const accentColor = (form.get("accentColor") as string | null)?.trim() ?? "";
+    const iconUrl = (form.get("iconUrl") as string | null)?.trim() ?? "";
+    const bannerUrl = (form.get("bannerUrl") as string | null)?.trim() ?? "";
+    const backgroundCss = (form.get("backgroundCss") as string | null)?.trim() ?? "";
+    const twitchChannel = (form.get("twitchChannel") as string | null)?.trim() ?? "";
+    const roleColorStreamer = (form.get("roleColorStreamer") as string | null)?.trim() ?? "";
+    const roleColorAdmin = (form.get("roleColorAdmin") as string | null)?.trim() ?? "";
+    const roleColorSeniorMod = (form.get("roleColorSeniorMod") as string | null)?.trim() ?? "";
+    const roleColorMod = (form.get("roleColorMod") as string | null)?.trim() ?? "";
+
+    if (accentColor && !/^#[0-9a-fA-F]{6}$/.test(accentColor))
+      return { error: "Accent color must be a valid hex color like #3DD68C.", intent };
+    for (const [field, val] of [
+      ["Streamer color", roleColorStreamer],
+      ["Admin color", roleColorAdmin],
+      ["Senior Mod color", roleColorSeniorMod],
+      ["Mod color", roleColorMod],
+    ] as [string, string][]) {
+      if (val && !/^#[0-9a-fA-F]{6}$/.test(val))
+        return { error: `${field} must be a valid hex color.`, intent };
+    }
+
+    await db
+      .update(communities)
+      .set({
         accentColor: accentColor || null,
         iconUrl: iconUrl || null,
         bannerUrl: bannerUrl || null,
@@ -165,6 +181,35 @@ export async function action({ params, request, context }: ActionFunctionArgs) {
         roleColorAdmin: roleColorAdmin || null,
         roleColorSeniorMod: roleColorSeniorMod || null,
         roleColorMod: roleColorMod || null,
+        updatedAt: new Date(),
+      })
+      .where(eq(communities.id, community.id));
+
+    await db.insert(moderationActions).values({
+      id: generateId(),
+      communityId: community.id,
+      actorId: user.id,
+      action: "settings_change",
+      createdAt: new Date(),
+    });
+
+    return { ok: true, intent };
+  }
+
+  // ── Permissions settings ──────────────────────────────────────────────────
+  if (intent === "settings_permissions") {
+    const memberCanPostLinks = form.get("memberCanPostLinks") === "1";
+    const memberCanPostImages = form.get("memberCanPostImages") === "1";
+    const memberCanPostVideos = form.get("memberCanPostVideos") === "1";
+    const memberPostsPerHourRaw = (form.get("memberPostsPerHour") as string | null)?.trim() ?? "";
+    const memberPostsPerHour = memberPostsPerHourRaw === "" ? null : Number(memberPostsPerHourRaw);
+
+    if (memberPostsPerHour !== null && (Number.isNaN(memberPostsPerHour) || memberPostsPerHour < 0))
+      return { error: "Posts per hour must be a positive number or blank for no limit.", intent };
+
+    await db
+      .update(communities)
+      .set({
         memberCanPostLinks,
         memberCanPostImages,
         memberCanPostVideos,
@@ -343,6 +388,7 @@ export default function ModSettings() {
   const nav = useNavigation();
   const root = useRouteLoaderData<typeof rootLoader>("root");
   const user = root?.user ?? null;
+  const [params, setParams] = useSearchParams();
 
   const isSubmitting = nav.state === "submitting";
   const canStaff =
@@ -358,10 +404,16 @@ export default function ModSettings() {
 
   const submittingIntent =
     nav.state === "submitting"
-      ? ((nav.formData?.get("_intent") as string | null) ?? "settings")
+      ? ((nav.formData?.get("_intent") as string | null) ?? "settings_general")
       : null;
 
-  const settingsOk = data && "ok" in data && data.ok && data.intent === "settings";
+  const settingsOk =
+    data &&
+    "ok" in data &&
+    data.ok &&
+    (data.intent === "settings_general" ||
+      data.intent === "settings_appearance" ||
+      data.intent === "settings_permissions");
   const roleOk =
     data &&
     "ok" in data &&
@@ -393,6 +445,16 @@ export default function ModSettings() {
     border: "1px solid var(--color-border)",
   };
 
+  type SettingsTab = "general" | "appearance" | "permissions" | "roles" | "staff";
+  const activeTab = (params.get("tab") ?? "general") as SettingsTab;
+  const TABS: { id: SettingsTab; label: string }[] = [
+    { id: "general", label: "General" },
+    { id: "appearance", label: "Appearance" },
+    { id: "permissions", label: "Permissions" },
+    { id: "roles", label: "Roles" },
+    { id: "staff", label: "Staff" },
+  ];
+
   return (
     <div className="flex flex-col min-h-screen" style={{ background: "var(--color-bg)" }}>
       <AppShell>
@@ -410,410 +472,160 @@ export default function ModSettings() {
             </h1>
           </div>
 
+          {/* Tab bar */}
+          <div
+            className="flex rounded-lg overflow-hidden"
+            style={{
+              border: "1px solid var(--color-border)",
+              background: "var(--color-bg-elev-1)",
+            }}
+          >
+            {TABS.map((t, i) => (
+              <button
+                key={t.id}
+                type="button"
+                onClick={() => setParams(t.id === "general" ? {} : { tab: t.id })}
+                className="flex-1 py-2 text-xs font-medium transition-colors"
+                style={{
+                  background: activeTab === t.id ? "var(--color-bg-elev-2)" : "transparent",
+                  border: "none",
+                  borderRight: i < TABS.length - 1 ? "1px solid var(--color-border)" : "none",
+                  color: activeTab === t.id ? "var(--color-text)" : "var(--color-text-faint)",
+                  cursor: "pointer",
+                }}
+              >
+                {t.label}
+              </button>
+            ))}
+          </div>
+
           {settingsOk && <Alert variant="success">Settings saved.</Alert>}
           {roleOk && <Alert variant="success">Roles updated.</Alert>}
           {staffOk && <Alert variant="success">Staff updated.</Alert>}
           {errorMsg && <Alert variant="error">{errorMsg}</Alert>}
 
-          {/* ── General settings ── */}
-          <div className="rounded-lg p-6" style={cardStyle}>
-            <Form method="post" className="flex flex-col gap-4">
-              <input type="hidden" name="_intent" value="settings" />
-              <div className="flex items-center justify-between">
-                <h2 className="text-sm font-semibold" style={{ color: "var(--color-text)" }}>
-                  General
-                </h2>
-                <Button type="submit" loading={submittingIntent === "settings" && isSubmitting}>
-                  Save settings
-                </Button>
-              </div>
-              <Input
-                id="name"
-                name="name"
-                type="text"
-                label="Display name"
-                defaultValue={community.name}
-                required
-              />
-              <Input
-                id="tagline"
-                name="tagline"
-                type="text"
-                label="Tagline"
-                placeholder="Short community description (shown in directory)"
-                defaultValue={community.tagline ?? ""}
-                hint="Max 120 characters."
-              />
-              <div className="flex flex-col gap-1.5">
-                <label
-                  htmlFor="description"
-                  className="text-sm font-medium"
-                  style={{ color: "var(--color-text)" }}
-                >
-                  Description
-                </label>
-                <textarea
-                  id="description"
-                  name="description"
-                  defaultValue={community.description ?? ""}
-                  rows={3}
-                  className="w-full rounded-md px-3 py-2 text-sm resize-none"
-                  style={{
-                    background: "var(--color-bg-elev-2)",
-                    border: "1px solid var(--color-border)",
-                    color: "var(--color-text)",
-                    outline: "none",
-                  }}
-                />
-              </div>
-
-              {/* Community icon */}
-              <ImageUploadField
-                name="iconUrl"
-                label="Community icon"
-                hint="256×256px recommended · Square · PNG, JPG, or WebP · Max 2 MB"
-                imageType="icon"
-                communitySlug={community.slug}
-                currentUrl={community.iconUrl}
-              />
-
-              {/* Hero banner */}
-              <ImageUploadField
-                name="bannerUrl"
-                label="Hero banner"
-                hint="1200×400px recommended · 3:1 ratio · PNG, JPG, or WebP · Max 4 MB"
-                imageType="banner"
-                communitySlug={community.slug}
-                currentUrl={community.bannerUrl}
-              />
-
-              {/* Accent color */}
-              <div className="flex flex-col gap-1.5">
-                <label
-                  htmlFor="accentColor"
-                  className="text-sm font-medium"
-                  style={{ color: "var(--color-text)" }}
-                >
-                  Accent color
-                </label>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="color"
-                    id="accentColorPicker"
-                    defaultValue={community.accentColor ?? "#f5f5f7"}
-                    onChange={(e) => {
-                      const input = document.getElementById("accentColor") as HTMLInputElement;
-                      if (input) input.value = e.target.value;
-                    }}
-                    className="w-10 h-9 rounded cursor-pointer"
-                    style={{
-                      border: "1px solid var(--color-border)",
-                      padding: "2px",
-                      background: "var(--color-bg-elev-2)",
-                    }}
-                  />
-                  <input
-                    type="text"
-                    id="accentColor"
-                    name="accentColor"
-                    defaultValue={community.accentColor ?? ""}
-                    placeholder="#f5f5f7"
-                    pattern="#[0-9a-fA-F]{6}"
-                    className="flex-1 rounded-md px-3 py-2 text-sm font-mono"
-                    style={{
-                      background: "var(--color-bg-elev-2)",
-                      border: "1px solid var(--color-border)",
-                      color: "var(--color-text)",
-                      outline: "none",
-                    }}
-                    onChange={(e) => {
-                      if (/^#[0-9a-fA-F]{6}$/.test(e.target.value)) {
-                        const picker = document.getElementById(
-                          "accentColorPicker",
-                        ) as HTMLInputElement;
-                        if (picker) picker.value = e.target.value;
-                      }
-                    }}
-                  />
-                </div>
-                <p className="text-xs" style={{ color: "var(--color-text-faint)" }}>
-                  Used for highlights and links within this community.
-                </p>
-              </div>
-
-              {/* Background */}
-              <BackgroundEditor
-                communitySlug={community.slug}
-                defaultValue={community.backgroundCss}
-              />
-
-              {/* Twitch channel */}
-              <div className="flex flex-col gap-1.5">
-                <label
-                  htmlFor="twitchChannel"
-                  className="text-sm font-medium"
-                  style={{ color: "var(--color-text)" }}
-                >
-                  Twitch channel
-                </label>
-                <input
+          {/* ── General tab ── */}
+          {activeTab === "general" && (
+            <div className="rounded-lg p-6" style={cardStyle}>
+              <h2 className="text-sm font-semibold mb-4" style={{ color: "var(--color-text)" }}>
+                General
+              </h2>
+              <Form method="post" className="flex flex-col gap-4">
+                <input type="hidden" name="_intent" value="settings_general" />
+                <Input
+                  id="name"
+                  name="name"
                   type="text"
-                  id="twitchChannel"
-                  name="twitchChannel"
-                  defaultValue={community.twitchChannel ?? ""}
-                  placeholder="e.g. xqc"
-                  className="rounded-md px-3 py-2 text-sm"
-                  style={{
-                    background: "var(--color-bg-elev-2)",
-                    border: "1px solid var(--color-border)",
-                    color: "var(--color-text)",
-                    outline: "none",
-                  }}
+                  label="Display name"
+                  defaultValue={community.name}
+                  required
                 />
-                <p className="text-xs" style={{ color: "var(--color-text-faint)" }}>
-                  Your Twitch username. Enables live stream + chat embed in the community sidebar.
-                </p>
-              </div>
-
-              <div className="flex flex-col gap-1.5">
-                <label
-                  htmlFor="rules"
-                  className="text-sm font-medium"
-                  style={{ color: "var(--color-text)" }}
-                >
-                  Rules
-                </label>
-                <p className="text-xs" style={{ color: "var(--color-text-faint)" }}>
-                  One rule per line.
-                </p>
-                <textarea
-                  id="rules"
-                  name="rules"
-                  defaultValue={existingRules.join("\n")}
-                  rows={5}
-                  className="w-full rounded-md px-3 py-2 text-sm resize-y font-mono"
-                  style={{
-                    background: "var(--color-bg-elev-2)",
-                    border: "1px solid var(--color-border)",
-                    color: "var(--color-text)",
-                    outline: "none",
-                  }}
+                <Input
+                  id="tagline"
+                  name="tagline"
+                  type="text"
+                  label="Tagline"
+                  placeholder="Short community description (shown in directory)"
+                  defaultValue={community.tagline ?? ""}
+                  hint="Max 120 characters."
                 />
-              </div>
-
-              {/* ── Member post permissions ── */}
-              <div
-                className="rounded-md p-4 flex flex-col gap-3"
-                style={{
-                  background: "var(--color-bg-elev-2)",
-                  border: "1px solid var(--color-border)",
-                }}
-              >
-                <p
-                  className="text-xs font-semibold uppercase tracking-wide"
-                  style={{ color: "var(--color-text-faint)" }}
-                >
-                  Default member permissions
-                </p>
-                <p className="text-xs" style={{ color: "var(--color-text-faint)" }}>
-                  What regular members (no custom role) can post. Staff always bypass these.
-                </p>
-                <PermissionCheckbox
-                  name="memberCanPostLinks"
-                  label="Can post links"
-                  defaultChecked={community.memberCanPostLinks}
-                />
-                <PermissionCheckbox
-                  name="memberCanPostImages"
-                  label="Can post images"
-                  defaultChecked={community.memberCanPostImages}
-                />
-                <PermissionCheckbox
-                  name="memberCanPostVideos"
-                  label="Can post videos"
-                  defaultChecked={community.memberCanPostVideos}
-                />
-                <div className="flex items-center gap-3">
+                <div className="flex flex-col gap-1.5">
                   <label
-                    htmlFor="memberPostsPerHour"
-                    className="text-sm"
-                    style={{ color: "var(--color-text-dim)" }}
+                    htmlFor="description"
+                    className="text-sm font-medium"
+                    style={{ color: "var(--color-text)" }}
                   >
-                    Post rate limit
+                    Description
                   </label>
-                  <input
-                    id="memberPostsPerHour"
-                    type="number"
-                    name="memberPostsPerHour"
-                    min={0}
-                    step={1}
-                    defaultValue={community.memberPostsPerHour ?? ""}
-                    placeholder="No limit"
-                    className="w-24 rounded-md px-2 py-1.5 text-sm"
+                  <textarea
+                    id="description"
+                    name="description"
+                    defaultValue={community.description ?? ""}
+                    rows={3}
+                    className="w-full rounded-md px-3 py-2 text-sm resize-none"
                     style={{
-                      background: "var(--color-bg-elev-1)",
+                      background: "var(--color-bg-elev-2)",
                       border: "1px solid var(--color-border)",
                       color: "var(--color-text)",
                       outline: "none",
                     }}
-                  />
-                  <span className="text-xs" style={{ color: "var(--color-text-faint)" }}>
-                    posts / hour
-                  </span>
-                </div>
-              </div>
-
-              {/* Staff role colors */}
-              <div
-                className="rounded-md p-4 flex flex-col gap-3"
-                style={{
-                  background: "var(--color-bg-elev-2)",
-                  border: "1px solid var(--color-border)",
-                }}
-              >
-                <p
-                  className="text-xs font-semibold uppercase tracking-wide"
-                  style={{ color: "var(--color-text-faint)" }}
-                >
-                  Staff role colors
-                </p>
-                <p className="text-xs" style={{ color: "var(--color-text-faint)" }}>
-                  Colors shown on staff badges in the community sidebar.
-                </p>
-                <RoleColorPicker
-                  name="roleColorStreamer"
-                  label="Streamer / Owner"
-                  defaultValue={community.roleColorStreamer ?? "#F59E0B"}
-                />
-                <RoleColorPicker
-                  name="roleColorAdmin"
-                  label="Admin"
-                  defaultValue={community.roleColorAdmin ?? "#A855F7"}
-                />
-                <RoleColorPicker
-                  name="roleColorSeniorMod"
-                  label="Senior Mod"
-                  defaultValue={community.roleColorSeniorMod ?? "#3B82F6"}
-                />
-                <RoleColorPicker
-                  name="roleColorMod"
-                  label="Mod"
-                  defaultValue={community.roleColorMod ?? "#22C55E"}
-                />
-              </div>
-
-              <Button
-                type="submit"
-                loading={submittingIntent === "settings" && isSubmitting}
-                className="w-full"
-              >
-                Save settings
-              </Button>
-            </Form>
-          </div>
-
-          {/* ── Custom roles ── */}
-          <div className="rounded-lg p-6" style={cardStyle}>
-            <h2 className="text-sm font-semibold mb-1" style={{ color: "var(--color-text)" }}>
-              Custom member roles
-            </h2>
-            <p className="text-xs mb-4" style={{ color: "var(--color-text-faint)" }}>
-              Create roles like "VIP" or "Content Creator". Each role can unlock specific post types
-              and get a boosted post rate limit.
-            </p>
-
-            {customRoles.length === 0 ? (
-              <p className="text-sm mb-4" style={{ color: "var(--color-text-faint)" }}>
-                No custom roles yet.
-              </p>
-            ) : (
-              <div
-                className="flex flex-col divide-y mb-4"
-                style={{ borderColor: "var(--color-border)" }}
-              >
-                {customRoles.map((role) => (
-                  <div key={role.id} className="flex items-start justify-between py-3 gap-3">
-                    <div className="flex flex-col gap-1.5 min-w-0">
-                      <span
-                        className="text-xs px-2 py-0.5 rounded-full font-medium self-start"
-                        style={{
-                          background: role.color ? `${role.color}22` : "var(--color-bg-elev-2)",
-                          color: role.color ?? "var(--color-text-dim)",
-                          border: `1px solid ${role.color ?? "var(--color-border)"}`,
-                        }}
-                      >
-                        {role.name}
-                      </span>
-                      <div className="flex flex-wrap gap-1">
-                        <PermTag active={true} label="Text" />
-                        <PermTag active={role.canPostLinks} label="Links" />
-                        <PermTag active={role.canPostImages} label="Images" />
-                        <PermTag active={role.canPostVideos} label="Videos" />
-                        {role.postsPerHour !== null && role.postsPerHour !== undefined ? (
-                          <PermTag active={true} label={`${role.postsPerHour}/hr`} />
-                        ) : (
-                          <PermTag active={false} label="default rate" faint />
-                        )}
-                        <span
-                          className="text-xs px-1.5 py-0.5 rounded"
-                          style={{
-                            background: "var(--color-bg-elev-2)",
-                            color: "var(--color-text-faint)",
-                            border: "1px solid var(--color-border)",
-                          }}
-                        >
-                          {BASE_ROLE_LABELS[role.baseRole]}
-                        </span>
-                      </div>
-                    </div>
-                    <Form method="post" className="flex-shrink-0">
-                      <input type="hidden" name="_intent" value="delete_role" />
-                      <input type="hidden" name="roleId" value={role.id} />
-                      <button
-                        type="submit"
-                        className="text-xs px-2 py-1 rounded transition-colors hover:opacity-80"
-                        style={{
-                          color: "var(--color-danger)",
-                          border: "1px solid var(--color-border)",
-                        }}
-                      >
-                        Delete
-                      </button>
-                    </Form>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {/* Create role form */}
-            <Form method="post" className="flex flex-col gap-4">
-              <input type="hidden" name="_intent" value="create_role" />
-
-              <div className="flex gap-2 items-end">
-                <div className="flex-1">
-                  <Input
-                    id="roleName"
-                    name="roleName"
-                    type="text"
-                    label="Role name"
-                    placeholder="VIP"
                   />
                 </div>
                 <div className="flex flex-col gap-1.5">
                   <label
-                    htmlFor="roleColorPicker"
+                    htmlFor="rules"
                     className="text-sm font-medium"
                     style={{ color: "var(--color-text)" }}
                   >
-                    Color
+                    Rules
                   </label>
-                  <div className="flex items-center gap-1.5">
+                  <p className="text-xs" style={{ color: "var(--color-text-faint)" }}>
+                    One rule per line.
+                  </p>
+                  <textarea
+                    id="rules"
+                    name="rules"
+                    defaultValue={existingRules.join("\n")}
+                    rows={5}
+                    className="w-full rounded-md px-3 py-2 text-sm resize-y font-mono"
+                    style={{
+                      background: "var(--color-bg-elev-2)",
+                      border: "1px solid var(--color-border)",
+                      color: "var(--color-text)",
+                      outline: "none",
+                    }}
+                  />
+                </div>
+                <Button
+                  type="submit"
+                  loading={submittingIntent === "settings_general" && isSubmitting}
+                  className="w-full"
+                >
+                  Save general settings
+                </Button>
+              </Form>
+            </div>
+          )}
+
+          {/* ── Appearance tab ── */}
+          {activeTab === "appearance" && (
+            <div className="rounded-lg p-6" style={cardStyle}>
+              <h2 className="text-sm font-semibold mb-4" style={{ color: "var(--color-text)" }}>
+                Appearance
+              </h2>
+              <Form method="post" className="flex flex-col gap-4">
+                <input type="hidden" name="_intent" value="settings_appearance" />
+                <ImageUploadField
+                  name="iconUrl"
+                  label="Community icon"
+                  hint="256×256px recommended · Square · PNG, JPG, or WebP · Max 2 MB"
+                  imageType="icon"
+                  communitySlug={community.slug}
+                  currentUrl={community.iconUrl}
+                />
+                <ImageUploadField
+                  name="bannerUrl"
+                  label="Hero banner"
+                  hint="1200×400px recommended · 3:1 ratio · PNG, JPG, or WebP · Max 4 MB"
+                  imageType="banner"
+                  communitySlug={community.slug}
+                  currentUrl={community.bannerUrl}
+                />
+                <div className="flex flex-col gap-1.5">
+                  <label
+                    htmlFor="accentColor"
+                    className="text-sm font-medium"
+                    style={{ color: "var(--color-text)" }}
+                  >
+                    Accent color
+                  </label>
+                  <div className="flex items-center gap-2">
                     <input
                       type="color"
-                      id="roleColorPicker"
-                      defaultValue="#3DD68C"
+                      id="accentColorPicker"
+                      defaultValue={community.accentColor ?? "#f5f5f7"}
                       onChange={(e) => {
-                        const input = document.getElementById("roleColor") as HTMLInputElement;
+                        const input = document.getElementById("accentColor") as HTMLInputElement;
                         if (input) input.value = e.target.value;
                       }}
                       className="w-10 h-9 rounded cursor-pointer"
@@ -825,11 +637,12 @@ export default function ModSettings() {
                     />
                     <input
                       type="text"
-                      id="roleColor"
-                      name="roleColor"
-                      defaultValue="#3DD68C"
-                      placeholder="#3DD68C"
-                      className="w-24 rounded-md px-2 py-2 text-sm font-mono"
+                      id="accentColor"
+                      name="accentColor"
+                      defaultValue={community.accentColor ?? ""}
+                      placeholder="#f5f5f7"
+                      pattern="#[0-9a-fA-F]{6}"
+                      className="flex-1 rounded-md px-3 py-2 text-sm font-mono"
                       style={{
                         background: "var(--color-bg-elev-2)",
                         border: "1px solid var(--color-border)",
@@ -839,153 +652,232 @@ export default function ModSettings() {
                       onChange={(e) => {
                         if (/^#[0-9a-fA-F]{6}$/.test(e.target.value)) {
                           const picker = document.getElementById(
-                            "roleColorPicker",
+                            "accentColorPicker",
                           ) as HTMLInputElement;
                           if (picker) picker.value = e.target.value;
                         }
                       }}
                     />
                   </div>
+                  <p className="text-xs" style={{ color: "var(--color-text-faint)" }}>
+                    Used for highlights and links within this community.
+                  </p>
                 </div>
-              </div>
-
-              {/* Permission checklist */}
-              <div
-                className="rounded-md p-4 flex flex-col gap-3"
-                style={{
-                  background: "var(--color-bg-elev-2)",
-                  border: "1px solid var(--color-border)",
-                }}
-              >
-                <p
-                  className="text-xs font-semibold uppercase tracking-wide"
-                  style={{ color: "var(--color-text-faint)" }}
-                >
-                  Content permissions
-                </p>
-                <PermissionCheckbox
-                  name="canPostLinks"
-                  label="Can post links"
-                  defaultChecked={true}
+                <BackgroundEditor
+                  communitySlug={community.slug}
+                  defaultValue={community.backgroundCss}
                 />
-                <PermissionCheckbox
-                  name="canPostImages"
-                  label="Can post images"
-                  defaultChecked={true}
-                />
-                <PermissionCheckbox
-                  name="canPostVideos"
-                  label="Can post videos"
-                  defaultChecked={true}
-                />
-                <div
-                  className="flex items-center gap-3 pt-1"
-                  style={{ borderTop: "1px solid var(--color-border)" }}
-                >
+                <div className="flex flex-col gap-1.5">
                   <label
-                    htmlFor="postsPerHour"
-                    className="text-sm"
-                    style={{ color: "var(--color-text-dim)" }}
+                    htmlFor="twitchChannel"
+                    className="text-sm font-medium"
+                    style={{ color: "var(--color-text)" }}
                   >
-                    Post rate limit
+                    Twitch channel
                   </label>
                   <input
-                    id="postsPerHour"
-                    type="number"
-                    name="postsPerHour"
-                    min={0}
-                    step={1}
-                    placeholder="No limit"
-                    className="w-24 rounded-md px-2 py-1.5 text-sm"
+                    type="text"
+                    id="twitchChannel"
+                    name="twitchChannel"
+                    defaultValue={community.twitchChannel ?? ""}
+                    placeholder="e.g. xqc"
+                    className="rounded-md px-3 py-2 text-sm"
                     style={{
-                      background: "var(--color-bg-elev-1)",
+                      background: "var(--color-bg-elev-2)",
                       border: "1px solid var(--color-border)",
                       color: "var(--color-text)",
                       outline: "none",
                     }}
                   />
-                  <span className="text-xs" style={{ color: "var(--color-text-faint)" }}>
-                    posts / hour (blank = no limit)
-                  </span>
+                  <p className="text-xs" style={{ color: "var(--color-text-faint)" }}>
+                    Your Twitch username. Enables live stream + chat embed in the community sidebar.
+                  </p>
                 </div>
-              </div>
-
-              {/* Moderation access */}
-              <div className="flex flex-col gap-1.5">
-                <label
-                  htmlFor="baseRole"
-                  className="text-sm font-medium"
-                  style={{ color: "var(--color-text)" }}
-                >
-                  Moderation access
-                </label>
-                <select
-                  id="baseRole"
-                  name="baseRole"
-                  className="rounded-md px-3 py-2 text-sm"
+                <div
+                  className="rounded-md p-4 flex flex-col gap-3"
                   style={{
                     background: "var(--color-bg-elev-2)",
                     border: "1px solid var(--color-border)",
-                    color: "var(--color-text)",
-                    outline: "none",
                   }}
                 >
-                  <option value="member">None — regular member</option>
-                  <option value="mod">Mod — remove posts + timeout users</option>
-                  <option value="senior_mod">Senior Mod — ban + feature posts</option>
-                  <option value="admin">Admin — full community access</option>
-                </select>
-                <p className="text-xs" style={{ color: "var(--color-text-faint)" }}>
-                  Controls whether this role can take moderation actions.
-                </p>
-              </div>
+                  <p
+                    className="text-xs font-semibold uppercase tracking-wide"
+                    style={{ color: "var(--color-text-faint)" }}
+                  >
+                    Staff role colors
+                  </p>
+                  <p className="text-xs" style={{ color: "var(--color-text-faint)" }}>
+                    Colors shown on staff badges in the community sidebar.
+                  </p>
+                  <RoleColorPicker
+                    name="roleColorStreamer"
+                    label="Streamer / Owner"
+                    defaultValue={community.roleColorStreamer ?? "#F59E0B"}
+                  />
+                  <RoleColorPicker
+                    name="roleColorAdmin"
+                    label="Admin"
+                    defaultValue={community.roleColorAdmin ?? "#A855F7"}
+                  />
+                  <RoleColorPicker
+                    name="roleColorSeniorMod"
+                    label="Senior Mod"
+                    defaultValue={community.roleColorSeniorMod ?? "#3B82F6"}
+                  />
+                  <RoleColorPicker
+                    name="roleColorMod"
+                    label="Mod"
+                    defaultValue={community.roleColorMod ?? "#22C55E"}
+                  />
+                </div>
+                <Button
+                  type="submit"
+                  loading={submittingIntent === "settings_appearance" && isSubmitting}
+                  className="w-full"
+                >
+                  Save appearance
+                </Button>
+              </Form>
+            </div>
+          )}
 
-              <Button
-                type="submit"
-                variant="secondary"
-                loading={submittingIntent === "create_role" && isSubmitting}
-              >
-                Create role
-              </Button>
-            </Form>
-          </div>
+          {/* ── Permissions tab ── */}
+          {activeTab === "permissions" && (
+            <div className="rounded-lg p-6" style={cardStyle}>
+              <h2 className="text-sm font-semibold mb-4" style={{ color: "var(--color-text)" }}>
+                Member permissions
+              </h2>
+              <Form method="post" className="flex flex-col gap-4">
+                <input type="hidden" name="_intent" value="settings_permissions" />
+                <div
+                  className="rounded-md p-4 flex flex-col gap-3"
+                  style={{
+                    background: "var(--color-bg-elev-2)",
+                    border: "1px solid var(--color-border)",
+                  }}
+                >
+                  <p
+                    className="text-xs font-semibold uppercase tracking-wide"
+                    style={{ color: "var(--color-text-faint)" }}
+                  >
+                    Default member permissions
+                  </p>
+                  <p className="text-xs" style={{ color: "var(--color-text-faint)" }}>
+                    What regular members (no custom role) can post. Staff always bypass these.
+                  </p>
+                  <PermissionCheckbox
+                    name="memberCanPostLinks"
+                    label="Can post links"
+                    defaultChecked={community.memberCanPostLinks}
+                  />
+                  <PermissionCheckbox
+                    name="memberCanPostImages"
+                    label="Can post images"
+                    defaultChecked={community.memberCanPostImages}
+                  />
+                  <PermissionCheckbox
+                    name="memberCanPostVideos"
+                    label="Can post videos"
+                    defaultChecked={community.memberCanPostVideos}
+                  />
+                  <div className="flex items-center gap-3">
+                    <label
+                      htmlFor="memberPostsPerHour"
+                      className="text-sm"
+                      style={{ color: "var(--color-text-dim)" }}
+                    >
+                      Post rate limit
+                    </label>
+                    <input
+                      id="memberPostsPerHour"
+                      type="number"
+                      name="memberPostsPerHour"
+                      min={0}
+                      step={1}
+                      defaultValue={community.memberPostsPerHour ?? ""}
+                      placeholder="No limit"
+                      className="w-24 rounded-md px-2 py-1.5 text-sm"
+                      style={{
+                        background: "var(--color-bg-elev-1)",
+                        border: "1px solid var(--color-border)",
+                        color: "var(--color-text)",
+                        outline: "none",
+                      }}
+                    />
+                    <span className="text-xs" style={{ color: "var(--color-text-faint)" }}>
+                      posts / hour
+                    </span>
+                  </div>
+                </div>
+                <Button
+                  type="submit"
+                  loading={submittingIntent === "settings_permissions" && isSubmitting}
+                  className="w-full"
+                >
+                  Save permissions
+                </Button>
+              </Form>
+            </div>
+          )}
 
-          {/* ── Staff management ── */}
-          <div className="rounded-lg p-6" style={cardStyle}>
-            <h2 className="text-sm font-semibold mb-4" style={{ color: "var(--color-text)" }}>
-              Staff
-            </h2>
-
-            {staff.length === 0 ? (
-              <p className="text-sm mb-4" style={{ color: "var(--color-text-faint)" }}>
-                No staff yet.
+          {/* ── Roles tab ── */}
+          {activeTab === "roles" && (
+            <div className="rounded-lg p-6" style={cardStyle}>
+              <h2 className="text-sm font-semibold mb-1" style={{ color: "var(--color-text)" }}>
+                Custom member roles
+              </h2>
+              <p className="text-xs mb-4" style={{ color: "var(--color-text-faint)" }}>
+                Create roles like "VIP" or "Content Creator". Each role can unlock specific post
+                types and get a boosted post rate limit.
               </p>
-            ) : (
-              <div
-                className="flex flex-col divide-y mb-4"
-                style={{ borderColor: "var(--color-border)" }}
-              >
-                {staff.map((s) => (
-                  <div key={s.userId} className="flex items-center justify-between py-3">
-                    <div>
-                      <span className="text-sm font-medium" style={{ color: "var(--color-text)" }}>
-                        @{s.handle}
-                      </span>
-                      <span
-                        className="ml-2 text-xs px-1.5 py-0.5 rounded"
-                        style={{
-                          background: "var(--color-bg-elev-2)",
-                          color: "var(--color-text-dim)",
-                          border: "1px solid var(--color-border)",
-                        }}
-                      >
-                        {ROLE_LABELS[s.role] ?? s.role}
-                      </span>
-                    </div>
-                    {canStaff && s.role !== "streamer" && (
-                      <Form method="post">
-                        <input type="hidden" name="_intent" value="remove_staff" />
-                        <input type="hidden" name="staffUserId" value={s.userId} />
+
+              {customRoles.length === 0 ? (
+                <p className="text-sm mb-4" style={{ color: "var(--color-text-faint)" }}>
+                  No custom roles yet.
+                </p>
+              ) : (
+                <div
+                  className="flex flex-col divide-y mb-4"
+                  style={{ borderColor: "var(--color-border)" }}
+                >
+                  {customRoles.map((role) => (
+                    <div key={role.id} className="flex items-start justify-between py-3 gap-3">
+                      <div className="flex flex-col gap-1.5 min-w-0">
+                        <span
+                          className="text-xs px-2 py-0.5 rounded-full font-medium self-start"
+                          style={{
+                            background: role.color ? `${role.color}22` : "var(--color-bg-elev-2)",
+                            color: role.color ?? "var(--color-text-dim)",
+                            border: `1px solid ${role.color ?? "var(--color-border)"}`,
+                          }}
+                        >
+                          {role.name}
+                        </span>
+                        <div className="flex flex-wrap gap-1">
+                          <PermTag active={true} label="Text" />
+                          <PermTag active={role.canPostLinks} label="Links" />
+                          <PermTag active={role.canPostImages} label="Images" />
+                          <PermTag active={role.canPostVideos} label="Videos" />
+                          {role.postsPerHour !== null && role.postsPerHour !== undefined ? (
+                            <PermTag active={true} label={`${role.postsPerHour}/hr`} />
+                          ) : (
+                            <PermTag active={false} label="default rate" faint />
+                          )}
+                          <span
+                            className="text-xs px-1.5 py-0.5 rounded"
+                            style={{
+                              background: "var(--color-bg-elev-2)",
+                              color: "var(--color-text-faint)",
+                              border: "1px solid var(--color-border)",
+                            }}
+                          >
+                            {BASE_ROLE_LABELS[role.baseRole]}
+                          </span>
+                        </div>
+                      </div>
+                      <Form method="post" className="flex-shrink-0">
+                        <input type="hidden" name="_intent" value="delete_role" />
+                        <input type="hidden" name="roleId" value={role.id} />
                         <button
                           type="submit"
                           className="text-xs px-2 py-1 rounded transition-colors hover:opacity-80"
@@ -994,63 +886,286 @@ export default function ModSettings() {
                             border: "1px solid var(--color-border)",
                           }}
                         >
-                          Remove
+                          Delete
                         </button>
                       </Form>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
+                    </div>
+                  ))}
+                </div>
+              )}
 
-            {canStaff && (
-              <Form method="post" className="flex flex-col gap-3">
-                <input type="hidden" name="_intent" value="add_staff" />
-                <div className="flex gap-2">
+              {/* Create role form */}
+              <Form method="post" className="flex flex-col gap-4">
+                <input type="hidden" name="_intent" value="create_role" />
+
+                <div className="flex gap-2 items-end">
                   <div className="flex-1">
                     <Input
-                      id="staffHandle"
-                      name="staffHandle"
+                      id="roleName"
+                      name="roleName"
                       type="text"
-                      label="Add by handle"
-                      placeholder="username"
+                      label="Role name"
+                      placeholder="VIP"
                     />
                   </div>
-                  <div className="flex flex-col gap-1.5" style={{ minWidth: "110px" }}>
+                  <div className="flex flex-col gap-1.5">
                     <label
-                      htmlFor="staffRole"
+                      htmlFor="roleColorPicker"
                       className="text-sm font-medium"
                       style={{ color: "var(--color-text)" }}
                     >
-                      Role
+                      Color
                     </label>
-                    <select
-                      id="staffRole"
-                      name="staffRole"
-                      className="rounded-md px-3 py-2 text-sm"
+                    <div className="flex items-center gap-1.5">
+                      <input
+                        type="color"
+                        id="roleColorPicker"
+                        defaultValue="#3DD68C"
+                        onChange={(e) => {
+                          const input = document.getElementById("roleColor") as HTMLInputElement;
+                          if (input) input.value = e.target.value;
+                        }}
+                        className="w-10 h-9 rounded cursor-pointer"
+                        style={{
+                          border: "1px solid var(--color-border)",
+                          padding: "2px",
+                          background: "var(--color-bg-elev-2)",
+                        }}
+                      />
+                      <input
+                        type="text"
+                        id="roleColor"
+                        name="roleColor"
+                        defaultValue="#3DD68C"
+                        placeholder="#3DD68C"
+                        className="w-24 rounded-md px-2 py-2 text-sm font-mono"
+                        style={{
+                          background: "var(--color-bg-elev-2)",
+                          border: "1px solid var(--color-border)",
+                          color: "var(--color-text)",
+                          outline: "none",
+                        }}
+                        onChange={(e) => {
+                          if (/^#[0-9a-fA-F]{6}$/.test(e.target.value)) {
+                            const picker = document.getElementById(
+                              "roleColorPicker",
+                            ) as HTMLInputElement;
+                            if (picker) picker.value = e.target.value;
+                          }
+                        }}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Permission checklist */}
+                <div
+                  className="rounded-md p-4 flex flex-col gap-3"
+                  style={{
+                    background: "var(--color-bg-elev-2)",
+                    border: "1px solid var(--color-border)",
+                  }}
+                >
+                  <p
+                    className="text-xs font-semibold uppercase tracking-wide"
+                    style={{ color: "var(--color-text-faint)" }}
+                  >
+                    Content permissions
+                  </p>
+                  <PermissionCheckbox
+                    name="canPostLinks"
+                    label="Can post links"
+                    defaultChecked={true}
+                  />
+                  <PermissionCheckbox
+                    name="canPostImages"
+                    label="Can post images"
+                    defaultChecked={true}
+                  />
+                  <PermissionCheckbox
+                    name="canPostVideos"
+                    label="Can post videos"
+                    defaultChecked={true}
+                  />
+                  <div
+                    className="flex items-center gap-3 pt-1"
+                    style={{ borderTop: "1px solid var(--color-border)" }}
+                  >
+                    <label
+                      htmlFor="postsPerHour"
+                      className="text-sm"
+                      style={{ color: "var(--color-text-dim)" }}
+                    >
+                      Post rate limit
+                    </label>
+                    <input
+                      id="postsPerHour"
+                      type="number"
+                      name="postsPerHour"
+                      min={0}
+                      step={1}
+                      placeholder="No limit"
+                      className="w-24 rounded-md px-2 py-1.5 text-sm"
                       style={{
-                        background: "var(--color-bg-elev-2)",
+                        background: "var(--color-bg-elev-1)",
                         border: "1px solid var(--color-border)",
                         color: "var(--color-text)",
                         outline: "none",
                       }}
-                    >
-                      <option value="mod">Mod</option>
-                      <option value="senior_mod">Senior Mod</option>
-                      <option value="admin">Admin</option>
-                    </select>
+                    />
+                    <span className="text-xs" style={{ color: "var(--color-text-faint)" }}>
+                      posts / hour (blank = no limit)
+                    </span>
                   </div>
                 </div>
+
+                {/* Moderation access */}
+                <div className="flex flex-col gap-1.5">
+                  <label
+                    htmlFor="baseRole"
+                    className="text-sm font-medium"
+                    style={{ color: "var(--color-text)" }}
+                  >
+                    Moderation access
+                  </label>
+                  <select
+                    id="baseRole"
+                    name="baseRole"
+                    className="rounded-md px-3 py-2 text-sm"
+                    style={{
+                      background: "var(--color-bg-elev-2)",
+                      border: "1px solid var(--color-border)",
+                      color: "var(--color-text)",
+                      outline: "none",
+                    }}
+                  >
+                    <option value="member">None — regular member</option>
+                    <option value="mod">Mod — remove posts + timeout users</option>
+                    <option value="senior_mod">Senior Mod — ban + feature posts</option>
+                    <option value="admin">Admin — full community access</option>
+                  </select>
+                  <p className="text-xs" style={{ color: "var(--color-text-faint)" }}>
+                    Controls whether this role can take moderation actions.
+                  </p>
+                </div>
+
                 <Button
                   type="submit"
                   variant="secondary"
-                  loading={submittingIntent === "add_staff" && isSubmitting}
+                  loading={submittingIntent === "create_role" && isSubmitting}
                 >
-                  Add staff member
+                  Create role
                 </Button>
               </Form>
-            )}
-          </div>
+            </div>
+          )}
+
+          {/* ── Staff tab ── */}
+          {activeTab === "staff" && (
+            <div className="rounded-lg p-6" style={cardStyle}>
+              <h2 className="text-sm font-semibold mb-4" style={{ color: "var(--color-text)" }}>
+                Staff
+              </h2>
+
+              {staff.length === 0 ? (
+                <p className="text-sm mb-4" style={{ color: "var(--color-text-faint)" }}>
+                  No staff yet.
+                </p>
+              ) : (
+                <div
+                  className="flex flex-col divide-y mb-4"
+                  style={{ borderColor: "var(--color-border)" }}
+                >
+                  {staff.map((s) => (
+                    <div key={s.userId} className="flex items-center justify-between py-3">
+                      <div>
+                        <span
+                          className="text-sm font-medium"
+                          style={{ color: "var(--color-text)" }}
+                        >
+                          @{s.handle}
+                        </span>
+                        <span
+                          className="ml-2 text-xs px-1.5 py-0.5 rounded"
+                          style={{
+                            background: "var(--color-bg-elev-2)",
+                            color: "var(--color-text-dim)",
+                            border: "1px solid var(--color-border)",
+                          }}
+                        >
+                          {ROLE_LABELS[s.role] ?? s.role}
+                        </span>
+                      </div>
+                      {canStaff && s.role !== "streamer" && (
+                        <Form method="post">
+                          <input type="hidden" name="_intent" value="remove_staff" />
+                          <input type="hidden" name="staffUserId" value={s.userId} />
+                          <button
+                            type="submit"
+                            className="text-xs px-2 py-1 rounded transition-colors hover:opacity-80"
+                            style={{
+                              color: "var(--color-danger)",
+                              border: "1px solid var(--color-border)",
+                            }}
+                          >
+                            Remove
+                          </button>
+                        </Form>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {canStaff && (
+                <Form method="post" className="flex flex-col gap-3">
+                  <input type="hidden" name="_intent" value="add_staff" />
+                  <div className="flex gap-2">
+                    <div className="flex-1">
+                      <Input
+                        id="staffHandle"
+                        name="staffHandle"
+                        type="text"
+                        label="Add by handle"
+                        placeholder="username"
+                      />
+                    </div>
+                    <div className="flex flex-col gap-1.5" style={{ minWidth: "110px" }}>
+                      <label
+                        htmlFor="staffRole"
+                        className="text-sm font-medium"
+                        style={{ color: "var(--color-text)" }}
+                      >
+                        Role
+                      </label>
+                      <select
+                        id="staffRole"
+                        name="staffRole"
+                        className="rounded-md px-3 py-2 text-sm"
+                        style={{
+                          background: "var(--color-bg-elev-2)",
+                          border: "1px solid var(--color-border)",
+                          color: "var(--color-text)",
+                          outline: "none",
+                        }}
+                      >
+                        <option value="mod">Mod</option>
+                        <option value="senior_mod">Senior Mod</option>
+                        <option value="admin">Admin</option>
+                      </select>
+                    </div>
+                  </div>
+                  <Button
+                    type="submit"
+                    variant="secondary"
+                    loading={submittingIntent === "add_staff" && isSubmitting}
+                  >
+                    Add staff member
+                  </Button>
+                </Form>
+              )}
+            </div>
+          )}
         </div>
       </AppShell>
       <Footer />
