@@ -82,6 +82,7 @@ export const communities = sqliteTable("communities", {
     .default(true),
   memberPostsPerHour: integer("member_posts_per_hour"), // null = system default (10)
   twitchChannel: text("twitch_channel"),
+  twitchChannel247: text("twitch_channel_247"),
   roleColorStreamer: text("role_color_streamer"),
   roleColorAdmin: text("role_color_admin"),
   roleColorSeniorMod: text("role_color_senior_mod"),

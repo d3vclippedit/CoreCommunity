@@ -86,11 +86,12 @@ export async function loader({ params, request, context }: LoaderFunctionArgs) {
     ownerUser: ownerUser ?? null,
     host,
     isLive,
+    twitchChannel247: community.twitchChannel247 ?? null,
   };
 }
 
 export default function CommunityHub() {
-  const { community, membership, staffRows, ownerUser, host, isLive } =
+  const { community, membership, staffRows, ownerUser, host, isLive, twitchChannel247 } =
     useLoaderData<typeof loader>();
   const root = useRouteLoaderData<typeof rootLoader>("root");
   const rootUser = root?.user ?? null;
@@ -198,6 +199,33 @@ export default function CommunityHub() {
                   style={{ display: "block" }}
                 />
               </div>
+            </>
+          ) : twitchChannel247 ? (
+            <>
+              <div
+                className="rounded-md overflow-hidden"
+                style={{ border: "1px solid var(--color-border)" }}
+              >
+                <iframe
+                  src={`https://player.twitch.tv/?channel=${twitchChannel247}&parent=${host}&muted=true`}
+                  title="24/7 stream"
+                  width="100%"
+                  height="160"
+                  allowFullScreen
+                  style={{ display: "block" }}
+                />
+              </div>
+              <p className="text-xs" style={{ color: "var(--color-text-faint)" }}>
+                24/7 channel •{" "}
+                <a
+                  href={`https://twitch.tv/${twitchChannel}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  style={{ color: "var(--color-text-dim)" }}
+                >
+                  main channel offline
+                </a>
+              </p>
             </>
           ) : (
             <a

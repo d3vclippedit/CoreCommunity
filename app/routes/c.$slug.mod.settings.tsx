@@ -152,6 +152,7 @@ export async function action({ params, request, context }: ActionFunctionArgs) {
     const bannerUrl = (form.get("bannerUrl") as string | null)?.trim() ?? "";
     const backgroundCss = (form.get("backgroundCss") as string | null)?.trim() ?? "";
     const twitchChannel = (form.get("twitchChannel") as string | null)?.trim() ?? "";
+    const twitchChannel247 = (form.get("twitchChannel247") as string | null)?.trim() ?? "";
     const roleColorStreamer = (form.get("roleColorStreamer") as string | null)?.trim() ?? "";
     const roleColorAdmin = (form.get("roleColorAdmin") as string | null)?.trim() ?? "";
     const roleColorSeniorMod = (form.get("roleColorSeniorMod") as string | null)?.trim() ?? "";
@@ -177,6 +178,7 @@ export async function action({ params, request, context }: ActionFunctionArgs) {
         bannerUrl: bannerUrl || null,
         backgroundCss: backgroundCss || null,
         twitchChannel: twitchChannel || null,
+        twitchChannel247: twitchChannel247 || null,
         roleColorStreamer: roleColorStreamer || null,
         roleColorAdmin: roleColorAdmin || null,
         roleColorSeniorMod: roleColorSeniorMod || null,
@@ -690,7 +692,35 @@ export default function ModSettings() {
                     }}
                   />
                   <p className="text-xs" style={{ color: "var(--color-text-faint)" }}>
-                    Your Twitch username. Enables live stream + chat embed in the community sidebar.
+                    Your Twitch username. Shows live stream + chat in the community sidebar when you
+                    go live.
+                  </p>
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <label
+                    htmlFor="twitchChannel247"
+                    className="text-sm font-medium"
+                    style={{ color: "var(--color-text)" }}
+                  >
+                    24/7 Twitch channel
+                  </label>
+                  <input
+                    type="text"
+                    id="twitchChannel247"
+                    name="twitchChannel247"
+                    defaultValue={community.twitchChannel247 ?? ""}
+                    placeholder="e.g. xqc247"
+                    className="rounded-md px-3 py-2 text-sm"
+                    style={{
+                      background: "var(--color-bg-elev-2)",
+                      border: "1px solid var(--color-border)",
+                      color: "var(--color-text)",
+                      outline: "none",
+                    }}
+                  />
+                  <p className="text-xs" style={{ color: "var(--color-text-faint)" }}>
+                    Optional. Shown in the sidebar while your main channel is offline — great for
+                    24/7 VOD or rerun channels.
                   </p>
                 </div>
                 <div
