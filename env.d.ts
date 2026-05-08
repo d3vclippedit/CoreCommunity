@@ -7,4 +7,6 @@ interface Env {
   RESEND_API_KEY: string;
   SESSION_SECRET: string;
   COMMUNITY_CREATION_OPEN: string; // "true" | "false" — feature flag
+  TWITCH_CLIENT_ID: string;
+  TWITCH_CLIENT_SECRET: string;
 }
