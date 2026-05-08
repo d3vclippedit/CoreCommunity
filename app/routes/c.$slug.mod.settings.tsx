@@ -151,8 +151,13 @@ export async function action({ params, request, context }: ActionFunctionArgs) {
     const iconUrl = (form.get("iconUrl") as string | null)?.trim() ?? "";
     const bannerUrl = (form.get("bannerUrl") as string | null)?.trim() ?? "";
     const backgroundCss = (form.get("backgroundCss") as string | null)?.trim() ?? "";
-    const twitchChannel = (form.get("twitchChannel") as string | null)?.trim() ?? "";
-    const twitchChannel247 = (form.get("twitchChannel247") as string | null)?.trim() ?? "";
+    const twitchChannelRaw = (form.get("twitchChannel") as string | null)?.trim() ?? "";
+    const twitchChannel247Raw = (form.get("twitchChannel247") as string | null)?.trim() ?? "";
+    // Accept full twitch.tv URLs or bare channel names
+    const extractChannel = (v: string) =>
+      v ? (v.replace(/^https?:\/\/(www\.)?twitch\.tv\//i, "").split(/[/?#]/)[0] ?? "") : "";
+    const twitchChannel = extractChannel(twitchChannelRaw);
+    const twitchChannel247 = extractChannel(twitchChannel247Raw);
     const roleColorStreamer = (form.get("roleColorStreamer") as string | null)?.trim() ?? "";
     const roleColorAdmin = (form.get("roleColorAdmin") as string | null)?.trim() ?? "";
     const roleColorSeniorMod = (form.get("roleColorSeniorMod") as string | null)?.trim() ?? "";
