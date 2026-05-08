@@ -152,7 +152,7 @@ export default function CommunityHub() {
             className="rounded-md overflow-hidden"
             style={{ border: "1px solid var(--color-border)" }}
           >
-            <div style={{ position: "relative", paddingTop: "56.25%" }}>
+            <div style={{ position: "relative", paddingTop: "68%" }}>
               <iframe
                 src={`https://player.twitch.tv/?channel=${twitchChannel}&parent=${host}&muted=true`}
                 title={`${community.name} live stream`}
