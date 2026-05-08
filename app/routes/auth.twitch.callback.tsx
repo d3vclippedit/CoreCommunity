@@ -28,17 +28,22 @@ export async function loader({ request, context }: LoaderFunctionArgs) {
   const { userId } = JSON.parse(stored) as { userId: string };
 
   try {
+    const redirectUri = getRedirectUri(request);
+    if (!env.TWITCH_CLIENT_ID || !env.TWITCH_CLIENT_SECRET) {
+      console.error("Twitch OAuth: TWITCH_CLIENT_ID or TWITCH_CLIENT_SECRET env var not set");
+      return redirect("/settings?tab=connected&twitch_error=1");
+    }
+
     const tokens = await exchangeTwitchCode(
       env.TWITCH_CLIENT_ID,
       env.TWITCH_CLIENT_SECRET,
       code,
-      getRedirectUri(request),
+      redirectUri,
     );
     const twitchUser = await getTwitchUser(tokens.access_token, env.TWITCH_CLIENT_ID);
 
     const db = createDb(env.DB);
 
-    // Check if this Twitch account is already linked to another user
     const existing = await db.query.users.findFirst({
       where: eq(users.twitchId, twitchUser.id),
       columns: { id: true },
@@ -58,7 +63,8 @@ export async function loader({ request, context }: LoaderFunctionArgs) {
       .where(eq(users.id, userId));
 
     return redirect("/settings?tab=connected&twitch_ok=1");
-  } catch {
+  } catch (err) {
+    console.error("Twitch OAuth callback error:", err);
     return redirect("/settings?tab=connected&twitch_error=1");
   }
 }

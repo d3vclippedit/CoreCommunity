@@ -26,7 +26,10 @@ export async function exchangeTwitchCode(
       redirect_uri: redirectUri,
     }),
   });
-  if (!res.ok) throw new Error(`Twitch token exchange failed: ${res.status}`);
+  if (!res.ok) {
+    const body = await res.text().catch(() => "(unreadable)");
+    throw new Error(`Twitch token exchange failed: ${res.status} — ${body}`);
+  }
   return res.json() as Promise<{ access_token: string; refresh_token: string }>;
 }
 

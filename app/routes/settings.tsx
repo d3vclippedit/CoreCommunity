@@ -74,18 +74,23 @@ export async function action({ request, context }: ActionFunctionArgs) {
       if (!match) return { error: "Twitch URL must be in the format twitch.tv/username.", intent };
       const urlUsername = match[2].toLowerCase();
 
-      const full = await db.query.users.findFirst({
-        where: eq(users.id, user.id),
-        columns: { twitchUsername: true },
-      });
-      if (!full?.twitchUsername) {
-        return { error: "Connect your Twitch account first before adding a Twitch link.", intent };
-      }
-      if (urlUsername !== full.twitchUsername.toLowerCase()) {
-        return {
-          error: `Twitch link must match your linked Twitch account (@${full.twitchUsername}).`,
-          intent,
-        };
+      if (!user.isPlatformAdmin) {
+        const full = await db.query.users.findFirst({
+          where: eq(users.id, user.id),
+          columns: { twitchUsername: true },
+        });
+        if (!full?.twitchUsername) {
+          return {
+            error: "Connect your Twitch account first before adding a Twitch link.",
+            intent,
+          };
+        }
+        if (urlUsername !== full.twitchUsername.toLowerCase()) {
+          return {
+            error: `Twitch link must match your linked Twitch account (@${full.twitchUsername}).`,
+            intent,
+          };
+        }
       }
     }
 
