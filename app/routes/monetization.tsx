@@ -563,6 +563,9 @@ function BundleCard({ bundle }: { bundle: Bundle }) {
   });
 
   const usdDisplay = `$${(bundle.usdPriceCents / 100).toFixed(2)}`;
+  const basePriceCents = bundle.coinAmount; // 100 cc = $1 base rate
+  const savingCents = basePriceCents - bundle.usdPriceCents;
+  const basePriceDisplay = savingCents >= 10 ? `$${(basePriceCents / 100).toFixed(2)}` : null;
   const approvalUrl = paypalFetcher.data?.approvalUrl;
   const isSubmitting = paypalFetcher.state !== "idle";
 
@@ -597,6 +600,11 @@ function BundleCard({ bundle }: { bundle: Bundle }) {
         )}
       </div>
       <div className="flex-shrink-0 flex flex-col items-end gap-1.5">
+        {basePriceDisplay && (
+          <p className="text-xs line-through" style={{ color: "var(--color-text-faint)" }}>
+            {basePriceDisplay}
+          </p>
+        )}
         <p className="text-sm font-semibold" style={{ color: "var(--color-text)" }}>
           {usdDisplay}
         </p>
