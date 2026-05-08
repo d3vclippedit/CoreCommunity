@@ -1,0 +1,4 @@
+# Normalize all text files to LF on commit so Biome lint matches on Windows and Linux CI
+* text=auto eol=lf
+*.ts linguist-language=TypeScript
+*.tsx linguist-language=TypeScript

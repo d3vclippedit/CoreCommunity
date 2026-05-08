@@ -35,8 +35,8 @@ export default function Terms() {
                 1. Acceptance
               </h2>
               <p>
-                By accessing or using Cormunities, you agree to these Terms. If you do not agree, do not
-                use the platform.
+                By accessing or using Cormunities, you agree to these Terms. If you do not agree, do
+                not use the platform.
               </p>
             </section>
 
@@ -55,9 +55,10 @@ export default function Terms() {
                 3. Content
               </h2>
               <p>
-                You retain ownership of content you post. By posting, you grant Cormunities a non-exclusive
-                license to display and distribute your content on the platform. You are responsible
-                for ensuring your content does not violate any laws or third-party rights.
+                You retain ownership of content you post. By posting, you grant Cormunities a
+                non-exclusive license to display and distribute your content on the platform. You
+                are responsible for ensuring your content does not violate any laws or third-party
+                rights.
               </p>
             </section>
 
@@ -89,8 +90,8 @@ export default function Terms() {
                 6. Disclaimer
               </h2>
               <p>
-                Cormunities is provided "as is" without warranties of any kind. We are not liable for
-                content posted by users or for any damages arising from use of the platform.
+                Cormunities is provided "as is" without warranties of any kind. We are not liable
+                for content posted by users or for any damages arising from use of the platform.
               </p>
             </section>
 

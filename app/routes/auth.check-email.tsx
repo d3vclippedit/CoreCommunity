@@ -35,7 +35,8 @@ export default function CheckEmail() {
         </h1>
         <p className="text-sm leading-relaxed mb-6" style={{ color: "var(--color-text-dim)" }}>
           We sent a verification link to your email address. Click it to activate your account. You
-          can browse Cormunities while you wait, but you won't be able to post until you're verified.
+          can browse Cormunities while you wait, but you won't be able to post until you're
+          verified.
         </p>
         <Link
           to="/"

@@ -57,11 +57,6 @@
     "pnpm": ">=9.0.0"
   },
   "pnpm": {
-    "onlyBuiltDependencies": [
-      "@biomejs/biome",
-      "esbuild",
-      "sharp",
-      "workerd"
-    ]
+    "onlyBuiltDependencies": ["@biomejs/biome", "esbuild", "sharp", "workerd"]
   }
 }

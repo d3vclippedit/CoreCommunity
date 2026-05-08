@@ -7,7 +7,10 @@ import type { loader as rootLoader } from "~/root";
 
 export const meta: MetaFunction = () => [
   { title: "About — Cormunities" },
-  { name: "description", content: "Cormunities is a creator-owned community platform for streamers." },
+  {
+    name: "description",
+    content: "Cormunities is a creator-owned community platform for streamers.",
+  },
 ];
 
 export default function About() {
@@ -31,8 +34,8 @@ export default function About() {
             style={{ color: "var(--color-text-dim)" }}
           >
             <p>
-              Cormunities is a creator-owned community platform built for streamers and the people around
-              them. Forum-style, discoverable, identity-bearing — not ephemeral chat.
+              Cormunities is a creator-owned community platform built for streamers and the people
+              around them. Forum-style, discoverable, identity-bearing — not ephemeral chat.
             </p>
             <p>
               Each community on CORE is run by its streamer. Not a Discord server admin — an actual
@@ -46,8 +49,8 @@ export default function About() {
               </h2>
               <p>
                 Streamers build audiences, but they don't own the infrastructure they live on. When
-                Discord changes pricing or Reddit removes API access, communities suffer. Cormunities is
-                the alternative: forums you control, built to last.
+                Discord changes pricing or Reddit removes API access, communities suffer.
+                Cormunities is the alternative: forums you control, built to last.
               </p>
             </section>
 
@@ -68,8 +71,8 @@ export default function About() {
                 Early access
               </h2>
               <p>
-                Cormunities is currently in early access, built in public. Features are still rolling out.
-                If something's broken or you have feedback, we want to hear it.
+                Cormunities is currently in early access, built in public. Features are still
+                rolling out. If something's broken or you have feedback, we want to hear it.
               </p>
             </section>
 
