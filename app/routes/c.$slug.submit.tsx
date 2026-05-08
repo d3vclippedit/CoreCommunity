@@ -244,7 +244,7 @@ export async function action({ params, request, context }: ActionFunctionArgs) {
       await db.insert(pollOptions).values({
         id: generateId(),
         pollId,
-        text: rawOptions[i]!,
+        text: rawOptions[i] ?? "",
         position: i,
         voteCount: 0,
       });

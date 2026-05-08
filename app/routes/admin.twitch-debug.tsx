@@ -98,7 +98,9 @@ export default function TwitchDebug() {
             {row("Client ID preview", d.clientIdPreview)}
             {row(
               "Credentials valid",
-              d.credentialsValid ? "Yes — client_credentials grant OK" : `No — ${d.credentialsError}`,
+              d.credentialsValid
+                ? "Yes — client_credentials grant OK"
+                : `No — ${d.credentialsError}`,
               d.credentialsValid,
             )}
             {row("Redirect URI (generated)", d.redirectUri)}
