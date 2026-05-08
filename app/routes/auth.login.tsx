@@ -86,7 +86,10 @@ export async function action({ request, context }: ActionFunctionArgs) {
     }
 
     const valid =
-      user && !user.deletedAt && !user.isBanned && (await verifyPassword(password, user.passwordHash));
+      user &&
+      !user.deletedAt &&
+      !user.isBanned &&
+      (await verifyPassword(password, user.passwordHash));
 
     if (!valid || !emailRl.allowed) {
       return { error: "Incorrect email/handle or password." };

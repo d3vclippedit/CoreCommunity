@@ -1,5 +1,11 @@
 import type { LoaderFunctionArgs, MetaFunction } from "@remix-run/cloudflare";
-import { Link, redirect, useLoaderData, useRouteLoaderData, useSearchParams } from "@remix-run/react";
+import {
+  Link,
+  redirect,
+  useLoaderData,
+  useRouteLoaderData,
+  useSearchParams,
+} from "@remix-run/react";
 import { AppShell } from "~/components/layout/AppShell";
 import { Footer } from "~/components/layout/Footer";
 import { Header } from "~/components/layout/Header";
@@ -39,10 +45,9 @@ export async function loader({ request, context }: LoaderFunctionArgs) {
         getPioneerEnrollment(db, user.id),
       ]);
 
-    const pioneerMetrics =
-      pioneerEnrollment?.isActive
-        ? await getPioneerMetrics(db, pioneerEnrollment.communityId)
-        : null;
+    const pioneerMetrics = pioneerEnrollment?.isActive
+      ? await getPioneerMetrics(db, pioneerEnrollment.communityId)
+      : null;
 
     return {
       user,
@@ -82,8 +87,7 @@ export default function EarningsPage() {
   const rootUser = root?.user ?? null;
   const [, setSearchParams] = useSearchParams();
 
-  const setTab = (t: Tab) =>
-    setSearchParams(t === "creator" ? {} : { tab: t }, { replace: true });
+  const setTab = (t: Tab) => setSearchParams(t === "creator" ? {} : { tab: t }, { replace: true });
 
   const tabs: { id: Tab; label: string }[] = [
     { id: "creator", label: "Creator" },
@@ -207,9 +211,7 @@ function PartnerTab({
   eligibility,
   payoutHistory,
 }: {
-  eligibility: NonNullable<
-    ReturnType<typeof useLoaderData<typeof loader>>["partnerEligibility"]
-  >;
+  eligibility: NonNullable<ReturnType<typeof useLoaderData<typeof loader>>["partnerEligibility"]>;
   payoutHistory: ReturnType<typeof useLoaderData<typeof loader>>["payoutHistory"];
 }) {
   return (
@@ -329,7 +331,11 @@ function PioneerTab({
           </span>
         </div>
         <p className="text-xs" style={{ color: "var(--color-text-faint)" }}>
-          Enrolled {new Date(enrollment.enrolledAt).toLocaleDateString("en-US", { month: "long", year: "numeric" })}
+          Enrolled{" "}
+          {new Date(enrollment.enrolledAt).toLocaleDateString("en-US", {
+            month: "long",
+            year: "numeric",
+          })}
           {enrollment.contractRef ? ` · Ref: ${enrollment.contractRef}` : ""}
         </p>
       </div>
@@ -359,7 +365,10 @@ function PioneerTab({
                 <div className="grid grid-cols-2 gap-y-4">
                   <MetricCell label="CC Spent" value={m.ccSpent.toLocaleString()} />
                   <MetricCell label="New Members" value={m.newMembers.toLocaleString()} />
-                  <MetricCell label="Recurring Members" value={m.recurringMembers.toLocaleString()} />
+                  <MetricCell
+                    label="Recurring Members"
+                    value={m.recurringMembers.toLocaleString()}
+                  />
                   <MetricCell label="Posts" value={m.postCount.toLocaleString()} />
                 </div>
               </div>
@@ -399,7 +408,10 @@ function Watch2EarnTab() {
       <p className="text-base font-semibold mb-2" style={{ color: "var(--color-text)" }}>
         Watch 2 Earn — Coming Soon
       </p>
-      <p className="text-sm leading-relaxed" style={{ color: "var(--color-text-dim)", maxWidth: "400px", margin: "0 auto" }}>
+      <p
+        className="text-sm leading-relaxed"
+        style={{ color: "var(--color-text-dim)", maxWidth: "400px", margin: "0 auto" }}
+      >
         Join a creator's community, watch their stream, and earn Core Coins over time. We're
         building it — stay tuned.
       </p>
@@ -472,12 +484,7 @@ function EligibilityCard({
               </div>
             </div>
           ) : (
-            <ProgressBar
-              key={item.label}
-              value={item.value}
-              max={item.goal}
-              label={item.label}
-            />
+            <ProgressBar key={item.label} value={item.value} max={item.goal} label={item.label} />
           ),
         )}
       </div>
@@ -532,9 +539,7 @@ function PayoutSidebar({
   payoutHistory: ({ id: string; status: string; createdAt: string | Date } | null)[];
   isEligible: boolean;
 }) {
-  const payoutHistory = payoutHistoryRaw.filter(
-    (p): p is NonNullable<typeof p> => p !== null,
-  );
+  const payoutHistory = payoutHistoryRaw.filter((p): p is NonNullable<typeof p> => p !== null);
   return (
     <div className="w-full lg:w-80 xl:w-96 flex-shrink-0">
       <h2 className="text-sm font-semibold mb-3" style={{ color: "var(--color-text)" }}>
@@ -581,7 +586,9 @@ function PayoutSidebar({
                 className="text-xs font-medium px-2 py-1 rounded-md"
                 style={{
                   background:
-                    payout.status === "completed" ? "rgba(61,214,140,0.1)" : "var(--color-bg-elev-2)",
+                    payout.status === "completed"
+                      ? "rgba(61,214,140,0.1)"
+                      : "var(--color-bg-elev-2)",
                   color:
                     payout.status === "completed"
                       ? "var(--color-success)"

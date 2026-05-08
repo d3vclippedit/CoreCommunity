@@ -532,69 +532,69 @@ function FeedbackTab({ data, submitting }: { data: LoaderData; submitting: boole
         {items.map((f) => {
           if (!f) return null;
           return (
-          <div
-            key={f.id}
-            className="rounded-md p-3"
-            style={{
-              background: "var(--color-bg-elev-2)",
-              border: "1px solid var(--color-border)",
-            }}
-          >
-            <div className="flex items-center gap-2 mb-1">
-              <span className="text-xs font-medium" style={{ color: "var(--color-text)" }}>
-                {f.userHandle ? `@${f.userHandle}` : "Anonymous"}
-              </span>
-              <span
-                className="text-xs px-1.5 py-0.5 rounded"
-                style={{ background: "var(--color-bg-elev-1)", color: "var(--color-text-dim)" }}
-              >
-                {f.category}
-              </span>
-              <span
-                className="text-xs"
-                style={{
-                  color:
-                    f.status === "open"
-                      ? "var(--color-danger)"
-                      : f.status === "read"
-                        ? "var(--color-text-dim)"
-                        : "var(--color-success)",
-                }}
-              >
-                {f.status}
-              </span>
-            </div>
-            <p className="text-sm mb-2" style={{ color: "var(--color-text-dim)" }}>
-              {f.message}
-            </p>
-            {f.adminNote && (
-              <p className="text-xs mb-2" style={{ color: "var(--color-text-faint)" }}>
-                Note: {f.adminNote}
+            <div
+              key={f.id}
+              className="rounded-md p-3"
+              style={{
+                background: "var(--color-bg-elev-2)",
+                border: "1px solid var(--color-border)",
+              }}
+            >
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-xs font-medium" style={{ color: "var(--color-text)" }}>
+                  {f.userHandle ? `@${f.userHandle}` : "Anonymous"}
+                </span>
+                <span
+                  className="text-xs px-1.5 py-0.5 rounded"
+                  style={{ background: "var(--color-bg-elev-1)", color: "var(--color-text-dim)" }}
+                >
+                  {f.category}
+                </span>
+                <span
+                  className="text-xs"
+                  style={{
+                    color:
+                      f.status === "open"
+                        ? "var(--color-danger)"
+                        : f.status === "read"
+                          ? "var(--color-text-dim)"
+                          : "var(--color-success)",
+                  }}
+                >
+                  {f.status}
+                </span>
+              </div>
+              <p className="text-sm mb-2" style={{ color: "var(--color-text-dim)" }}>
+                {f.message}
               </p>
-            )}
-            <Form method="post" className="flex gap-2 items-center flex-wrap">
-              <input type="hidden" name="feedbackId" value={f.id} />
-              <input
-                name="adminNote"
-                type="text"
-                placeholder="Admin note (optional)"
-                defaultValue={f.adminNote ?? ""}
-                className="rounded-md px-2 py-1 text-xs"
-                style={{ ...inputStyle, width: "200px" }}
-              />
-              <select
-                name="feedbackStatus"
-                defaultValue={f.status}
-                className="rounded-md px-2 py-1 text-xs"
-                style={{ ...inputStyle, width: "100px" }}
-              >
-                <option value="open">open</option>
-                <option value="read">read</option>
-                <option value="resolved">resolved</option>
-              </select>
-              <Btn value="feedback_status" color="dim" disabled={submitting} />
-            </Form>
-          </div>
+              {f.adminNote && (
+                <p className="text-xs mb-2" style={{ color: "var(--color-text-faint)" }}>
+                  Note: {f.adminNote}
+                </p>
+              )}
+              <Form method="post" className="flex gap-2 items-center flex-wrap">
+                <input type="hidden" name="feedbackId" value={f.id} />
+                <input
+                  name="adminNote"
+                  type="text"
+                  placeholder="Admin note (optional)"
+                  defaultValue={f.adminNote ?? ""}
+                  className="rounded-md px-2 py-1 text-xs"
+                  style={{ ...inputStyle, width: "200px" }}
+                />
+                <select
+                  name="feedbackStatus"
+                  defaultValue={f.status}
+                  className="rounded-md px-2 py-1 text-xs"
+                  style={{ ...inputStyle, width: "100px" }}
+                >
+                  <option value="open">open</option>
+                  <option value="read">read</option>
+                  <option value="resolved">resolved</option>
+                </select>
+                <Btn value="feedback_status" color="dim" disabled={submitting} />
+              </Form>
+            </div>
           );
         })}
       </div>
@@ -617,45 +617,45 @@ function AppealsTab({ data, submitting }: { data: LoaderData; submitting: boolea
         {appeals.map((a) => {
           if (!a) return null;
           return (
-          <div
-            key={a.id}
-            className="rounded-md p-3"
-            style={{
-              background: "var(--color-bg-elev-2)",
-              border: "1px solid var(--color-border)",
-            }}
-          >
-            <div className="flex items-center gap-2 mb-1">
-              <span className="text-xs font-medium" style={{ color: "var(--color-text)" }}>
-                @{a.userHandle}
-              </span>
-              <span className="text-xs" style={{ color: "var(--color-text-dim)" }}>
-                banned from
-              </span>
-              <Link
-                to={`/c/${a.communitySlug}`}
-                className="text-xs no-underline hover:underline"
-                style={{ color: "var(--color-accent, var(--color-text))" }}
-              >
-                {a.communityName}
-              </Link>
+            <div
+              key={a.id}
+              className="rounded-md p-3"
+              style={{
+                background: "var(--color-bg-elev-2)",
+                border: "1px solid var(--color-border)",
+              }}
+            >
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-xs font-medium" style={{ color: "var(--color-text)" }}>
+                  @{a.userHandle}
+                </span>
+                <span className="text-xs" style={{ color: "var(--color-text-dim)" }}>
+                  banned from
+                </span>
+                <Link
+                  to={`/c/${a.communitySlug}`}
+                  className="text-xs no-underline hover:underline"
+                  style={{ color: "var(--color-accent, var(--color-text))" }}
+                >
+                  {a.communityName}
+                </Link>
+              </div>
+              <p className="text-sm mb-2" style={{ color: "var(--color-text-dim)" }}>
+                {a.message}
+              </p>
+              <Form method="post" className="flex gap-2 items-center flex-wrap">
+                <input type="hidden" name="appealId" value={a.id} />
+                <input
+                  name="reviewNote"
+                  type="text"
+                  placeholder="Review note (optional)"
+                  className="rounded-md px-2 py-1 text-xs"
+                  style={{ ...inputStyle, width: "200px" }}
+                />
+                <Btn value="appeal_approve" color="green" disabled={submitting} />
+                <Btn value="appeal_deny" color="red" disabled={submitting} />
+              </Form>
             </div>
-            <p className="text-sm mb-2" style={{ color: "var(--color-text-dim)" }}>
-              {a.message}
-            </p>
-            <Form method="post" className="flex gap-2 items-center flex-wrap">
-              <input type="hidden" name="appealId" value={a.id} />
-              <input
-                name="reviewNote"
-                type="text"
-                placeholder="Review note (optional)"
-                className="rounded-md px-2 py-1 text-xs"
-                style={{ ...inputStyle, width: "200px" }}
-              />
-              <Btn value="appeal_approve" color="green" disabled={submitting} />
-              <Btn value="appeal_deny" color="red" disabled={submitting} />
-            </Form>
-          </div>
           );
         })}
       </div>
@@ -710,45 +710,45 @@ function PioneerTab({ data, submitting }: { data: LoaderData; submitting: boolea
           {list.map((e) => {
             if (!e) return null;
             return (
-            <div
-              key={e.id}
-              className="flex items-center justify-between rounded-md px-3 py-2"
-              style={{
-                background: "var(--color-bg-elev-2)",
-                border: "1px solid var(--color-border)",
-              }}
-            >
-              <div>
-                <span className="text-sm font-medium" style={{ color: "var(--color-text)" }}>
-                  @{e.userHandle}
-                </span>
-                <span className="text-xs ml-2" style={{ color: "var(--color-text-dim)" }}>
-                  → {e.communityName}
-                </span>
-                {e.contractRef && (
-                  <span className="text-xs ml-2" style={{ color: "var(--color-text-faint)" }}>
-                    [{e.contractRef}]
+              <div
+                key={e.id}
+                className="flex items-center justify-between rounded-md px-3 py-2"
+                style={{
+                  background: "var(--color-bg-elev-2)",
+                  border: "1px solid var(--color-border)",
+                }}
+              >
+                <div>
+                  <span className="text-sm font-medium" style={{ color: "var(--color-text)" }}>
+                    @{e.userHandle}
                   </span>
-                )}
+                  <span className="text-xs ml-2" style={{ color: "var(--color-text-dim)" }}>
+                    → {e.communityName}
+                  </span>
+                  {e.contractRef && (
+                    <span className="text-xs ml-2" style={{ color: "var(--color-text-faint)" }}>
+                      [{e.contractRef}]
+                    </span>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  <span
+                    className="text-xs px-1.5 py-0.5 rounded"
+                    style={{
+                      background: e.isActive ? "var(--color-success)" : "var(--color-bg-elev-1)",
+                      color: e.isActive ? "#000" : "var(--color-text-faint)",
+                    }}
+                  >
+                    {e.isActive ? "active" : "revoked"}
+                  </span>
+                  {e.isActive && (
+                    <Form method="post">
+                      <input type="hidden" name="enrollmentId" value={e.id} />
+                      <Btn value="pioneer_revoke" color="red" disabled={submitting} />
+                    </Form>
+                  )}
+                </div>
               </div>
-              <div className="flex items-center gap-2">
-                <span
-                  className="text-xs px-1.5 py-0.5 rounded"
-                  style={{
-                    background: e.isActive ? "var(--color-success)" : "var(--color-bg-elev-1)",
-                    color: e.isActive ? "#000" : "var(--color-text-faint)",
-                  }}
-                >
-                  {e.isActive ? "active" : "revoked"}
-                </span>
-                {e.isActive && (
-                  <Form method="post">
-                    <input type="hidden" name="enrollmentId" value={e.id} />
-                    <Btn value="pioneer_revoke" color="red" disabled={submitting} />
-                  </Form>
-                )}
-              </div>
-            </div>
             );
           })}
         </div>
@@ -767,27 +767,27 @@ function ConfigTab({ data }: { data: LoaderData }) {
           {data.bundles.map((b) => {
             if (!b) return null;
             return (
-            <div key={b.id} className="flex items-center justify-between">
-              <span className="text-sm" style={{ color: "var(--color-text-dim)" }}>
-                {b.name} — {b.coinAmount} CC — ${(b.usdPriceCents / 100).toFixed(2)}
-              </span>
-              <Form method="post">
-                <input type="hidden" name="bundleId" value={b.id} />
-                <button
-                  type="submit"
-                  name="intent"
-                  value="bundle_toggle"
-                  className="text-xs px-3 py-1 rounded-md"
-                  style={{
-                    background: "var(--color-bg-elev-2)",
-                    border: "1px solid var(--color-border)",
-                    color: b.isActive ? "var(--color-success)" : "var(--color-text-faint)",
-                  }}
-                >
-                  {b.isActive ? "Active" : "Inactive"}
-                </button>
-              </Form>
-            </div>
+              <div key={b.id} className="flex items-center justify-between">
+                <span className="text-sm" style={{ color: "var(--color-text-dim)" }}>
+                  {b.name} — {b.coinAmount} CC — ${(b.usdPriceCents / 100).toFixed(2)}
+                </span>
+                <Form method="post">
+                  <input type="hidden" name="bundleId" value={b.id} />
+                  <button
+                    type="submit"
+                    name="intent"
+                    value="bundle_toggle"
+                    className="text-xs px-3 py-1 rounded-md"
+                    style={{
+                      background: "var(--color-bg-elev-2)",
+                      border: "1px solid var(--color-border)",
+                      color: b.isActive ? "var(--color-success)" : "var(--color-text-faint)",
+                    }}
+                  >
+                    {b.isActive ? "Active" : "Inactive"}
+                  </button>
+                </Form>
+              </div>
             );
           })}
         </div>
@@ -798,27 +798,27 @@ function ConfigTab({ data }: { data: LoaderData }) {
           {data.badgeDefs.map((b) => {
             if (!b) return null;
             return (
-            <div key={b.id} className="flex items-center justify-between">
-              <span className="text-sm" style={{ color: "var(--color-text-dim)" }}>
-                {b.icon} {b.name} — {b.coinCost} CC
-              </span>
-              <Form method="post">
-                <input type="hidden" name="badgeId" value={b.id} />
-                <button
-                  type="submit"
-                  name="intent"
-                  value="badge_toggle"
-                  className="text-xs px-3 py-1 rounded-md"
-                  style={{
-                    background: "var(--color-bg-elev-2)",
-                    border: "1px solid var(--color-border)",
-                    color: b.isActive ? "var(--color-success)" : "var(--color-text-faint)",
-                  }}
-                >
-                  {b.isActive ? "Active" : "Inactive"}
-                </button>
-              </Form>
-            </div>
+              <div key={b.id} className="flex items-center justify-between">
+                <span className="text-sm" style={{ color: "var(--color-text-dim)" }}>
+                  {b.icon} {b.name} — {b.coinCost} CC
+                </span>
+                <Form method="post">
+                  <input type="hidden" name="badgeId" value={b.id} />
+                  <button
+                    type="submit"
+                    name="intent"
+                    value="badge_toggle"
+                    className="text-xs px-3 py-1 rounded-md"
+                    style={{
+                      background: "var(--color-bg-elev-2)",
+                      border: "1px solid var(--color-border)",
+                      color: b.isActive ? "var(--color-success)" : "var(--color-text-faint)",
+                    }}
+                  >
+                    {b.isActive ? "Active" : "Inactive"}
+                  </button>
+                </Form>
+              </div>
             );
           })}
         </div>

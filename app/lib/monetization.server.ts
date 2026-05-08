@@ -54,7 +54,10 @@ export async function checkEligibility(db: Db, userId: string): Promise<Eligibil
       .select({ totalCoins: sql<number>`coalesce(sum(${monetizationEarnings.grossCoins}), 0)` })
       .from(monetizationEarnings)
       .where(
-        and(eq(monetizationEarnings.userId, userId), gte(monetizationEarnings.createdAt, windowStart)),
+        and(
+          eq(monetizationEarnings.userId, userId),
+          gte(monetizationEarnings.createdAt, windowStart),
+        ),
       )
       .get(),
   ]);
@@ -121,14 +124,21 @@ export async function checkPartnerEligibility(
       })
       .from(posts)
       .where(
-        and(eq(posts.authorId, userId), gte(posts.createdAt, windowStart), sql`${posts.removedAt} IS NULL`),
+        and(
+          eq(posts.authorId, userId),
+          gte(posts.createdAt, windowStart),
+          sql`${posts.removedAt} IS NULL`,
+        ),
       )
       .get(),
     db
       .select({ totalCoins: sql<number>`coalesce(sum(${monetizationEarnings.grossCoins}), 0)` })
       .from(monetizationEarnings)
       .where(
-        and(eq(monetizationEarnings.userId, userId), gte(monetizationEarnings.createdAt, windowStart)),
+        and(
+          eq(monetizationEarnings.userId, userId),
+          gte(monetizationEarnings.createdAt, windowStart),
+        ),
       )
       .get(),
   ]);
