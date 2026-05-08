@@ -178,6 +178,89 @@ export function ExpandedPostContent({
   return null;
 }
 
+export function InlineMedia({
+  type,
+  url,
+  imageUrl,
+  embedKind,
+  embedRef,
+}: {
+  type: string;
+  url?: string | null;
+  imageUrl?: string | null;
+  embedKind?: string | null;
+  embedRef?: string | null;
+}) {
+  if (type === "image" && imageUrl) {
+    return (
+      <img
+        src={imageUrl}
+        alt=""
+        loading="lazy"
+        style={{ width: "100%", maxHeight: 200, objectFit: "contain", display: "block" }}
+      />
+    );
+  }
+
+  if ((type === "video" || type === "link") && embedKind && embedRef) {
+    const parent = window.location.hostname;
+    const src = getEmbedSrc(embedKind as Exclude<EmbedKind, null>, embedRef, parent);
+    return (
+      <iframe
+        src={src}
+        title="Embedded content"
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+        allowFullScreen
+        style={{ width: "100%", aspectRatio: "16/9", border: "none", display: "block" }}
+      />
+    );
+  }
+
+  if ((type === "video" || type === "link") && url) {
+    const embed = detectEmbed(url);
+    if (embed?.kind === "giphy") {
+      return (
+        <img
+          src={`https://media.giphy.com/media/${embed.id}/giphy.gif`}
+          alt="GIF"
+          loading="lazy"
+          style={{ width: "100%", maxHeight: 200, objectFit: "contain", display: "block" }}
+        />
+      );
+    }
+    if (
+      embed?.kind === "youtube" ||
+      embed?.kind === "twitch-vod" ||
+      embed?.kind === "twitch-clip"
+    ) {
+      const parent = window.location.hostname;
+      let src = "";
+      if (embed.kind === "youtube") src = `https://www.youtube.com/embed/${embed.id}?rel=0`;
+      if (embed.kind === "twitch-vod")
+        src = `https://player.twitch.tv/?video=${embed.id}&parent=${parent}&autoplay=false`;
+      if (embed.kind === "twitch-clip")
+        src = `https://clips.twitch.tv/embed?clip=${embed.id}&parent=${parent}&autoplay=false`;
+      return (
+        <iframe
+          src={src}
+          title="Embedded content"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+          allowFullScreen
+          style={{ width: "100%", aspectRatio: "16/9", border: "none", display: "block" }}
+        />
+      );
+    }
+    if (embed?.kind === "direct-video") {
+      return (
+        // biome-ignore lint/a11y/useMediaCaption: user-uploaded video, no captions available
+        <video src={url} controls style={{ width: "100%", maxHeight: 200, display: "block" }} />
+      );
+    }
+  }
+
+  return null;
+}
+
 export function ExpandChevron({ expanded }: { expanded: boolean }) {
   return (
     <svg

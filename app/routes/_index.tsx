@@ -1,9 +1,9 @@
 import type { LoaderFunctionArgs, MetaFunction } from "@remix-run/cloudflare";
 import { Link, useLoaderData, useSearchParams } from "@remix-run/react";
 import { and, desc, eq, inArray, isNull, or } from "drizzle-orm";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { CoreLogo } from "~/components/CoreLogo";
-import { ExpandChevron, ExpandedPostContent, detectEmbed } from "~/components/PostExpand";
+import { InlineMedia, detectEmbed } from "~/components/PostExpand";
 import { AppShell } from "~/components/layout/AppShell";
 import { Footer } from "~/components/layout/Footer";
 import { Header } from "~/components/layout/Header";
@@ -391,48 +391,25 @@ function formatFeedCC(n: number): string {
 }
 
 function FeedPostCard({ post }: { post: FeedPost }) {
-  const [expanded, setExpanded] = useState(false);
   const tier = getFeedMilestoneTier(post.badgeCoinsCC);
   const caption = post.body ? post.body.replace(/<[^>]*>/g, "").trim() : null;
 
-  const isExpandable =
+  const hasMedia =
     (post.type === "image" && !!post.imageUrl) ||
-    (post.type === "video" && !!post.url) ||
-    (post.type === "link" && (!!post.embedKind || (!!post.url && !!detectEmbed(post.url))));
-
-  const hasThumb =
-    !expanded && ((post.type === "image" && !!post.imageUrl) || post.type === "video");
-  const ytId =
-    post.type === "video"
-      ? post.url?.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/)?.[1]
-      : null;
+    ((post.type === "video" || post.type === "link") &&
+      (!!post.embedKind || (!!post.url && !!detectEmbed(post.url))));
 
   return (
     <div
-      className={`post-card rounded-lg p-4${tier ? ` ${tier.className}` : ""}${isExpandable ? " cursor-pointer select-none" : ""}`}
+      className={`post-card rounded-lg p-4${tier ? ` ${tier.className}` : ""}`}
       style={{
-        background: expanded ? "var(--color-bg-elev-2)" : "var(--color-bg-elev-1)",
+        background: "var(--color-bg-elev-1)",
         border: `1px solid ${tier ? tier.borderColor : "var(--color-border)"}`,
-        transition: "background 0.15s ease",
-      }}
-      onClick={(e) => {
-        if ((e.target as HTMLElement).closest("a, button")) return;
-        if (isExpandable) setExpanded((v) => !v);
-      }}
-      onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === " ") {
-          if (isExpandable) setExpanded((v) => !v);
-        }
       }}
     >
-      {/* Top row */}
-      <div className="flex gap-4">
+      <div className="flex gap-4 items-center">
         {/* Community icon */}
-        <Link
-          to={`/c/${post.communitySlug}`}
-          className="flex-shrink-0"
-          onClick={(e) => e.stopPropagation()}
-        >
+        <Link to={`/c/${post.communitySlug}`} className="flex-shrink-0 self-start mt-0.5">
           <CommunityAvatar
             name={post.communityName ?? ""}
             iconUrl={post.communityIconUrl}
@@ -440,14 +417,10 @@ function FeedPostCard({ post }: { post: FeedPost }) {
           />
         </Link>
 
-        {/* Main content */}
+        {/* Text content */}
         <div className="flex-1 min-w-0">
           <div className="flex items-center justify-between mb-1">
-            <Link
-              to={`/c/${post.communitySlug}`}
-              className="no-underline group"
-              onClick={(e) => e.stopPropagation()}
-            >
+            <Link to={`/c/${post.communitySlug}`} className="no-underline group">
               <span
                 className="text-xs font-medium group-hover:underline"
                 style={{ color: "var(--color-text-dim)" }}
@@ -476,7 +449,6 @@ function FeedPostCard({ post }: { post: FeedPost }) {
               to={`/c/${post.communitySlug}/p/${post.id}`}
               className="text-sm font-medium no-underline hover:underline leading-snug"
               style={{ color: "var(--color-text)" }}
-              onClick={(e) => e.stopPropagation()}
             >
               {post.title}
             </Link>
@@ -504,7 +476,7 @@ function FeedPostCard({ post }: { post: FeedPost }) {
             )}
           </div>
 
-          {caption && !expanded && (
+          {caption && (
             <p
               className="text-xs mb-1.5 leading-relaxed"
               style={{
@@ -559,91 +531,32 @@ function FeedPostCard({ post }: { post: FeedPost }) {
               to={`/c/${post.communitySlug}/p/${post.id}`}
               className="no-underline hover:underline"
               style={{ color: "var(--color-text-faint)" }}
-              onClick={(e) => e.stopPropagation()}
             >
               {post.commentCount} comment{post.commentCount !== 1 ? "s" : ""}
             </Link>
           </div>
         </div>
 
-        {/* Thumbnail (collapsed only) */}
-        {hasThumb && (
+        {/* Inline media — always visible, right side */}
+        {hasMedia && (
           <div
-            className="post-thumb flex-shrink-0 relative flex items-center justify-center"
+            className="flex-shrink-0 rounded-lg overflow-hidden self-center"
             style={{
-              width: 140,
-              height: 100,
+              width: 220,
               background: "var(--color-bg-elev-2)",
               border: "1px solid var(--color-border)",
             }}
           >
-            {post.type === "image" && post.imageUrl && (
-              <img
-                src={post.imageUrl}
-                alt=""
-                loading="lazy"
-                className="w-full h-full"
-                style={{ objectFit: "contain" }}
-              />
-            )}
-            {post.type === "video" && (
-              <>
-                {ytId && (
-                  <img
-                    src={`https://img.youtube.com/vi/${ytId}/mqdefault.jpg`}
-                    alt=""
-                    loading="lazy"
-                    className="absolute inset-0 w-full h-full object-cover"
-                  />
-                )}
-                <div
-                  className="relative z-10 flex items-center justify-center rounded-full"
-                  style={{
-                    width: 34,
-                    height: 34,
-                    background: ytId ? "rgba(0,0,0,0.55)" : "rgba(245,245,247,0.06)",
-                    border: "1.5px solid rgba(245,245,247,0.25)",
-                  }}
-                >
-                  <svg
-                    width="12"
-                    height="12"
-                    viewBox="0 0 11 11"
-                    fill="currentColor"
-                    style={{ color: "var(--color-text)", marginLeft: 2 }}
-                    aria-hidden="true"
-                  >
-                    <path d="M1.5 1.5L9.5 5.5L1.5 9.5V1.5Z" />
-                  </svg>
-                </div>
-              </>
-            )}
+            <InlineMedia
+              type={post.type}
+              url={post.url}
+              imageUrl={post.imageUrl}
+              embedKind={post.embedKind}
+              embedRef={post.embedRef}
+            />
           </div>
         )}
-
-        {/* Expand chevron */}
-        {isExpandable && <ExpandChevron expanded={expanded} />}
       </div>
-
-      {/* Expanded content */}
-      {expanded && (
-        <div className="expand-in mt-3 pt-3" style={{ borderTop: "1px solid var(--color-border)" }}>
-          {caption && post.type !== "text" && (
-            <p className="text-xs mb-3 leading-relaxed" style={{ color: "var(--color-text-dim)" }}>
-              {caption}
-            </p>
-          )}
-          <ExpandedPostContent
-            type={post.type}
-            url={post.url}
-            imageUrl={post.imageUrl}
-            body={post.body}
-            title={post.title}
-            embedKind={post.embedKind}
-            embedRef={post.embedRef}
-          />
-        </div>
-      )}
     </div>
   );
 }
