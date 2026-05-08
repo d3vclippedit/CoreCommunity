@@ -9,4 +9,5 @@ interface Env {
   COMMUNITY_CREATION_OPEN: string; // "true" | "false" — feature flag
   TWITCH_CLIENT_ID: string;
   TWITCH_CLIENT_SECRET: string;
+  APP_URL?: string;
 }

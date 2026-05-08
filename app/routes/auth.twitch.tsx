@@ -4,7 +4,8 @@ import { getTwitchAuthUrl } from "~/lib/auth/twitch";
 import { getCurrentUser } from "~/lib/auth/user.server";
 import { generateToken } from "~/lib/utils";
 
-function getRedirectUri(request: Request): string {
+function getRedirectUri(request: Request, appUrl?: string): string {
+  if (appUrl) return `${appUrl.replace(/\/$/, "")}/auth/twitch/callback`;
   const url = new URL(request.url);
   return `${url.protocol}//${url.host}/auth/twitch/callback`;
 }
@@ -19,7 +20,9 @@ export async function loader({ request, context }: LoaderFunctionArgs) {
     expirationTtl: 600,
   });
 
-  return redirect(getTwitchAuthUrl(env.TWITCH_CLIENT_ID, getRedirectUri(request), state));
+  return redirect(
+    getTwitchAuthUrl(env.TWITCH_CLIENT_ID, getRedirectUri(request, env.APP_URL), state),
+  );
 }
 
 export async function action({ request, context }: ActionFunctionArgs) {

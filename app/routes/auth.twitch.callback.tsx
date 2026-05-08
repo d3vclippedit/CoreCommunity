@@ -5,7 +5,8 @@ import { exchangeTwitchCode, getTwitchUser } from "~/lib/auth/twitch";
 import { createDb } from "~/lib/db/index";
 import { users } from "../../db/schema";
 
-function getRedirectUri(request: Request): string {
+function getRedirectUri(request: Request, appUrl?: string): string {
+  if (appUrl) return `${appUrl.replace(/\/$/, "")}/auth/twitch/callback`;
   const url = new URL(request.url);
   return `${url.protocol}//${url.host}/auth/twitch/callback`;
 }
@@ -28,7 +29,7 @@ export async function loader({ request, context }: LoaderFunctionArgs) {
   const { userId } = JSON.parse(stored) as { userId: string };
 
   try {
-    const redirectUri = getRedirectUri(request);
+    const redirectUri = getRedirectUri(request, env.APP_URL);
     if (!env.TWITCH_CLIENT_ID || !env.TWITCH_CLIENT_SECRET) {
       console.error("Twitch OAuth: TWITCH_CLIENT_ID or TWITCH_CLIENT_SECRET env var not set");
       return redirect("/settings?tab=connected&twitch_error=1");
