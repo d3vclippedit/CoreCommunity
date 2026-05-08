@@ -58,6 +58,7 @@ export async function action({ request, context }: ActionFunctionArgs) {
         handle: true,
         passwordHash: true,
         deletedAt: true,
+        isBanned: true,
       },
     });
 
@@ -84,7 +85,8 @@ export async function action({ request, context }: ActionFunctionArgs) {
       });
     }
 
-    const valid = user && !user.deletedAt && (await verifyPassword(password, user.passwordHash));
+    const valid =
+      user && !user.deletedAt && !user.isBanned && (await verifyPassword(password, user.passwordHash));
 
     if (!valid || !emailRl.allowed) {
       return { error: "Incorrect email/handle or password." };

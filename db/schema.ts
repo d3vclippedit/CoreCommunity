@@ -24,6 +24,11 @@ export const users = sqliteTable("users", {
   deletedAt: integer("deleted_at", { mode: "timestamp" }),
   isPlatformAdmin: integer("is_platform_admin", { mode: "boolean" }).notNull().default(false),
   isVerifiedStreamer: integer("is_verified_streamer", { mode: "boolean" }).notNull().default(false),
+  isBanned: integer("is_banned", { mode: "boolean" }).notNull().default(false),
+  earningTier: text("earning_tier")
+    .$type<"none" | "creator" | "partner" | "pioneer">()
+    .notNull()
+    .default("none"),
   // V2: xp, level, reputation columns
   xp: integer("xp").notNull().default(0),
   level: integer("level").notNull().default(0),
@@ -201,6 +206,7 @@ export const posts = sqliteTable("posts", {
   embedRef: text("embed_ref"), // canonical id parsed from url
   score: integer("score").notNull().default(0), // upvotes - downvotes (denormalized)
   badgeScore: real("badge_score").notNull().default(0), // accumulated badge visibility weight
+  viewCount: integer("view_count").notNull().default(0),
   upvotes: integer("upvotes").notNull().default(0),
   downvotes: integer("downvotes").notNull().default(0),
   commentCount: integer("comment_count").notNull().default(0),
@@ -547,4 +553,60 @@ export const adminMoneyLogs = sqliteTable("admin_money_logs", {
   refId: text("ref_id"),
   note: text("note"),
   createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
+});
+
+// ─── Pioneer Program ─────────────────────────────────────────────────────────
+
+export const pioneerEnrollments = sqliteTable("pioneer_enrollments", {
+  id: text("id").primaryKey(),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  communityId: text("community_id")
+    .notNull()
+    .references(() => communities.id, { onDelete: "cascade" }),
+  enrolledByAdminId: text("enrolled_by_admin_id")
+    .notNull()
+    .references(() => users.id),
+  contractRef: text("contract_ref"),
+  enrolledAt: integer("enrolled_at", { mode: "timestamp" }).notNull(),
+  expiresAt: integer("expires_at", { mode: "timestamp" }),
+  isActive: integer("is_active", { mode: "boolean" }).notNull().default(true),
+});
+
+// ─── Feedback & Ban Appeals ────────────────────────────────────────────────────
+
+export type FeedbackCategory = "bug" | "feature" | "support" | "other";
+export type FeedbackStatus = "open" | "read" | "resolved";
+
+export const feedback = sqliteTable("feedback", {
+  id: text("id").primaryKey(),
+  userId: text("user_id").references(() => users.id, { onDelete: "set null" }),
+  category: text("category").$type<FeedbackCategory>().notNull().default("other"),
+  message: text("message").notNull(),
+  status: text("status").$type<FeedbackStatus>().notNull().default("open"),
+  adminNote: text("admin_note"),
+  createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
+  updatedAt: integer("updated_at", { mode: "timestamp" }).notNull(),
+});
+
+export type AppealStatus = "pending" | "approved" | "denied";
+
+export const banAppeals = sqliteTable("ban_appeals", {
+  id: text("id").primaryKey(),
+  banId: text("ban_id")
+    .notNull()
+    .references(() => bans.id, { onDelete: "cascade" }),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  communityId: text("community_id")
+    .notNull()
+    .references(() => communities.id, { onDelete: "cascade" }),
+  message: text("message").notNull(),
+  status: text("status").$type<AppealStatus>().notNull().default("pending"),
+  reviewedByUserId: text("reviewed_by_user_id"),
+  reviewNote: text("review_note"),
+  createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
+  updatedAt: integer("updated_at", { mode: "timestamp" }).notNull(),
 });

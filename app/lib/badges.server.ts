@@ -14,8 +14,8 @@ import {
 
 type Db = ReturnType<typeof createDb>;
 
-// Server-side payout rate — never exposed to frontend
-const CREATOR_PAYOUT_RATE = 0.7; // 70% to creator, 30% platform fee
+// Server-side payout rate — never exposed to frontend, never log or return to client
+const CREATOR_PAYOUT_RATE = 0.05; // 1/20 of badge value goes to creator
 
 export async function getActiveBadgeDefinitions(db: Db) {
   return db
@@ -44,6 +44,7 @@ export async function applyBadge(
 
   if (!post) throw new Error("POST_NOT_FOUND");
   if (post.removedAt) throw new Error("POST_REMOVED");
+  if (post.authorId === giverUserId) throw new Error("SELF_BADGE_NOT_ALLOWED");
 
   // Verify badge definition
   const badgeDef = await db

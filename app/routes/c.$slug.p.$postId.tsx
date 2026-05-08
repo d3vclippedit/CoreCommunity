@@ -116,6 +116,14 @@ export async function loader({ params, request, context }: LoaderFunctionArgs) {
     user ? getBalance(db, user.id) : Promise.resolve(0),
   ]);
 
+  // Increment view count — non-critical, silently ignore failures
+  try {
+    await db
+      .update(posts)
+      .set({ viewCount: sql`${posts.viewCount} + 1` })
+      .where(eq(posts.id, post.id));
+  } catch {}
+
   const isPostAuthor = user?.id === post.authorId;
 
   return {
