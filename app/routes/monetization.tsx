@@ -14,15 +14,14 @@ import { getCurrentUser } from "~/lib/auth/user.server";
 import { formatCoins } from "~/lib/coins";
 import { getActiveBundles, getBalance, getTransactionHistory } from "~/lib/coins.server";
 import { createDb } from "~/lib/db/index";
-import { checkEligibility, getPayoutHistory } from "~/lib/monetization.server";
 import type { loader as rootLoader } from "~/root";
 
 export const meta: MetaFunction = () => [
-  { title: "Monetisation — Cormunities" },
-  { name: "description", content: "Manage your coins, buy bundles, and track creator earnings." },
+  { title: "Core Coins — Cormunities" },
+  { name: "description", content: "Buy Core Coins and manage your wallet." },
 ];
 
-const TABS = ["wallet", "buy", "earn"] as const;
+const TABS = ["buy", "wallet"] as const;
 type Tab = (typeof TABS)[number];
 
 export async function loader({ request, context }: LoaderFunctionArgs) {
@@ -30,12 +29,11 @@ export async function loader({ request, context }: LoaderFunctionArgs) {
   const user = await getCurrentUser(request, env);
 
   const url = new URL(request.url);
-  const tab = (url.searchParams.get("tab") as Tab) ?? "wallet";
-  const validTab = TABS.includes(tab) ? tab : "wallet";
+  const tab = (url.searchParams.get("tab") as Tab) ?? "buy";
+  const validTab = TABS.includes(tab) ? tab : "buy";
 
-  // Wallet and earnings tabs require auth
-  if (!user && validTab !== "buy")
-    return redirect(`/auth/login?next=/monetization?tab=${validTab}`);
+  // Wallet requires auth; buy is public
+  if (!user && validTab === "wallet") return redirect("/auth/login?next=/monetization");
 
   const db = createDb(env.DB);
 
@@ -49,17 +47,13 @@ export async function loader({ request, context }: LoaderFunctionArgs) {
         bundles,
         balance: 0,
         transactions: [],
-        eligibility: null,
-        payoutHistory: [],
         dbReady: true,
       };
     }
 
-    const [balance, transactions, eligibility, payoutHistory] = await Promise.all([
+    const [balance, transactions] = await Promise.all([
       getBalance(db, user.id),
       getTransactionHistory(db, user.id, 50),
-      checkEligibility(db, user.id),
-      getPayoutHistory(db, user.id),
     ]);
 
     return {
@@ -68,8 +62,6 @@ export async function loader({ request, context }: LoaderFunctionArgs) {
       bundles,
       balance,
       transactions,
-      eligibility,
-      payoutHistory,
       dbReady: true,
     };
   } catch {
@@ -79,8 +71,6 @@ export async function loader({ request, context }: LoaderFunctionArgs) {
       bundles: [],
       balance: 0,
       transactions: [],
-      eligibility: null,
-      payoutHistory: [],
       dbReady: false,
     };
   }
@@ -93,13 +83,6 @@ const TX_LABELS: Record<string, string> = {
   admin_credit: "Admin credit",
   admin_debit: "Admin debit",
   earning: "Creator earning",
-};
-
-const PAYOUT_STATUS_LABELS: Record<string, string> = {
-  pending: "Pending",
-  processing: "Processing",
-  completed: "Completed",
-  failed: "Failed",
 };
 
 const BADGE_DISPLAY = [
@@ -118,7 +101,7 @@ export default function MonetisationPage() {
   const root = useRouteLoaderData<typeof rootLoader>("root");
   const rootUser = root?.user ?? null;
   const [params, setParams] = useSearchParams();
-  const activeTab: Tab = (params.get("tab") as Tab) ?? data.tab ?? "wallet";
+  const activeTab: Tab = (params.get("tab") as Tab) ?? data.tab ?? "buy";
 
   function switchTab(tab: Tab) {
     setParams(
@@ -140,10 +123,10 @@ export default function MonetisationPage() {
           {/* Header row */}
           <div className="mb-5">
             <h1 className="text-2xl font-semibold" style={{ color: "var(--color-text)" }}>
-              Monetisation
+              Core Coins
             </h1>
             <p className="text-sm mt-1" style={{ color: "var(--color-text-dim)" }}>
-              Coins, badges, and creator earnings — all in one place.
+              Buy coins and support creators with badges.
             </p>
           </div>
 
@@ -199,9 +182,8 @@ export default function MonetisationPage() {
           >
             {(
               [
-                { id: "wallet", label: "Wallet" },
                 { id: "buy", label: "Buy Coins" },
-                { id: "earn", label: "Creator Earnings" },
+                { id: "wallet", label: "Wallet" },
               ] as { id: Tab; label: string }[]
             ).map(({ id, label }) => (
               <button
@@ -326,44 +308,46 @@ export default function MonetisationPage() {
                     {data.transactions
                       .filter((tx): tx is NonNullable<typeof tx> => tx != null)
                       .map((tx, i) => {
-                      const isCredit = tx.amount > 0;
-                      return (
-                        <div
-                          key={tx.id}
-                          className="flex items-center justify-between px-4 py-3"
-                          style={{ borderTop: i > 0 ? "1px solid var(--color-border)" : undefined }}
-                        >
-                          <div className="flex flex-col gap-0.5 min-w-0">
-                            <p
-                              className="text-sm font-medium"
-                              style={{ color: "var(--color-text)" }}
-                            >
-                              {TX_LABELS[tx.type] ?? tx.type}
-                            </p>
-                            {tx.note && (
-                              <p
-                                className="text-xs truncate"
-                                style={{ color: "var(--color-text-faint)" }}
-                              >
-                                {tx.note}
-                              </p>
-                            )}
-                            <p className="text-xs" style={{ color: "var(--color-text-faint)" }}>
-                              {new Date(tx.createdAt).toLocaleString()}
-                            </p>
-                          </div>
-                          <span
-                            className="text-sm font-semibold flex-shrink-0 ml-4"
+                        const isCredit = tx.amount > 0;
+                        return (
+                          <div
+                            key={tx.id}
+                            className="flex items-center justify-between px-4 py-3"
                             style={{
-                              color: isCredit ? "var(--color-success)" : "var(--color-danger)",
+                              borderTop: i > 0 ? "1px solid var(--color-border)" : undefined,
                             }}
                           >
-                            {isCredit ? "+" : ""}
-                            {formatCoins(tx.amount)} cc
-                          </span>
-                        </div>
-                      );
-                    })}
+                            <div className="flex flex-col gap-0.5 min-w-0">
+                              <p
+                                className="text-sm font-medium"
+                                style={{ color: "var(--color-text)" }}
+                              >
+                                {TX_LABELS[tx.type] ?? tx.type}
+                              </p>
+                              {tx.note && (
+                                <p
+                                  className="text-xs truncate"
+                                  style={{ color: "var(--color-text-faint)" }}
+                                >
+                                  {tx.note}
+                                </p>
+                              )}
+                              <p className="text-xs" style={{ color: "var(--color-text-faint)" }}>
+                                {new Date(tx.createdAt).toLocaleString()}
+                              </p>
+                            </div>
+                            <span
+                              className="text-sm font-semibold flex-shrink-0 ml-4"
+                              style={{
+                                color: isCredit ? "var(--color-success)" : "var(--color-danger)",
+                              }}
+                            >
+                              {isCredit ? "+" : ""}
+                              {formatCoins(tx.amount)} cc
+                            </span>
+                          </div>
+                        );
+                      })}
                   </div>
                 )}
               </div>
@@ -556,216 +540,9 @@ export default function MonetisationPage() {
               </div>
             </div>
           )}
-
-          {/* ── Creator Earnings tab ── */}
-          {activeTab === "earn" && data.user && data.eligibility && (
-            <div className="flex flex-col lg:flex-row gap-6 items-start">
-              {/* Left — eligibility */}
-              <div className="flex-1 min-w-0 flex flex-col gap-5">
-                <div
-                  className="rounded-xl p-5"
-                  style={{
-                    background: "var(--color-bg-elev-1)",
-                    border: `1px solid ${data.eligibility.isEligible ? "var(--color-success)" : "var(--color-border)"}`,
-                  }}
-                >
-                  <div className="flex items-center gap-2 mb-5">
-                    <span className="text-lg">{data.eligibility.isEligible ? "✅" : "⏳"}</span>
-                    <h2 className="text-sm font-semibold" style={{ color: "var(--color-text)" }}>
-                      {data.eligibility.isEligible
-                        ? "You're eligible for payouts!"
-                        : "Requirements to unlock payouts"}
-                    </h2>
-                  </div>
-
-                  <div className="flex flex-col gap-5">
-                    <ProgressBar
-                      value={data.eligibility.followerCount}
-                      max={data.eligibility.followerGoal}
-                      label="Followers (last 28 days)"
-                    />
-                    <ProgressBar
-                      value={data.eligibility.postCount}
-                      max={data.eligibility.postGoal}
-                      label="Posts (last 28 days)"
-                    />
-                    <div className="flex flex-col gap-1.5">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs" style={{ color: "var(--color-text-dim)" }}>
-                          Badge earnings threshold
-                        </span>
-                        <span
-                          className="text-xs font-medium"
-                          style={{
-                            color: data.eligibility.badgeValueMet
-                              ? "var(--color-success)"
-                              : "var(--color-text-dim)",
-                          }}
-                        >
-                          {data.eligibility.badgeValueMet ? "✓ Met" : "Not yet met"}
-                        </span>
-                      </div>
-                      <div
-                        className="h-1.5 w-full rounded-full overflow-hidden"
-                        style={{ background: "var(--color-bg-elev-2)" }}
-                      >
-                        <div
-                          className="h-full rounded-full"
-                          style={{
-                            width: data.eligibility.badgeValueMet ? "100%" : "0%",
-                            background: data.eligibility.badgeValueMet
-                              ? "var(--color-success)"
-                              : "var(--color-text)",
-                          }}
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  {!data.eligibility.isEligible && (
-                    <p className="text-xs mt-4" style={{ color: "var(--color-text-faint)" }}>
-                      All three requirements must be met within the same rolling 28-day window.
-                    </p>
-                  )}
-                </div>
-
-                {/* How payouts work */}
-                <div
-                  className="rounded-xl p-5"
-                  style={{
-                    background: "var(--color-bg-elev-1)",
-                    border: "1px solid var(--color-border)",
-                  }}
-                >
-                  <h2 className="text-sm font-semibold mb-3" style={{ color: "var(--color-text)" }}>
-                    How payouts work
-                  </h2>
-                  <ul className="flex flex-col gap-3">
-                    {[
-                      "When viewers badge your posts, you earn a share of the coins spent.",
-                      "Once eligible, your pending earnings are processed monthly.",
-                      "Payouts are sent via the payment method on file with our team.",
-                      "Contact support at any time to request an early eligibility review.",
-                    ].map((item) => (
-                      <li key={item} className="flex items-start gap-2">
-                        <span style={{ color: "var(--color-text-faint)", flexShrink: 0 }}>·</span>
-                        <span className="text-sm" style={{ color: "var(--color-text-dim)" }}>
-                          {item}
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              </div>
-
-              {/* Right — payout history */}
-              <div className="w-full lg:w-80 xl:w-96 flex-shrink-0">
-                <h2 className="text-sm font-semibold mb-3" style={{ color: "var(--color-text)" }}>
-                  Payout history
-                </h2>
-                {data.payoutHistory.length === 0 ? (
-                  <div
-                    className="rounded-xl p-6 text-center"
-                    style={{
-                      background: "var(--color-bg-elev-1)",
-                      border: "1px solid var(--color-border)",
-                    }}
-                  >
-                    <p className="text-sm" style={{ color: "var(--color-text-faint)" }}>
-                      No payouts yet.
-                    </p>
-                    {!data.eligibility.isEligible && (
-                      <p className="text-xs mt-2" style={{ color: "var(--color-text-faint)" }}>
-                        Complete the requirements above to unlock payouts.
-                      </p>
-                    )}
-                  </div>
-                ) : (
-                  <div
-                    className="rounded-xl overflow-hidden"
-                    style={{
-                      background: "var(--color-bg-elev-1)",
-                      border: "1px solid var(--color-border)",
-                    }}
-                  >
-                    {data.payoutHistory.map((payout, i) => (
-                      <div
-                        key={payout.id}
-                        className="flex items-center justify-between px-4 py-3"
-                        style={{ borderTop: i > 0 ? "1px solid var(--color-border)" : undefined }}
-                      >
-                        <div>
-                          <p className="text-sm font-medium" style={{ color: "var(--color-text)" }}>
-                            {PAYOUT_STATUS_LABELS[payout.status] ?? payout.status}
-                          </p>
-                          <p
-                            className="text-xs mt-0.5"
-                            style={{ color: "var(--color-text-faint)" }}
-                          >
-                            {new Date(payout.createdAt).toLocaleDateString("en-US", {
-                              month: "short",
-                              day: "numeric",
-                              year: "numeric",
-                            })}
-                          </p>
-                        </div>
-                        <span
-                          className="text-xs font-medium px-2 py-1 rounded-md"
-                          style={{
-                            background:
-                              payout.status === "completed"
-                                ? "rgba(61,214,140,0.1)"
-                                : "var(--color-bg-elev-2)",
-                            color:
-                              payout.status === "completed"
-                                ? "var(--color-success)"
-                                : "var(--color-text-faint)",
-                          }}
-                        >
-                          {PAYOUT_STATUS_LABELS[payout.status] ?? payout.status}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
         </div>
       </AppShell>
       <Footer />
-    </div>
-  );
-}
-
-function ProgressBar({ value, max, label }: { value: number; max: number; label: string }) {
-  const pct = Math.min(100, Math.round((value / max) * 100));
-  const done = value >= max;
-  return (
-    <div className="flex flex-col gap-1.5">
-      <div className="flex items-center justify-between">
-        <span className="text-xs" style={{ color: "var(--color-text-dim)" }}>
-          {label}
-        </span>
-        <span
-          className="text-xs font-medium"
-          style={{ color: done ? "var(--color-success)" : "var(--color-text-dim)" }}
-        >
-          {done ? "✓ Done" : `${value} / ${max}`}
-        </span>
-      </div>
-      <div
-        className="h-1.5 w-full rounded-full overflow-hidden"
-        style={{ background: "var(--color-bg-elev-2)" }}
-      >
-        <div
-          className="h-full rounded-full transition-all"
-          style={{
-            width: `${pct}%`,
-            background: done ? "var(--color-success)" : "var(--color-text)",
-          }}
-        />
-      </div>
     </div>
   );
 }

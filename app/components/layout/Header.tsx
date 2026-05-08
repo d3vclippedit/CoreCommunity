@@ -54,47 +54,60 @@ export function Header({ user }: HeaderProps) {
         <nav className="hidden md:flex items-center gap-1 flex-1" aria-label="Main navigation">
           {user && <NavLink to="/" label="Feed" exact />}
           <NavLink to="/communities" label="Communities" />
-          {user && <NavLink to="/monetization" label="Core Coins" excludeSearch="tab=earn" />}
-          {user && (
-            <NavLink to="/monetization?tab=earn" label="Creator Earnings" matchSearch="tab=earn" />
-          )}
+          {user && <NavLink to="/monetization" label="Core Coins" />}
+          {user && <NavLink to="/earnings" label="Creator Earnings" />}
         </nav>
 
         {/* Right side — coins + auth/user */}
         <div className="flex items-center gap-3 ml-auto">
           {user && (
-            <Link
-              to="/monetization"
-              className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg no-underline transition-colors hover:opacity-80"
+            <div
+              className="hidden sm:flex items-center rounded-lg overflow-hidden"
               style={{
                 background: "var(--color-bg-elev-1)",
                 border: "1px solid var(--color-border)",
               }}
-              aria-label="Core Coins balance"
             >
-              {/* Emblem placeholder — swap for real logo asset when ready */}
-              <span
-                className="flex items-center justify-center rounded-md flex-shrink-0"
+              {/* Balance display */}
+              <span className="flex items-center gap-1.5 px-3 py-1.5">
+                <span
+                  className="flex items-center justify-center rounded-md flex-shrink-0"
+                  style={{
+                    width: 22,
+                    height: 22,
+                    background: "var(--color-bg-elev-2)",
+                    border: "1px solid var(--color-border)",
+                  }}
+                  aria-hidden="true"
+                >
+                  <Coins size={13} style={{ color: "var(--color-text-dim)" }} />
+                </span>
+                <span
+                  className="text-xs font-semibold tabular-nums"
+                  style={{ color: "var(--color-text)" }}
+                >
+                  {formatCoins(coinBalance)}
+                </span>
+                <span className="text-xs" style={{ color: "var(--color-text-faint)" }}>
+                  cc
+                </span>
+              </span>
+              {/* Buy coins shortcut */}
+              <Link
+                to="/monetization"
+                className="flex items-center justify-center px-2.5 py-1.5 no-underline transition-colors hover:opacity-80"
                 style={{
-                  width: 22,
-                  height: 22,
-                  background: "var(--color-bg-elev-2)",
-                  border: "1px solid var(--color-border)",
+                  borderLeft: "1px solid var(--color-border)",
+                  color: "var(--color-text)",
+                  fontSize: "15px",
+                  fontWeight: 600,
+                  lineHeight: 1,
                 }}
-                aria-hidden="true"
+                aria-label="Buy Core Coins"
               >
-                <Coins size={13} style={{ color: "var(--color-text-dim)" }} />
-              </span>
-              <span
-                className="text-xs font-semibold tabular-nums"
-                style={{ color: "var(--color-text)" }}
-              >
-                {formatCoins(coinBalance)}
-              </span>
-              <span className="text-xs" style={{ color: "var(--color-text-faint)" }}>
-                cc
-              </span>
-            </Link>
+                +
+              </Link>
+            </div>
           )}
 
           {user ? (
