@@ -12,7 +12,7 @@ INSERT OR IGNORE INTO post_badge_definitions (id, code, name, icon, coin_cost, u
   ('bd-005', 'goated',   'Goated',  '🐐', 1000,  1000,  3.0,  1, 5, 1773360000, 1773360000),
   ('bd-006', 'viral',    'Viral',   '💥', 2500,  2500,  5.0,  1, 6, 1773360000, 1773360000),
   ('bd-007', 'legend',   'Legend',  '⭐', 5000,  5000,  8.0,  1, 7, 1773360000, 1773360000),
-  ('bd-008', 'core',     'Core',    '💎', 10000, 10000, 15.0, 1, 8, 1773360000, 1773360000);
+  ('pbd_core', 'core',     'Core',    '💎', 10000, 10000, 15.0, 1, 8, 1773360000, 1773360000);
 
 -- ── Mock users ───────────────────────────────────────────────────────────────
 INSERT OR IGNORE INTO users (id, email, handle, display_name, password_hash, email_verified_at, created_at, updated_at, is_platform_admin, is_verified_streamer) VALUES
@@ -186,7 +186,7 @@ INSERT OR IGNORE INTO post_badge_applications (id, post_id, community_id, giver_
 
 -- Meme Vault: 10000+2500+500 = 13000 cc
 INSERT OR IGNORE INTO post_badge_applications (id, post_id, community_id, giver_user_id, recipient_user_id, badge_definition_id, coin_amount, created_at) VALUES
-  ('ba-010', 'p-mock-030', 'c-mock-04', 'u-mock-19', 'u-mock-02', 'bd-008', 10000, 1777593600),
+  ('ba-010', 'p-mock-030', 'c-mock-04', 'u-mock-19', 'u-mock-02', 'pbd_core', 10000, 1777593600),
   ('ba-011', 'p-mock-026', 'c-mock-04', 'u-mock-12', 'u-mock-11', 'bd-006', 2500,  1775779200),
   ('ba-012', 'p-mock-029', 'c-mock-04', 'u-mock-18', 'u-mock-11', 'bd-004', 500,   1776988800);
 
