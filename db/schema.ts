@@ -35,6 +35,14 @@ export const users = sqliteTable("users", {
   reputation: integer("reputation").notNull().default(0),
   followerCount: integer("follower_count").notNull().default(0),
   followingCount: integer("following_count").notNull().default(0),
+  // 2FA
+  totpSecret: text("totp_secret"),
+  totpEnabled: integer("totp_enabled", { mode: "boolean" }).notNull().default(false),
+  // Twitch account link
+  twitchId: text("twitch_id"),
+  twitchUsername: text("twitch_username"),
+  twitchLinkedAt: integer("twitch_linked_at", { mode: "timestamp" }),
+  twitchUrl: text("twitch_url"),
 });
 
 // Sessions stored in KV, not D1.
@@ -554,6 +562,87 @@ export const adminMoneyLogs = sqliteTable("admin_money_logs", {
   refId: text("ref_id"),
   note: text("note"),
   createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
+});
+
+// ─── Polls ───────────────────────────────────────────────────────────────────
+
+export const polls = sqliteTable("polls", {
+  id: text("id").primaryKey(),
+  communityId: text("community_id")
+    .notNull()
+    .references(() => communities.id, { onDelete: "cascade" }),
+  postId: text("post_id")
+    .unique()
+    .notNull()
+    .references(() => posts.id, { onDelete: "cascade" }),
+  creatorId: text("creator_id")
+    .notNull()
+    .references(() => users.id),
+  endsAt: integer("ends_at", { mode: "timestamp" }),
+  isClosed: integer("is_closed", { mode: "boolean" }).notNull().default(false),
+  createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
+  updatedAt: integer("updated_at", { mode: "timestamp" }).notNull(),
+});
+
+export const pollOptions = sqliteTable("poll_options", {
+  id: text("id").primaryKey(),
+  pollId: text("poll_id")
+    .notNull()
+    .references(() => polls.id, { onDelete: "cascade" }),
+  text: text("text").notNull(),
+  position: integer("position").notNull().default(0),
+  voteCount: integer("vote_count").notNull().default(0),
+});
+
+export const pollVotes = sqliteTable("poll_votes", {
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  pollId: text("poll_id")
+    .notNull()
+    .references(() => polls.id, { onDelete: "cascade" }),
+  optionId: text("option_id")
+    .notNull()
+    .references(() => pollOptions.id, { onDelete: "cascade" }),
+  createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
+  // PK (userId, pollId) — set in migration
+});
+
+// ─── Giveaways ────────────────────────────────────────────────────────────────
+
+export type GiveawayStatus = "active" | "ended" | "cancelled";
+
+export const giveaways = sqliteTable("giveaways", {
+  id: text("id").primaryKey(),
+  communityId: text("community_id")
+    .notNull()
+    .references(() => communities.id, { onDelete: "cascade" }),
+  creatorId: text("creator_id")
+    .notNull()
+    .references(() => users.id),
+  title: text("title").notNull(),
+  description: text("description"),
+  prize: text("prize").notNull(),
+  status: text("status").$type<GiveawayStatus>().notNull().default("active"),
+  endsAt: integer("ends_at", { mode: "timestamp" }),
+  minMembershipDays: integer("min_membership_days"),
+  minPostCount: integer("min_post_count"),
+  winnerUserId: text("winner_user_id").references(() => users.id),
+  winnerDrawnAt: integer("winner_drawn_at", { mode: "timestamp" }),
+  createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
+  updatedAt: integer("updated_at", { mode: "timestamp" }).notNull(),
+});
+
+export const giveawayEntries = sqliteTable("giveaway_entries", {
+  id: text("id").primaryKey(),
+  giveawayId: text("giveaway_id")
+    .notNull()
+    .references(() => giveaways.id, { onDelete: "cascade" }),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  enteredAt: integer("entered_at", { mode: "timestamp" }).notNull(),
+  // UNIQUE(giveawayId, userId) — set in migration
 });
 
 // ─── Pioneer Program ─────────────────────────────────────────────────────────

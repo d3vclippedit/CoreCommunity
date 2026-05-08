@@ -59,6 +59,7 @@ export async function action({ request, context }: ActionFunctionArgs) {
         passwordHash: true,
         deletedAt: true,
         isBanned: true,
+        totpEnabled: true,
       },
     });
 
@@ -93,6 +94,19 @@ export async function action({ request, context }: ActionFunctionArgs) {
 
     if (!valid || !emailRl.allowed) {
       return { error: "Incorrect email/handle or password." };
+    }
+
+    // If 2FA is enabled, issue a pending token and redirect to TOTP page
+    if (user.totpEnabled) {
+      const pendingToken = crypto.randomUUID();
+      const expiresAt = Math.floor(Date.now() / 1000) + 300; // 5 min
+      await env.KV.put(
+        `pending_totp:${pendingToken}`,
+        JSON.stringify({ userId: user.id, expiresAt }),
+        { expirationTtl: 300 },
+      );
+      const safeRedirect = redirectTo.startsWith("/") ? redirectTo : "/";
+      return redirect(`/auth/2fa?t=${pendingToken}&redirectTo=${encodeURIComponent(safeRedirect)}`);
     }
 
     const token = await createSession(env.KV, user.id);

@@ -7,7 +7,7 @@ import {
   useLoaderData,
   useRouteLoaderData,
 } from "@remix-run/react";
-import { and, eq, isNull, ne } from "drizzle-orm";
+import { and, desc, eq, isNull, ne } from "drizzle-orm";
 import { useState } from "react";
 import type React from "react";
 import { AppShell } from "~/components/layout/AppShell";
@@ -17,7 +17,7 @@ import { getCurrentUser } from "~/lib/auth/user.server";
 import { createDb } from "~/lib/db/index";
 
 import type { loader as rootLoader } from "~/root";
-import { communities, communityMemberships, users } from "../../db/schema";
+import { communities, communityMemberships, streamSnapshots, users } from "../../db/schema";
 import { CommunityAvatar } from "./communities._index";
 
 // Default role colors used when community hasn't customised them
@@ -74,12 +74,23 @@ export async function loader({ params, request, context }: LoaderFunctionArgs) {
 
   const host = new URL(request.url).hostname;
 
+  let streamIsLive: boolean | null = null;
+  if (community.twitchChannel) {
+    const snap = await db.query.streamSnapshots.findFirst({
+      where: eq(streamSnapshots.streamerLogin, community.twitchChannel),
+      orderBy: [desc(streamSnapshots.recordedAt)],
+      columns: { isLive: true },
+    });
+    if (snap) streamIsLive = snap.isLive;
+  }
+
   return {
     community,
     membership: membership ?? null,
     staffRows,
     ownerUser: ownerUser ?? null,
     host,
+    streamIsLive,
     twitchChannel247: community.twitchChannel247 ?? null,
     borderStyles: {
       streamer: community.roleBorderStreamer ?? "electric",
@@ -91,8 +102,16 @@ export async function loader({ params, request, context }: LoaderFunctionArgs) {
 }
 
 export default function CommunityHub() {
-  const { community, membership, staffRows, ownerUser, host, twitchChannel247, borderStyles } =
-    useLoaderData<typeof loader>();
+  const {
+    community,
+    membership,
+    staffRows,
+    ownerUser,
+    host,
+    twitchChannel247,
+    streamIsLive,
+    borderStyles,
+  } = useLoaderData<typeof loader>();
   const root = useRouteLoaderData<typeof rootLoader>("root");
   const rootUser = root?.user ?? null;
 
@@ -125,6 +144,7 @@ export default function CommunityHub() {
       <CommunityNavLink to={`/c/${community.slug}`} label="Posts" end />
       <CommunityNavLink to={`/c/${community.slug}/about`} label="About" />
       <CommunityNavLink to={`/c/${community.slug}/members`} label="Members" />
+      <CommunityNavLink to={`/c/${community.slug}/giveaways`} label="Giveaways" />
 
       {isMod && (
         <>
@@ -153,28 +173,118 @@ export default function CommunityHub() {
             className="text-xs font-semibold uppercase tracking-wide"
             style={{ color: "var(--color-text-faint)" }}
           >
-            Live stream
+            {streamIsLive === false && twitchChannel247 ? "24/7 stream" : "Live stream"}
           </p>
-          <div
-            className="rounded-md overflow-hidden"
-            style={{ border: "1px solid var(--color-border)" }}
-          >
-            <div style={{ position: "relative", paddingTop: "56.25%" }}>
-              <iframe
-                src={`https://player.twitch.tv/?channel=${twitchChannel}&parent=${host}&muted=true`}
-                title={`${community.name} live stream`}
-                allowFullScreen
-                style={{
-                  position: "absolute",
-                  top: 0,
-                  left: 0,
-                  width: "100%",
-                  height: "100%",
-                  display: "block",
-                }}
-              />
+
+          {/* Video: live → main, offline+247 → 247 channel, offline+no247 → placeholder */}
+          {streamIsLive !== false ? (
+            <div
+              className="rounded-md overflow-hidden"
+              style={{ border: "1px solid var(--color-border)" }}
+            >
+              <div style={{ position: "relative", paddingTop: "56.25%" }}>
+                <iframe
+                  src={`https://player.twitch.tv/?channel=${twitchChannel}&parent=${host}&muted=true`}
+                  title={`${community.name} live stream`}
+                  allowFullScreen
+                  style={{
+                    position: "absolute",
+                    top: 0,
+                    left: 0,
+                    width: "100%",
+                    height: "100%",
+                    display: "block",
+                  }}
+                />
+              </div>
             </div>
-          </div>
+          ) : twitchChannel247 ? (
+            <>
+              <p className="text-xs" style={{ color: "var(--color-text-faint)" }}>
+                Main channel offline — showing 24/7 stream
+              </p>
+              <div
+                className="rounded-md overflow-hidden"
+                style={{ border: "1px solid var(--color-border)" }}
+              >
+                <div style={{ position: "relative", paddingTop: "56.25%" }}>
+                  <iframe
+                    src={`https://player.twitch.tv/?channel=${twitchChannel247}&parent=${host}&muted=true`}
+                    title={`${community.name} 24/7 stream`}
+                    allowFullScreen
+                    style={{
+                      position: "absolute",
+                      top: 0,
+                      left: 0,
+                      width: "100%",
+                      height: "100%",
+                      display: "block",
+                    }}
+                  />
+                </div>
+              </div>
+            </>
+          ) : (
+            <div className="rounded-md" style={{ border: "1px solid var(--color-border)" }}>
+              <div
+                style={{
+                  position: "relative",
+                  paddingTop: "56.25%",
+                  background: "var(--color-bg-elev-2)",
+                }}
+              >
+                <div
+                  style={{
+                    position: "absolute",
+                    inset: 0,
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: 8,
+                  }}
+                >
+                  <div
+                    style={{
+                      width: 40,
+                      height: 40,
+                      borderRadius: "50%",
+                      background: "var(--color-bg-elev-1)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      border: "1px solid var(--color-border)",
+                    }}
+                  >
+                    <svg
+                      width="18"
+                      height="18"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="var(--color-text-faint)"
+                      strokeWidth="2"
+                      aria-hidden="true"
+                    >
+                      <path d="M2 7a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V7z" />
+                      <line x1="2" y1="21" x2="22" y2="21" />
+                    </svg>
+                  </div>
+                  <p
+                    style={{
+                      color: "var(--color-text-faint)",
+                      fontSize: 13,
+                      textAlign: "center",
+                      padding: "0 16px",
+                    }}
+                  >
+                    {community.name} is currently offline
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Chat always stays connected to main channel */}
           <p
             className="text-xs font-semibold uppercase tracking-wide mt-1"
             style={{ color: "var(--color-text-faint)" }}
@@ -193,19 +303,6 @@ export default function CommunityHub() {
               style={{ display: "block" }}
             />
           </div>
-          {twitchChannel247 && (
-            <p className="text-xs mt-1" style={{ color: "var(--color-text-faint)" }}>
-              Also streaming 24/7 on{" "}
-              <a
-                href={`https://twitch.tv/${twitchChannel247}`}
-                target="_blank"
-                rel="noreferrer"
-                style={{ color: "var(--color-text-dim)" }}
-              >
-                /{twitchChannel247}
-              </a>
-            </p>
-          )}
         </div>
       )}
     </nav>

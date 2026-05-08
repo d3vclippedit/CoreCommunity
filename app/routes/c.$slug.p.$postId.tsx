@@ -20,6 +20,9 @@ import {
   comments,
   communities,
   communityMemberships,
+  pollOptions,
+  pollVotes,
+  polls,
   posts,
   users,
   votes,
@@ -117,6 +120,48 @@ export async function loader({ params, request, context }: LoaderFunctionArgs) {
     user ? getBalance(db, user.id) : Promise.resolve(0),
   ]);
 
+  let pollData: {
+    id: string;
+    endsAt: Date | null;
+    isClosed: boolean;
+    options: { id: string; text: string; position: number; voteCount: number }[];
+    userVoteOptionId: string | null;
+    totalVotes: number;
+    isEnded: boolean;
+  } | null = null;
+
+  if (post.type === "poll") {
+    const poll = await db.query.polls.findFirst({
+      where: eq(polls.postId, post.id),
+      columns: { id: true, endsAt: true, isClosed: true },
+    });
+    if (poll) {
+      const options = await db.query.pollOptions.findMany({
+        where: eq(pollOptions.pollId, poll.id),
+        orderBy: (o, { asc }) => [asc(o.position)],
+      });
+      let userVoteOptionId: string | null = null;
+      if (user) {
+        const pv = await db.query.pollVotes.findFirst({
+          where: and(eq(pollVotes.userId, user.id), eq(pollVotes.pollId, poll.id)),
+          columns: { optionId: true },
+        });
+        userVoteOptionId = pv?.optionId ?? null;
+      }
+      const totalVotes = options.reduce((s, o) => s + o.voteCount, 0);
+      const isEnded = poll.isClosed || (poll.endsAt ? poll.endsAt < new Date() : false);
+      pollData = {
+        id: poll.id,
+        endsAt: poll.endsAt,
+        isClosed: poll.isClosed,
+        options,
+        userVoteOptionId,
+        totalVotes,
+        isEnded,
+      };
+    }
+  }
+
   // Increment view count — non-critical, silently ignore failures
   try {
     await db
@@ -140,6 +185,7 @@ export async function loader({ params, request, context }: LoaderFunctionArgs) {
     badgeDefs,
     userCoinBalance,
     isPostAuthor,
+    pollData,
   };
 }
 
@@ -218,6 +264,7 @@ export default function PostPermalink() {
     badgeSummary,
     badgeDefs,
     userCoinBalance,
+    pollData,
   } = useLoaderData<typeof loader>();
   const root = useRouteLoaderData<typeof rootLoader>("root");
   const rootUser = root?.user ?? null;
@@ -335,6 +382,7 @@ export default function PostPermalink() {
                     dangerouslySetInnerHTML={{ __html: sanitizeHtml(post.body) }}
                   />
                 )}
+                {pollData && <PollWidget pollData={pollData} userId={rootUser?.id ?? null} />}
                 <div
                   className="flex items-center gap-3 text-xs flex-wrap"
                   style={{ color: "var(--color-text-faint)" }}
@@ -871,6 +919,141 @@ function ReportPostButton({
         ✕
       </button>
     </fetcher.Form>
+  );
+}
+
+function PollWidget({
+  pollData,
+  userId,
+}: {
+  pollData: {
+    id: string;
+    endsAt: Date | string | null;
+    isClosed: boolean;
+    options: { id: string; text: string; voteCount: number }[];
+    userVoteOptionId: string | null;
+    totalVotes: number;
+    isEnded: boolean;
+  };
+  userId: string | null;
+}) {
+  const fetcher = useFetcher<{ ok?: boolean; error?: string }>();
+  const votedId = fetcher.data?.ok
+    ? (fetcher.formData?.get("optionId") as string | null)
+    : pollData.userVoteOptionId;
+  const hasVoted = !!votedId;
+  const showResults = hasVoted || pollData.isEnded;
+
+  const optimisticOptions = pollData.options.map((o) => ({
+    ...o,
+    voteCount:
+      fetcher.data?.ok && fetcher.formData?.get("optionId") === o.id
+        ? o.voteCount + 1
+        : o.voteCount,
+  }));
+  const totalVotes = showResults
+    ? optimisticOptions.reduce((s, o) => s + o.voteCount, 0)
+    : pollData.totalVotes;
+
+  return (
+    <div
+      className="rounded-md p-4 mb-3 flex flex-col gap-2"
+      style={{ background: "var(--color-bg-elev-2)", border: "1px solid var(--color-border)" }}
+    >
+      {pollData.isEnded && (
+        <p className="text-xs mb-1" style={{ color: "var(--color-text-faint)" }}>
+          Poll ended
+        </p>
+      )}
+      {pollData.endsAt && !pollData.isEnded && (
+        <p className="text-xs mb-1" style={{ color: "var(--color-text-faint)" }}>
+          Ends {new Date(pollData.endsAt).toLocaleDateString()}
+        </p>
+      )}
+      {optimisticOptions.map((opt) => {
+        const pct = totalVotes > 0 ? Math.round((opt.voteCount / totalVotes) * 100) : 0;
+        const isWinner =
+          pollData.isEnded &&
+          opt.voteCount === Math.max(...optimisticOptions.map((o) => o.voteCount));
+        return (
+          <div key={opt.id} className="flex flex-col gap-1">
+            {showResults ? (
+              <div className="flex flex-col gap-0.5">
+                <div className="flex items-center justify-between gap-2">
+                  <span
+                    className="text-sm"
+                    style={{
+                      color: isWinner ? "var(--color-text)" : "var(--color-text-dim)",
+                      fontWeight: isWinner ? 600 : undefined,
+                    }}
+                  >
+                    {opt.text}
+                    {votedId === opt.id && " ✓"}
+                  </span>
+                  <span
+                    className="text-xs flex-shrink-0"
+                    style={{ color: "var(--color-text-faint)" }}
+                  >
+                    {pct}%
+                  </span>
+                </div>
+                <div
+                  className="h-1.5 rounded-full overflow-hidden"
+                  style={{ background: "var(--color-bg-elev-1)" }}
+                >
+                  <div
+                    className="h-full rounded-full transition-all"
+                    style={{
+                      width: `${pct}%`,
+                      background: isWinner ? "var(--color-text)" : "var(--color-text-faint)",
+                    }}
+                  />
+                </div>
+              </div>
+            ) : userId ? (
+              <fetcher.Form method="post" action="/api/polls">
+                <input type="hidden" name="intent" value="vote" />
+                <input type="hidden" name="pollId" value={pollData.id} />
+                <input type="hidden" name="optionId" value={opt.id} />
+                <button
+                  type="submit"
+                  disabled={fetcher.state !== "idle"}
+                  className="w-full text-left px-3 py-2 rounded-md text-sm transition-colors"
+                  style={{
+                    background: "var(--color-bg-elev-1)",
+                    border: "1px solid var(--color-border)",
+                    color: "var(--color-text-dim)",
+                    cursor: "pointer",
+                  }}
+                >
+                  {opt.text}
+                </button>
+              </fetcher.Form>
+            ) : (
+              <div
+                className="px-3 py-2 rounded-md text-sm"
+                style={{
+                  background: "var(--color-bg-elev-1)",
+                  border: "1px solid var(--color-border)",
+                  color: "var(--color-text-faint)",
+                }}
+              >
+                {opt.text}
+              </div>
+            )}
+          </div>
+        );
+      })}
+      <p className="text-xs mt-1" style={{ color: "var(--color-text-faint)" }}>
+        {totalVotes.toLocaleString()} vote{totalVotes !== 1 ? "s" : ""}
+        {!userId && !pollData.isEnded && " · Log in to vote"}
+      </p>
+      {fetcher.data && "error" in fetcher.data && fetcher.data.error && (
+        <p className="text-xs" style={{ color: "var(--color-danger)" }}>
+          {fetcher.data.error}
+        </p>
+      )}
+    </div>
   );
 }
 

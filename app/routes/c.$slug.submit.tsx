@@ -24,6 +24,8 @@ import {
   communityCustomRoles,
   communityMemberships,
   communitySections,
+  pollOptions,
+  polls,
   posts,
 } from "../../db/schema";
 
@@ -76,7 +78,26 @@ export async function loader({ params, request, context }: LoaderFunctionArgs) {
 
   const perms = await loadPerms(db, user.id, community.id, community);
 
-  return { slug: community.slug, name: community.name, perms };
+  const membership = await db.query.communityMemberships.findFirst({
+    where: and(
+      eq(communityMemberships.userId, user.id),
+      eq(communityMemberships.communityId, community.id),
+    ),
+    columns: { role: true },
+  });
+  const isMod =
+    membership?.role === "mod" ||
+    membership?.role === "senior_mod" ||
+    membership?.role === "admin" ||
+    membership?.role === "streamer";
+
+  return {
+    slug: community.slug,
+    name: community.name,
+    perms,
+    isMod: isMod ?? false,
+    communityId: community.id,
+  };
 }
 
 export async function action({ params, request, context }: ActionFunctionArgs) {
@@ -158,6 +179,79 @@ export async function action({ params, request, context }: ActionFunctionArgs) {
   const postId = generateId();
   const now = new Date();
 
+  if (type === "poll") {
+    const mem2 = await db.query.communityMemberships.findFirst({
+      where: and(
+        eq(communityMemberships.userId, user.id),
+        eq(communityMemberships.communityId, community.id),
+      ),
+      columns: { role: true },
+    });
+    const modCheck =
+      mem2?.role === "mod" ||
+      mem2?.role === "senior_mod" ||
+      mem2?.role === "admin" ||
+      mem2?.role === "streamer";
+    if (!modCheck) return { error: "Only moderators can create polls." };
+
+    const rawOptions: string[] = [];
+    for (let i = 0; i < 10; i++) {
+      const opt = (form.get(`option_${i}`) as string | null)?.trim();
+      if (opt) rawOptions.push(opt);
+    }
+    if (rawOptions.length < 2) return { error: "A poll needs at least 2 options." };
+    if (rawOptions.length > 6) return { error: "A poll can have at most 6 options." };
+
+    const endsAtStr = form.get("endsAt") as string | null;
+    const endsAt = endsAtStr ? new Date(endsAtStr) : null;
+    if (endsAt && Number.isNaN(endsAt.getTime())) return { error: "Invalid end date." };
+
+    await db.insert(posts).values({
+      id: postId,
+      communityId: community.id,
+      sectionId: section.id,
+      authorId: user.id,
+      type: "poll",
+      title,
+      body: null,
+      url: null,
+      embedKind: null,
+      embedRef: null,
+      score: 0,
+      upvotes: 0,
+      downvotes: 0,
+      commentCount: 0,
+      isPinned: false,
+      isFeatured: false,
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    const pollId = generateId();
+    await db.insert(polls).values({
+      id: pollId,
+      communityId: community.id,
+      postId,
+      creatorId: user.id,
+      endsAt,
+      isClosed: false,
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    for (let i = 0; i < rawOptions.length; i++) {
+      await db.insert(pollOptions).values({
+        id: generateId(),
+        pollId,
+        text: rawOptions[i]!,
+        position: i,
+        voteCount: 0,
+      });
+    }
+
+    return redirect(`/c/${community.slug}/p/${postId}`);
+  }
+
   const postType =
     type === "link" ? "link" : type === "image" ? "image" : type === "video" ? "video" : "text";
   const postUrl = type === "link" ? url : type === "image" || type === "video" ? mediaUrl : null;
@@ -186,7 +280,7 @@ export async function action({ params, request, context }: ActionFunctionArgs) {
   return redirect(`/c/${community.slug}/p/${postId}`);
 }
 
-type Tab = "text" | "link" | "image" | "video";
+type Tab = "text" | "link" | "image" | "video" | "poll";
 
 type TiptapEditorType = React.ComponentType<{
   onChange: (html: string) => void;
@@ -340,13 +434,14 @@ function MediaUpload({
 }
 
 export default function Submit() {
-  const { slug, perms } = useLoaderData<typeof loader>();
+  const { slug, perms, isMod } = useLoaderData<typeof loader>();
   const data = useActionData<typeof action>();
   const nav = useNavigation();
 
   const [tab, setTab] = useState<Tab>("text");
   const [bodyHtml, setBodyHtml] = useState("");
   const [mediaUrl, setMediaUrl] = useState("");
+  const [pollOpts, setPollOpts] = useState(["", ""]);
   const [EditorComp, setEditorComp] = useState<TiptapEditorType | null>(null);
   const titleRef = useRef<HTMLInputElement>(null);
 
@@ -356,7 +451,6 @@ export default function Submit() {
     });
   }, []);
 
-  // Reset media URL when switching tabs
   const handleTabChange = (t: Tab) => {
     setTab(t);
     setMediaUrl("");
@@ -367,10 +461,13 @@ export default function Submit() {
     { id: "link", label: "Link", locked: !perms.canPostLinks },
     { id: "image", label: "Image", locked: !perms.canPostImages },
     { id: "video", label: "Video", locked: !perms.canPostVideos },
+    ...(isMod ? [{ id: "poll" as Tab, label: "Poll" }] : []),
   ];
 
   const submitDisabled =
-    nav.state === "submitting" || ((tab === "image" || tab === "video") && !mediaUrl);
+    nav.state === "submitting" ||
+    ((tab === "image" || tab === "video") && !mediaUrl) ||
+    (tab === "poll" && pollOpts.filter((o) => o.trim()).length < 2);
 
   return (
     <div
@@ -552,6 +649,92 @@ export default function Submit() {
                   hint="MP4, WebM, or MOV — max 100 MB"
                   onUpload={setMediaUrl}
                 />
+              </div>
+            )}
+
+            {tab === "poll" && (
+              <div className="flex flex-col gap-4">
+                <div className="flex flex-col gap-2">
+                  <span className="text-sm font-medium" style={{ color: "var(--color-text)" }}>
+                    Poll options <span style={{ color: "var(--color-text-faint)" }}>(2–6)</span>
+                  </span>
+                  {pollOpts.map((opt, i) => (
+                    // biome-ignore lint/suspicious/noArrayIndexKey: poll options are always reordered by user intent
+                    <div key={i} className="flex gap-2">
+                      <input
+                        type="text"
+                        name={`option_${i}`}
+                        value={opt}
+                        onChange={(e) => {
+                          const next = [...pollOpts];
+                          next[i] = e.target.value;
+                          setPollOpts(next);
+                        }}
+                        placeholder={`Option ${i + 1}`}
+                        maxLength={100}
+                        className="flex-1 rounded-md px-3 py-2 text-sm"
+                        style={{
+                          background: "var(--color-bg-elev-2)",
+                          border: "1px solid var(--color-border)",
+                          color: "var(--color-text)",
+                          outline: "none",
+                        }}
+                      />
+                      {pollOpts.length > 2 && (
+                        <button
+                          type="button"
+                          onClick={() => setPollOpts(pollOpts.filter((_, j) => j !== i))}
+                          className="px-2 text-xs"
+                          style={{
+                            color: "var(--color-danger)",
+                            background: "none",
+                            border: "none",
+                            cursor: "pointer",
+                          }}
+                        >
+                          ✕
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                  {pollOpts.length < 6 && (
+                    <button
+                      type="button"
+                      onClick={() => setPollOpts([...pollOpts, ""])}
+                      className="text-xs self-start"
+                      style={{
+                        color: "var(--color-text-faint)",
+                        background: "none",
+                        border: "none",
+                        cursor: "pointer",
+                      }}
+                    >
+                      + Add option
+                    </button>
+                  )}
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <label
+                    htmlFor="pollEndsAt"
+                    className="text-sm font-medium"
+                    style={{ color: "var(--color-text)" }}
+                  >
+                    End date / time{" "}
+                    <span style={{ color: "var(--color-text-faint)" }}>(optional)</span>
+                  </label>
+                  <input
+                    id="pollEndsAt"
+                    type="datetime-local"
+                    name="endsAt"
+                    className="rounded-md px-3 py-2 text-sm"
+                    style={{
+                      background: "var(--color-bg-elev-2)",
+                      border: "1px solid var(--color-border)",
+                      color: "var(--color-text)",
+                      outline: "none",
+                    }}
+                  />
+                </div>
               </div>
             )}
 
