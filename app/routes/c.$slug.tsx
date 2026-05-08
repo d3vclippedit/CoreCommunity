@@ -384,7 +384,7 @@ const BORDER_ANIMATIONS: Record<string, { animation: string; speed: string }> = 
   subtle: { animation: "subtle-glow", speed: "3s ease-in-out infinite" },
   glow: { animation: "glow-pulse", speed: "2s ease-in-out infinite" },
   pulse: { animation: "pulse-strong", speed: "2s ease-in-out infinite" },
-  electric: { animation: "electric-border", speed: "0.8s ease-in-out infinite" },
+  electric: { animation: "electric-border", speed: "3s linear infinite" },
   fire: { animation: "fire-border", speed: "1.8s ease-in-out infinite" },
   frost: { animation: "frost-glow", speed: "2.5s ease-in-out infinite" },
   rainbow: { animation: "rainbow-glow", speed: "3s linear infinite" },

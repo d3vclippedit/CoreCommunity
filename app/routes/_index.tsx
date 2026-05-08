@@ -1,6 +1,6 @@
 import type { LoaderFunctionArgs, MetaFunction } from "@remix-run/cloudflare";
 import { Link, useLoaderData, useSearchParams } from "@remix-run/react";
-import { and, desc, eq, inArray, isNull } from "drizzle-orm";
+import { and, desc, eq, inArray, isNull, or } from "drizzle-orm";
 import { useEffect, useRef } from "react";
 import { CoreLogo } from "~/components/CoreLogo";
 import { AppShell } from "~/components/layout/AppShell";
@@ -117,7 +117,7 @@ export async function loader({ request, context }: LoaderFunctionArgs) {
 
   const orderBy = sort === "new" ? desc(posts.createdAt) : desc(posts.score);
 
-  // Following tab — only posts from people the user follows
+  // Following tab — posts from followed users + communities the user has joined
   if (tab === "following") {
     const followingRows = await db
       .select({ followeeId: follows.followeeId })
@@ -125,7 +125,12 @@ export async function loader({ request, context }: LoaderFunctionArgs) {
       .where(eq(follows.followerId, user.id));
     const followingIds = followingRows.map((r) => r.followeeId);
 
-    if (followingIds.length === 0) {
+    const clauses = [
+      ...(followingIds.length > 0 ? [inArray(posts.authorId, followingIds)] : []),
+      ...(joinedIds.length > 0 ? [inArray(posts.communityId, joinedIds)] : []),
+    ];
+
+    if (clauses.length === 0) {
       return {
         user,
         tab,
@@ -135,6 +140,8 @@ export async function loader({ request, context }: LoaderFunctionArgs) {
         joinedSlugs: [] as string[],
       };
     }
+
+    const followingFilter = clauses.length === 1 ? clauses[0] : or(...clauses);
 
     const rawPosts = await db
       .select({
@@ -157,7 +164,7 @@ export async function loader({ request, context }: LoaderFunctionArgs) {
         communities,
         and(eq(posts.communityId, communities.id), isNull(communities.deletedAt)),
       )
-      .where(and(isNull(posts.removedAt), inArray(posts.authorId, followingIds)))
+      .where(and(isNull(posts.removedAt), followingFilter))
       .orderBy(orderBy)
       .limit(50);
 
@@ -600,10 +607,10 @@ function EmptyFeed({ tab }: { tab: Tab }) {
       {tab === "following" ? (
         <>
           <p className="text-sm mb-2" style={{ color: "var(--color-text-dim)" }}>
-            You're not following anyone yet.
+            Nothing here yet.
           </p>
           <p className="text-xs" style={{ color: "var(--color-text-faint)" }}>
-            Visit a user's profile and click <strong>Follow</strong> to see their posts here.
+            Join communities or follow people to see their posts here.
           </p>
         </>
       ) : (
