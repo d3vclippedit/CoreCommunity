@@ -62,7 +62,7 @@ export async function loader({ params, request, context }: LoaderFunctionArgs) {
   const badgeMap = new Map<string, typeof badgeRows>();
   for (const b of badgeRows) {
     if (!badgeMap.has(b.postId)) badgeMap.set(b.postId, []);
-    badgeMap.get(b.postId)!.push(b);
+    badgeMap.get(b.postId)?.push(b);
   }
 
   const enriched = rows.map((p) => {
@@ -147,6 +147,7 @@ const MILESTONE_TIERS = [
     label: "Legendary",
     className: "post-milestone-legendary",
     color: "rgba(255,60,120,1)",
+    borderColor: "rgba(255,60,120,0.9)",
     bg: "rgba(255,60,120,0.1)",
   },
   {
@@ -154,20 +155,23 @@ const MILESTONE_TIERS = [
     label: "Gold",
     className: "post-milestone-gold",
     color: "rgba(255,196,0,1)",
+    borderColor: "rgba(255,196,0,0.85)",
     bg: "rgba(255,196,0,0.1)",
   },
   {
     min: 25_000,
     label: "Silver",
     className: "post-milestone-silver",
-    color: "rgba(190,190,215,1)",
-    bg: "rgba(190,190,215,0.1)",
+    color: "rgba(200,205,240,1)",
+    borderColor: "rgba(200,205,240,0.75)",
+    bg: "rgba(200,205,240,0.08)",
   },
   {
     min: 10_000,
     label: "Bronze",
     className: "post-milestone-bronze",
     color: "rgba(205,127,50,1)",
+    borderColor: "rgba(205,127,50,0.75)",
     bg: "rgba(205,127,50,0.1)",
   },
 ];
@@ -207,7 +211,7 @@ function PostCard({
       className={`rounded-lg p-4 flex gap-3${tier ? ` ${tier.className}` : ""}`}
       style={{
         background: "var(--color-bg-elev-1)",
-        border: "1px solid var(--color-border)",
+        border: `1px solid ${tier ? tier.borderColor : "var(--color-border)"}`,
       }}
     >
       {/* Vote score */}

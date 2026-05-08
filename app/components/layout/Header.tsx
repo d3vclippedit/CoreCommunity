@@ -14,7 +14,7 @@ interface HeaderProps {
 }
 
 export function Header({ user }: HeaderProps) {
-  const location = useLocation();
+  const _location = useLocation();
   const root = useRouteLoaderData<typeof rootLoader>("root");
   const coinBalance = root?.coinBalance ?? 0;
 

@@ -1,6 +1,6 @@
 import type { LoaderFunctionArgs, MetaFunction } from "@remix-run/cloudflare";
 import { Link, useLoaderData, useSearchParams } from "@remix-run/react";
-import { and, desc, eq, inArray, isNull } from "drizzle-orm";
+import { and, desc, eq, isNull } from "drizzle-orm";
 import { useEffect, useRef } from "react";
 import { CoreLogo } from "~/components/CoreLogo";
 import { AppShell } from "~/components/layout/AppShell";
@@ -24,7 +24,7 @@ export const meta: MetaFunction = () => [
   { property: "og:type", content: "website" },
 ];
 
-type Tab = "all" | "mine" | "discover";
+type Tab = "all" | "discover";
 type Sort = "hot" | "new" | "top";
 
 type FeedPost = {
@@ -115,24 +115,9 @@ export async function loader({ request, context }: LoaderFunctionArgs) {
     };
   }
 
-  // All or Mine — fetch posts
+  // All posts — engagement-ranked
   const orderBy = sort === "new" ? desc(posts.createdAt) : desc(posts.score);
-
-  if (tab === "mine" && joinedIds.length === 0) {
-    return {
-      user,
-      tab,
-      sort,
-      posts: [] as FeedPost[],
-      discoverCommunities: [] as DiscoverCommunity[],
-      joinedSlugs: [] as string[],
-    };
-  }
-
-  const whereClause =
-    tab === "mine"
-      ? and(isNull(posts.removedAt), inArray(posts.communityId, joinedIds))
-      : isNull(posts.removedAt);
+  const whereClause = isNull(posts.removedAt);
 
   const rawPosts = await db
     .select({
@@ -167,7 +152,7 @@ export async function loader({ request, context }: LoaderFunctionArgs) {
   const badgeMap = new Map<string, typeof badgeRows>();
   for (const b of badgeRows) {
     if (!badgeMap.has(b.postId)) badgeMap.set(b.postId, []);
-    badgeMap.get(b.postId)!.push(b);
+    badgeMap.get(b.postId)?.push(b);
   }
 
   const feedPosts = rawPosts.map((p) => {
@@ -207,7 +192,15 @@ export default function Index() {
 
   const setTab = (t: Tab) => setSearchParams(t === "all" ? {} : { tab: t });
   const setSort = (s: Sort) =>
-    setSearchParams(s === "hot" ? (tab === "all" ? {} : { tab }) : { tab, sort: s });
+    setSearchParams(
+      s === "hot"
+        ? tab === "all"
+          ? {}
+          : { tab }
+        : tab === "all"
+          ? { sort: s }
+          : { tab, sort: s },
+    );
 
   return (
     <div className="flex flex-col min-h-screen" style={{ background: "var(--color-bg)" }}>
@@ -222,7 +215,7 @@ export default function Index() {
               border: "1px solid var(--color-border)",
             }}
           >
-            {(["all", "mine", "discover"] as Tab[]).map((t) => (
+            {(["all", "discover"] as Tab[]).map((t) => (
               <button
                 key={t}
                 type="button"
@@ -234,7 +227,7 @@ export default function Index() {
                     : { color: "var(--color-text-faint)" }
                 }
               >
-                {t === "all" ? "All Posts" : t === "mine" ? "Your Feed" : "Discover"}
+                {t === "all" ? "All Posts" : "Discover"}
               </button>
             ))}
           </div>
@@ -285,6 +278,7 @@ const FEED_MILESTONE_TIERS = [
     label: "Legendary",
     className: "post-milestone-legendary",
     color: "rgba(255,60,120,1)",
+    borderColor: "rgba(255,60,120,0.9)",
     bg: "rgba(255,60,120,0.1)",
   },
   {
@@ -292,20 +286,23 @@ const FEED_MILESTONE_TIERS = [
     label: "Gold",
     className: "post-milestone-gold",
     color: "rgba(255,196,0,1)",
+    borderColor: "rgba(255,196,0,0.85)",
     bg: "rgba(255,196,0,0.1)",
   },
   {
     min: 25_000,
     label: "Silver",
     className: "post-milestone-silver",
-    color: "rgba(190,190,215,1)",
-    bg: "rgba(190,190,215,0.1)",
+    color: "rgba(200,205,240,1)",
+    borderColor: "rgba(200,205,240,0.75)",
+    bg: "rgba(200,205,240,0.08)",
   },
   {
     min: 10_000,
     label: "Bronze",
     className: "post-milestone-bronze",
     color: "rgba(205,127,50,1)",
+    borderColor: "rgba(205,127,50,0.75)",
     bg: "rgba(205,127,50,0.1)",
   },
 ];
@@ -325,10 +322,10 @@ function FeedPostCard({ post }: { post: FeedPost }) {
 
   return (
     <div
-      className={`rounded-lg p-4 flex gap-4 transition-colors${tier ? ` ${tier.className}` : ""}`}
+      className={`rounded-lg p-4 flex gap-4${tier ? ` ${tier.className}` : ""}`}
       style={{
         background: "var(--color-bg-elev-1)",
-        border: "1px solid var(--color-border)",
+        border: `1px solid ${tier ? tier.borderColor : "var(--color-border)"}`,
       }}
     >
       {/* Community icon */}
@@ -541,30 +538,15 @@ function DiscoverCard({ community: c }: { community: DiscoverCommunity }) {
   );
 }
 
-function EmptyFeed({ tab }: { tab: Tab }) {
+function EmptyFeed({ tab: _tab }: { tab: Tab }) {
   return (
     <div
       className="rounded-lg p-8 text-center"
       style={{ background: "var(--color-bg-elev-1)", border: "1px solid var(--color-border)" }}
     >
-      {tab === "mine" ? (
-        <>
-          <p className="text-sm mb-3" style={{ color: "var(--color-text-dim)" }}>
-            Your feed is empty. Join some communities to see their posts here.
-          </p>
-          <Link
-            to="/communities"
-            className="text-sm font-medium no-underline hover:underline"
-            style={{ color: "var(--color-text)" }}
-          >
-            Browse communities →
-          </Link>
-        </>
-      ) : (
-        <p className="text-sm" style={{ color: "var(--color-text-dim)" }}>
-          No posts yet. Check back soon.
-        </p>
-      )}
+      <p className="text-sm" style={{ color: "var(--color-text-dim)" }}>
+        No posts yet. Check back soon.
+      </p>
     </div>
   );
 }

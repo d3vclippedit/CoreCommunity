@@ -109,19 +109,15 @@
 }
 
 .post-milestone-bronze {
-  border-color: rgba(205, 127, 50, 0.5) !important;
   animation: milestone-bronze 2.5s ease-in-out infinite;
 }
 .post-milestone-silver {
-  border-color: rgba(190, 190, 215, 0.55) !important;
   animation: milestone-silver 2s ease-in-out infinite;
 }
 .post-milestone-gold {
-  border-color: rgba(255, 196, 0, 0.6) !important;
   animation: milestone-gold 2s ease-in-out infinite;
 }
 .post-milestone-legendary {
-  border-color: rgba(255, 60, 120, 0.8) !important;
   animation: milestone-legendary 3s linear infinite;
 }
 
