@@ -167,9 +167,9 @@ export default function SettingsPage() {
               <Form method="post" className="flex flex-col gap-4">
                 <input type="hidden" name="_intent" value="profile" />
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-sm font-medium" style={{ color: "var(--color-text-dim)" }}>
+                  <p className="text-sm font-medium" style={{ color: "var(--color-text-dim)" }}>
                     Handle
-                  </label>
+                  </p>
                   <p className="text-sm font-mono" style={{ color: "var(--color-text-faint)" }}>
                     @{user.handle}
                   </p>
