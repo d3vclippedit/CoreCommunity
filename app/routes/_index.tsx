@@ -193,13 +193,7 @@ export default function Index() {
   const setTab = (t: Tab) => setSearchParams(t === "all" ? {} : { tab: t });
   const setSort = (s: Sort) =>
     setSearchParams(
-      s === "hot"
-        ? tab === "all"
-          ? {}
-          : { tab }
-        : tab === "all"
-          ? { sort: s }
-          : { tab, sort: s },
+      s === "hot" ? (tab === "all" ? {} : { tab }) : tab === "all" ? { sort: s } : { tab, sort: s },
     );
 
   return (
