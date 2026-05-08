@@ -17,14 +17,16 @@ export function Button({
   ...props
 }: ButtonProps) {
   const base =
-    "inline-flex items-center justify-center font-medium rounded-md transition-all select-none disabled:opacity-50 disabled:cursor-not-allowed";
+    "inline-flex items-center justify-center font-medium rounded-md transition-all duration-150 select-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.96]";
 
   const variants = {
-    primary: "bg-[--color-text] text-[--color-bg] hover:opacity-85",
+    primary:
+      "bg-[--color-text] text-[--color-bg] hover:opacity-90 hover:shadow-[0_0_0_2px_rgba(245,245,247,0.14),0_0_16px_rgba(245,245,247,0.09)]",
     secondary:
-      "bg-[--color-bg-elev-2] text-[--color-text] border border-[--color-border] hover:bg-[--color-bg-elev-1]",
+      "bg-[--color-bg-elev-2] text-[--color-text] border border-[--color-border] hover:border-[--color-text-faint] hover:bg-[--color-bg-elev-1]",
     ghost: "text-[--color-text-dim] hover:text-[--color-text] hover:bg-[--color-bg-elev-2]",
-    danger: "bg-[--color-danger] text-white hover:opacity-85",
+    danger:
+      "bg-[--color-danger] text-white hover:opacity-90 hover:shadow-[0_0_16px_rgba(229,72,77,0.4)]",
   };
 
   const sizes = {

@@ -32,6 +32,8 @@ type FeedPost = {
   title: string;
   type: string; // "text" | "link" | "image" | "video"
   url: string | null;
+  imageUrl: string | null;
+  body: string | null;
   score: number;
   commentCount: number;
   isPinned: boolean;
@@ -149,6 +151,8 @@ export async function loader({ request, context }: LoaderFunctionArgs) {
         title: posts.title,
         type: posts.type,
         url: posts.url,
+        imageUrl: posts.imageUrl,
+        body: posts.body,
         score: posts.score,
         commentCount: posts.commentCount,
         isPinned: posts.isPinned,
@@ -191,6 +195,8 @@ export async function loader({ request, context }: LoaderFunctionArgs) {
       title: posts.title,
       type: posts.type,
       url: posts.url,
+      imageUrl: posts.imageUrl,
+      body: posts.body,
       score: posts.score,
       commentCount: posts.commentCount,
       isPinned: posts.isPinned,
@@ -379,10 +385,12 @@ function formatFeedCC(n: number): string {
 
 function FeedPostCard({ post }: { post: FeedPost }) {
   const tier = getFeedMilestoneTier(post.badgeCoinsCC);
+  const hasMedia = (post.type === "image" && !!post.imageUrl) || post.type === "video";
+  const caption = post.body ? post.body.replace(/<[^>]*>/g, "").trim() : null;
 
   return (
     <div
-      className={`rounded-lg p-4 flex gap-4${tier ? ` ${tier.className}` : ""}`}
+      className={`post-card rounded-lg p-4 flex gap-4${tier ? ` ${tier.className}` : ""}`}
       style={{
         background: "var(--color-bg-elev-1)",
         border: `1px solid ${tier ? tier.borderColor : "var(--color-border)"}`,
@@ -397,14 +405,14 @@ function FeedPostCard({ post }: { post: FeedPost }) {
         <CommunityAvatar
           name={post.communityName ?? ""}
           iconUrl={post.communityIconUrl}
-          size={64}
+          size={40}
         />
       </Link>
 
       {/* Main content */}
       <div className="flex-1 min-w-0">
         {/* Community name + score */}
-        <div className="flex items-center justify-between mb-1.5">
+        <div className="flex items-center justify-between mb-1">
           <Link
             to={`/c/${post.communitySlug}`}
             className="no-underline group"
@@ -417,13 +425,16 @@ function FeedPostCard({ post }: { post: FeedPost }) {
               c/{post.communitySlug}
             </span>
           </Link>
-          <span className="text-sm font-semibold" style={{ color: "var(--color-text)" }}>
-            {post.score}
+          <span
+            className="text-xs font-semibold tabular-nums"
+            style={{ color: "var(--color-text-faint)" }}
+          >
+            {post.score} pts
           </span>
         </div>
 
-        {/* Title */}
-        <div className="flex items-start gap-2">
+        {/* Title + type badge */}
+        <div className="flex items-start gap-2 mb-1">
           {post.isPinned && (
             <span
               className="text-xs mt-0.5 flex-shrink-0"
@@ -442,10 +453,7 @@ function FeedPostCard({ post }: { post: FeedPost }) {
           {post.type === "link" && post.url && (
             <span
               className="text-xs flex-shrink-0 mt-0.5 px-1.5 py-0.5 rounded"
-              style={{
-                background: "var(--color-bg-elev-2)",
-                color: "var(--color-text-faint)",
-              }}
+              style={{ background: "var(--color-bg-elev-2)", color: "var(--color-text-faint)" }}
             >
               {(() => {
                 try {
@@ -456,27 +464,35 @@ function FeedPostCard({ post }: { post: FeedPost }) {
               })()}
             </span>
           )}
-          {post.type === "image" && (
+          {(post.type === "image" || post.type === "video") && (
             <span
               className="text-xs flex-shrink-0 mt-0.5 px-1.5 py-0.5 rounded"
               style={{ background: "var(--color-bg-elev-2)", color: "var(--color-text-faint)" }}
             >
-              image
-            </span>
-          )}
-          {post.type === "video" && (
-            <span
-              className="text-xs flex-shrink-0 mt-0.5 px-1.5 py-0.5 rounded"
-              style={{ background: "var(--color-bg-elev-2)", color: "var(--color-text-faint)" }}
-            >
-              video
+              {post.type}
             </span>
           )}
         </div>
 
+        {/* Caption */}
+        {caption && (
+          <p
+            className="text-xs mb-1.5 leading-relaxed"
+            style={{
+              color: "var(--color-text-dim)",
+              display: "-webkit-box",
+              WebkitLineClamp: 2,
+              WebkitBoxOrient: "vertical",
+              overflow: "hidden",
+            }}
+          >
+            {caption}
+          </p>
+        )}
+
         {/* Badge strip */}
         {post.badges.length > 0 && (
-          <div className="flex items-center gap-2 mt-1.5">
+          <div className="flex items-center gap-2 mb-1.5">
             <div className="flex items-center gap-0.5">
               {post.badges.slice(0, 4).map((b) => (
                 <span key={b.name} className="text-sm leading-none" title={`${b.name} ×${b.count}`}>
@@ -503,7 +519,7 @@ function FeedPostCard({ post }: { post: FeedPost }) {
 
         {/* Meta */}
         <div
-          className="flex items-center gap-3 mt-1.5 text-xs flex-wrap"
+          className="flex items-center gap-3 text-xs flex-wrap"
           style={{ color: "var(--color-text-faint)" }}
         >
           <span>by {post.authorHandle}</span>
@@ -517,8 +533,74 @@ function FeedPostCard({ post }: { post: FeedPost }) {
           </Link>
         </div>
       </div>
+
+      {/* Media thumbnail */}
+      {hasMedia && <FeedMediaThumb type={post.type} imageUrl={post.imageUrl} url={post.url} />}
     </div>
   );
+}
+
+function FeedMediaThumb({
+  type,
+  imageUrl,
+  url,
+}: {
+  type: string;
+  imageUrl?: string | null;
+  url?: string | null;
+}) {
+  const thumbStyle = {
+    width: 140,
+    height: 100,
+    background: "var(--color-bg-elev-2)",
+    border: "1px solid var(--color-border)",
+  };
+
+  if (type === "image" && imageUrl) {
+    return (
+      <div className="post-thumb" style={thumbStyle}>
+        <img src={imageUrl} alt="" loading="lazy" />
+      </div>
+    );
+  }
+
+  if (type === "video") {
+    const ytId = url?.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/)?.[1];
+    return (
+      <div className="post-thumb relative flex items-center justify-center" style={thumbStyle}>
+        {ytId && (
+          <img
+            src={`https://img.youtube.com/vi/${ytId}/mqdefault.jpg`}
+            alt=""
+            loading="lazy"
+            className="absolute inset-0 w-full h-full object-cover"
+          />
+        )}
+        <div
+          className="relative z-10 flex items-center justify-center rounded-full"
+          style={{
+            width: 34,
+            height: 34,
+            background: ytId ? "rgba(0,0,0,0.55)" : "rgba(245,245,247,0.06)",
+            border: "1.5px solid rgba(245,245,247,0.25)",
+          }}
+        >
+          <svg
+            width="12"
+            height="12"
+            viewBox="0 0 11 11"
+            fill="currentColor"
+            style={{ color: "var(--color-text)", marginLeft: 2 }}
+            aria-hidden="true"
+          >
+            <path d="M1.5 1.5L9.5 5.5L1.5 9.5V1.5Z" />
+          </svg>
+        </div>
+      </div>
+    );
+  }
+
+  return null;
 }
 
 function DiscoverGrid({ communities: items }: { communities: DiscoverCommunity[] }) {

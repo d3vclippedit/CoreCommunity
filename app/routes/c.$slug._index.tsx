@@ -44,6 +44,9 @@ export async function loader({ params, request, context }: LoaderFunctionArgs) {
       id: posts.id,
       title: posts.title,
       type: posts.type,
+      url: posts.url,
+      imageUrl: posts.imageUrl,
+      body: posts.body,
       score: posts.score,
       commentCount: posts.commentCount,
       isPinned: posts.isPinned,
@@ -77,6 +80,9 @@ export async function loader({ params, request, context }: LoaderFunctionArgs) {
         count: b.count,
         totalCoins: b.totalCoins,
       })),
+    } as typeof p & {
+      badgeCoinsCC: number;
+      badges: { icon: string; name: string; count: number; totalCoins: number }[];
     };
   });
 
@@ -194,6 +200,9 @@ function PostCard({
     id: string;
     title: string;
     type: string;
+    url: string | null;
+    imageUrl: string | null;
+    body: string | null;
     score: number;
     commentCount: number;
     isPinned: boolean;
@@ -205,17 +214,19 @@ function PostCard({
   communitySlug: string;
 }) {
   const tier = getMilestoneTier(post.badgeCoinsCC);
+  const hasMedia = (post.type === "image" && !!post.imageUrl) || post.type === "video";
+  const caption = post.body ? post.body.replace(/<[^>]*>/g, "").trim() : null;
 
   return (
     <div
-      className={`rounded-lg p-4 flex gap-3${tier ? ` ${tier.className}` : ""}`}
+      className={`post-card rounded-lg p-4 flex gap-3${tier ? ` ${tier.className}` : ""}`}
       style={{
         background: "var(--color-bg-elev-1)",
         border: `1px solid ${tier ? tier.borderColor : "var(--color-border)"}`,
       }}
     >
       {/* Vote score */}
-      <div className="flex flex-col items-center gap-0.5 flex-shrink-0 w-8 text-center">
+      <div className="flex flex-col items-center gap-0.5 flex-shrink-0 w-8 text-center pt-0.5">
         <span className="text-sm font-semibold" style={{ color: "var(--color-text)" }}>
           {post.score}
         </span>
@@ -223,9 +234,12 @@ function PostCard({
 
       {/* Content */}
       <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-1.5 mb-1">
+        <div className="flex items-start gap-1.5 mb-1">
           {post.isPinned && (
-            <span className="text-xs font-medium" style={{ color: "var(--color-success)" }}>
+            <span
+              className="text-xs font-medium flex-shrink-0 mt-0.5"
+              style={{ color: "var(--color-success)" }}
+            >
               📌
             </span>
           )}
@@ -236,7 +250,30 @@ function PostCard({
           >
             {post.title}
           </Link>
+          {(post.type === "image" || post.type === "video" || post.type === "link") && (
+            <span
+              className="flex-shrink-0 text-xs px-1.5 py-0.5 rounded mt-0.5"
+              style={{ background: "var(--color-bg-elev-2)", color: "var(--color-text-faint)" }}
+            >
+              {post.type}
+            </span>
+          )}
         </div>
+
+        {caption && (
+          <p
+            className="text-xs mb-1.5 leading-relaxed"
+            style={{
+              color: "var(--color-text-dim)",
+              display: "-webkit-box",
+              WebkitLineClamp: 2,
+              WebkitBoxOrient: "vertical",
+              overflow: "hidden",
+            }}
+          >
+            {caption}
+          </p>
+        )}
 
         {post.badges.length > 0 && (
           <div className="flex items-center gap-2 mb-1.5">
@@ -279,8 +316,74 @@ function PostCard({
           </Link>
         </div>
       </div>
+
+      {/* Media thumbnail */}
+      {hasMedia && <MediaThumb type={post.type} imageUrl={post.imageUrl} url={post.url} />}
     </div>
   );
+}
+
+function MediaThumb({
+  type,
+  imageUrl,
+  url,
+}: {
+  type: string;
+  imageUrl?: string | null;
+  url?: string | null;
+}) {
+  const thumbStyle = {
+    width: 128,
+    height: 96,
+    background: "var(--color-bg-elev-2)",
+    border: "1px solid var(--color-border)",
+  };
+
+  if (type === "image" && imageUrl) {
+    return (
+      <div className="post-thumb" style={thumbStyle}>
+        <img src={imageUrl} alt="" loading="lazy" />
+      </div>
+    );
+  }
+
+  if (type === "video") {
+    const ytId = url?.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/)?.[1];
+    return (
+      <div className="post-thumb relative flex items-center justify-center" style={thumbStyle}>
+        {ytId && (
+          <img
+            src={`https://img.youtube.com/vi/${ytId}/mqdefault.jpg`}
+            alt=""
+            loading="lazy"
+            className="absolute inset-0 w-full h-full object-cover"
+          />
+        )}
+        <div
+          className="relative z-10 flex items-center justify-center rounded-full"
+          style={{
+            width: 32,
+            height: 32,
+            background: ytId ? "rgba(0,0,0,0.55)" : "rgba(245,245,247,0.06)",
+            border: "1.5px solid rgba(245,245,247,0.25)",
+          }}
+        >
+          <svg
+            width="11"
+            height="11"
+            viewBox="0 0 11 11"
+            fill="currentColor"
+            style={{ color: "var(--color-text)", marginLeft: 2 }}
+            aria-hidden="true"
+          >
+            <path d="M1.5 1.5L9.5 5.5L1.5 9.5V1.5Z" />
+          </svg>
+        </div>
+      </div>
+    );
+  }
+
+  return null;
 }
 
 function relativeTime(dateStr: string): string {

@@ -233,6 +233,49 @@
   animation: milestone-legendary 3s linear infinite;
 }
 
+/* ── Post card hover lift ─────────────────────────────────────────────────── */
+.post-card {
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.post-card:hover {
+  transform: translateY(-1px);
+}
+.post-card:not(.post-milestone-bronze):not(.post-milestone-silver):not(.post-milestone-gold):not(
+    .post-milestone-legendary
+  ):hover {
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+/* ── Media thumbnail in feed cards ───────────────────────────────────────── */
+.post-thumb {
+  flex-shrink: 0;
+  overflow: hidden;
+  border-radius: var(--radius-sm);
+  align-self: flex-start;
+}
+.post-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* ── Sort / tab button active underline ──────────────────────────────────── */
+.sort-btn-active {
+  position: relative;
+}
+.sort-btn-active::after {
+  content: "";
+  position: absolute;
+  bottom: -2px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 16px;
+  height: 2px;
+  border-radius: 1px;
+  background: var(--color-text);
+}
+
 /* Base resets */
 *,
 *::before,
