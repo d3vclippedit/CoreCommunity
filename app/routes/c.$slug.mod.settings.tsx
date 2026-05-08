@@ -162,6 +162,10 @@ export async function action({ params, request, context }: ActionFunctionArgs) {
     const roleColorAdmin = (form.get("roleColorAdmin") as string | null)?.trim() ?? "";
     const roleColorSeniorMod = (form.get("roleColorSeniorMod") as string | null)?.trim() ?? "";
     const roleColorMod = (form.get("roleColorMod") as string | null)?.trim() ?? "";
+    const roleBorderStreamer = (form.get("roleBorderStreamer") as string | null)?.trim() ?? "";
+    const roleBorderAdmin = (form.get("roleBorderAdmin") as string | null)?.trim() ?? "";
+    const roleBorderSeniorMod = (form.get("roleBorderSeniorMod") as string | null)?.trim() ?? "";
+    const roleBorderMod = (form.get("roleBorderMod") as string | null)?.trim() ?? "";
 
     if (accentColor && !/^#[0-9a-fA-F]{6}$/.test(accentColor))
       return { error: "Accent color must be a valid hex color like #3DD68C.", intent };
@@ -188,6 +192,10 @@ export async function action({ params, request, context }: ActionFunctionArgs) {
         roleColorAdmin: roleColorAdmin || null,
         roleColorSeniorMod: roleColorSeniorMod || null,
         roleColorMod: roleColorMod || null,
+        roleBorderStreamer: roleBorderStreamer || null,
+        roleBorderAdmin: roleBorderAdmin || null,
+        roleBorderSeniorMod: roleBorderSeniorMod || null,
+        roleBorderMod: roleBorderMod || null,
         updatedAt: new Date(),
       })
       .where(eq(communities.id, community.id));
@@ -763,6 +771,43 @@ export default function ModSettings() {
                     name="roleColorMod"
                     label="Mod"
                     defaultValue={community.roleColorMod ?? "#22C55E"}
+                  />
+                </div>
+
+                {/* Border effects */}
+                <div className="flex flex-col gap-3 pt-2">
+                  <p
+                    className="text-xs font-semibold uppercase tracking-wide"
+                    style={{ color: "var(--color-text-faint)" }}
+                  >
+                    Staff badge border effects
+                  </p>
+                  <p className="text-xs" style={{ color: "var(--color-text-faint)" }}>
+                    Animated border shown on staff emblems in the sidebar.
+                  </p>
+                  <RoleBorderPicker
+                    name="roleBorderStreamer"
+                    label="Streamer / Owner"
+                    defaultValue={community.roleBorderStreamer ?? "electric"}
+                    color={community.roleColorStreamer ?? "#F59E0B"}
+                  />
+                  <RoleBorderPicker
+                    name="roleBorderAdmin"
+                    label="Admin"
+                    defaultValue={community.roleBorderAdmin ?? "glow"}
+                    color={community.roleColorAdmin ?? "#A855F7"}
+                  />
+                  <RoleBorderPicker
+                    name="roleBorderSeniorMod"
+                    label="Senior Mod"
+                    defaultValue={community.roleBorderSeniorMod ?? "subtle"}
+                    color={community.roleColorSeniorMod ?? "#3B82F6"}
+                  />
+                  <RoleBorderPicker
+                    name="roleBorderMod"
+                    label="Mod"
+                    defaultValue={community.roleBorderMod ?? "none"}
+                    color={community.roleColorMod ?? "#22C55E"}
                   />
                 </div>
                 <Button
@@ -1757,6 +1802,88 @@ function RoleColorPicker({
           }
         }}
       />
+    </div>
+  );
+}
+
+const BORDER_STYLE_OPTIONS = [
+  { value: "none", label: "None" },
+  { value: "subtle", label: "Subtle" },
+  { value: "glow", label: "Glow" },
+  { value: "pulse", label: "Pulse" },
+  { value: "electric", label: "Electric" },
+  { value: "fire", label: "Fire" },
+  { value: "frost", label: "Frost" },
+  { value: "rainbow", label: "Rainbow" },
+] as const;
+
+const BORDER_PREVIEW_ANIM: Record<string, React.CSSProperties> = {
+  subtle: { animation: "subtle-glow 3s ease-in-out infinite" },
+  glow: { animation: "glow-pulse 2s ease-in-out infinite" },
+  pulse: { animation: "pulse-strong 2s ease-in-out infinite" },
+  electric: { animation: "electric-border 0.8s ease-in-out infinite" },
+  fire: { animation: "fire-border 1.8s ease-in-out infinite" },
+  frost: { animation: "frost-glow 2.5s ease-in-out infinite" },
+  rainbow: { animation: "rainbow-glow 3s linear infinite", border: "2px solid transparent" },
+};
+
+function RoleBorderPicker({
+  name,
+  label,
+  defaultValue,
+  color,
+}: { name: string; label: string; defaultValue: string; color: string }) {
+  const [selected, setSelected] = useState(defaultValue);
+  const glow = `${color}99`;
+
+  return (
+    <div className="flex flex-col gap-2">
+      <input type="hidden" name={name} value={selected} />
+      <span className="text-sm" style={{ color: "var(--color-text-dim)" }}>
+        {label}
+      </span>
+      <div className="flex flex-wrap gap-2">
+        {BORDER_STYLE_OPTIONS.map((opt) => {
+          const isRainbow = opt.value === "rainbow";
+          const anim = BORDER_PREVIEW_ANIM[opt.value];
+          const active = selected === opt.value;
+          return (
+            <button
+              key={opt.value}
+              type="button"
+              onClick={() => setSelected(opt.value)}
+              className="flex flex-col items-center gap-1.5"
+              style={{ background: "none", border: "none", cursor: "pointer", padding: 0 }}
+            >
+              <div
+                style={{
+                  width: 28,
+                  height: 28,
+                  borderRadius: "50%",
+                  background: "var(--color-bg-elev-2)",
+                  border: isRainbow ? "2px solid transparent" : `2px solid ${color}`,
+                  outline: active ? `2px solid ${color}` : "2px solid transparent",
+                  outlineOffset: "2px",
+                  flexShrink: 0,
+                  ...(anim && !isRainbow
+                    ? ({ "--glow-color": glow, ...anim } as React.CSSProperties)
+                    : {}),
+                  ...(isRainbow ? anim : {}),
+                }}
+              />
+              <span
+                className="text-xs"
+                style={{
+                  color: active ? "var(--color-text)" : "var(--color-text-faint)",
+                  fontSize: "10px",
+                }}
+              >
+                {opt.label}
+              </span>
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 }

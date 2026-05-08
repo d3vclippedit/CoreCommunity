@@ -80,11 +80,17 @@ export async function loader({ params, request, context }: LoaderFunctionArgs) {
     ownerUser: ownerUser ?? null,
     host,
     twitchChannel247: community.twitchChannel247 ?? null,
+    borderStyles: {
+      streamer: community.roleBorderStreamer ?? "electric",
+      admin: community.roleBorderAdmin ?? "glow",
+      senior_mod: community.roleBorderSeniorMod ?? "subtle",
+      mod: community.roleBorderMod ?? "none",
+    },
   };
 }
 
 export default function CommunityHub() {
-  const { community, membership, staffRows, ownerUser, host, twitchChannel247 } =
+  const { community, membership, staffRows, ownerUser, host, twitchChannel247, borderStyles } =
     useLoaderData<typeof loader>();
   const root = useRouteLoaderData<typeof rootLoader>("root");
   const rootUser = root?.user ?? null;
@@ -259,7 +265,7 @@ export default function CommunityHub() {
               displayName={ownerUser.displayName}
               avatarUrl={ownerUser.avatarUrl}
               roleColor={roleColors.streamer}
-              glowing
+              borderStyle={borderStyles.streamer}
             />
           </MemberSection>
         )}
@@ -273,7 +279,7 @@ export default function CommunityHub() {
                 displayName={m.displayName}
                 avatarUrl={m.avatarUrl}
                 roleColor={roleColors.admin}
-                glowing
+                borderStyle={borderStyles.admin}
               />
             ))}
           </MemberSection>
@@ -288,6 +294,7 @@ export default function CommunityHub() {
                 displayName={m.displayName}
                 avatarUrl={m.avatarUrl}
                 roleColor={roleColors.senior_mod}
+                borderStyle={borderStyles.senior_mod}
               />
             ))}
           </MemberSection>
@@ -302,6 +309,7 @@ export default function CommunityHub() {
                 displayName={m.displayName}
                 avatarUrl={m.avatarUrl}
                 roleColor={roleColors.mod}
+                borderStyle={borderStyles.mod}
               />
             ))}
           </MemberSection>
@@ -372,18 +380,62 @@ function MemberSection({
   );
 }
 
+const BORDER_ANIMATIONS: Record<string, { animation: string; speed: string }> = {
+  subtle: { animation: "subtle-glow", speed: "3s ease-in-out infinite" },
+  glow: { animation: "glow-pulse", speed: "2s ease-in-out infinite" },
+  pulse: { animation: "pulse-strong", speed: "2s ease-in-out infinite" },
+  electric: { animation: "electric-border", speed: "0.8s ease-in-out infinite" },
+  fire: { animation: "fire-border", speed: "1.8s ease-in-out infinite" },
+  frost: { animation: "frost-glow", speed: "2.5s ease-in-out infinite" },
+  rainbow: { animation: "rainbow-glow", speed: "3s linear infinite" },
+};
+
+function getRoleBadgeStyle(
+  borderStyle: string,
+  roleColor: string | null | undefined,
+  avatarUrl: string | null | undefined,
+): React.CSSProperties {
+  const base: React.CSSProperties = {
+    background: avatarUrl ? undefined : "var(--color-bg-elev-2)",
+    backgroundImage: avatarUrl ? `url(${avatarUrl})` : undefined,
+    backgroundSize: avatarUrl ? "cover" : undefined,
+    backgroundPosition: avatarUrl ? "center" : undefined,
+    color: roleColor ?? "var(--color-text-dim)",
+  };
+
+  if (borderStyle === "rainbow") {
+    return {
+      ...base,
+      border: "1.5px solid transparent",
+      animation: "rainbow-glow 3s linear infinite",
+    };
+  }
+
+  const anim = BORDER_ANIMATIONS[borderStyle];
+  return {
+    ...base,
+    border: `1.5px solid ${roleColor ?? "var(--color-border)"}`,
+    ...(anim && roleColor
+      ? ({
+          "--glow-color": `${roleColor}99`,
+          animation: `${anim.animation} ${anim.speed}`,
+        } as React.CSSProperties)
+      : {}),
+  };
+}
+
 function MemberRow({
   handle,
   displayName,
   avatarUrl,
   roleColor,
-  glowing,
+  borderStyle = "none",
 }: {
   handle: string;
   displayName: string;
   avatarUrl: string | null | undefined;
   roleColor?: string | null;
-  glowing?: boolean;
+  borderStyle?: string;
 }) {
   return (
     <Link
@@ -391,23 +443,8 @@ function MemberRow({
       className="flex items-center gap-2 no-underline rounded-md px-1.5 py-1 transition-colors hover:bg-[var(--color-bg-elev-2)]"
     >
       <div
-        className="w-6 h-6 rounded-full flex-shrink-0 flex items-center justify-center text-xs font-semibold"
-        style={
-          {
-            background: avatarUrl ? undefined : "var(--color-bg-elev-2)",
-            border: `1.5px solid ${roleColor ?? "var(--color-border)"}`,
-            backgroundImage: avatarUrl ? `url(${avatarUrl})` : undefined,
-            backgroundSize: "cover",
-            backgroundPosition: "center",
-            color: roleColor ?? "var(--color-text-dim)",
-            ...(glowing && roleColor
-              ? {
-                  "--glow-color": `${roleColor}99`,
-                  animation: "glow-pulse 2s ease-in-out infinite",
-                }
-              : {}),
-          } as React.CSSProperties
-        }
+        className="w-6 h-6 flex-shrink-0 flex items-center justify-center text-xs font-semibold overflow-hidden"
+        style={{ borderRadius: "50%", ...getRoleBadgeStyle(borderStyle, roleColor, avatarUrl) }}
       >
         {!avatarUrl && displayName[0]?.toUpperCase()}
       </div>

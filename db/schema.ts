@@ -87,6 +87,10 @@ export const communities = sqliteTable("communities", {
   roleColorAdmin: text("role_color_admin"),
   roleColorSeniorMod: text("role_color_senior_mod"),
   roleColorMod: text("role_color_mod"),
+  roleBorderStreamer: text("role_border_streamer"),
+  roleBorderAdmin: text("role_border_admin"),
+  roleBorderSeniorMod: text("role_border_senior_mod"),
+  roleBorderMod: text("role_border_mod"),
   ownerId: text("owner_id")
     .notNull()
     .references(() => users.id),
