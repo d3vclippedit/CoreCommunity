@@ -4,6 +4,7 @@ import { getCurrentUser } from "~/lib/auth/user.server";
 import { createDb } from "~/lib/db/index";
 import { checkRateLimit } from "~/lib/ratelimit";
 import { generateId } from "~/lib/utils";
+import type { ReportTargetType } from "../../db/schema";
 import { reports } from "../../db/schema";
 
 export async function action({ request, context }: ActionFunctionArgs) {
@@ -15,15 +16,15 @@ export async function action({ request, context }: ActionFunctionArgs) {
   if (!rl.allowed) return { error: "Too many reports. Try again later." };
 
   const form = await request.formData();
-  const targetType = form.get("targetType") as "post" | "comment" | null;
+  const targetType = form.get("targetType") as ReportTargetType | null;
   const targetId = form.get("targetId") as string | null;
   const communityId = form.get("communityId") as string | null;
   const reason = form.get("reason") as string | null;
   const details = (form.get("details") as string | null)?.trim() || null;
 
-  if (!targetType || !targetId || !communityId || !reason) {
+  const validTargetTypes: ReportTargetType[] = ["post", "comment", "community"];
+  if (!targetType || !validTargetTypes.includes(targetType) || !targetId || !communityId || !reason)
     return { error: "Missing required fields." };
-  }
 
   const validReasons = ["spam", "harassment", "nsfw", "off_topic", "other"];
   if (!validReasons.includes(reason)) return { error: "Invalid reason." };

@@ -259,6 +259,7 @@ export const votes = sqliteTable("votes", {
 
 // ─── Reports ──────────────────────────────────────────────────────────────────
 
+export type ReportTargetType = "post" | "comment" | "community";
 export type ReportReason = "spam" | "harassment" | "nsfw" | "off_topic" | "other";
 export type ReportStatus = "open" | "actioned" | "dismissed";
 
@@ -267,7 +268,7 @@ export const reports = sqliteTable("reports", {
   reporterId: text("reporter_id")
     .notNull()
     .references(() => users.id),
-  targetType: text("target_type").$type<VoteTarget>().notNull(),
+  targetType: text("target_type").$type<ReportTargetType>().notNull(),
   targetId: text("target_id").notNull(),
   communityId: text("community_id")
     .notNull()

@@ -1,6 +1,7 @@
 import type { ActionFunctionArgs, LoaderFunctionArgs, MetaFunction } from "@remix-run/cloudflare";
 import { Form, Link, useFetcher, useLoaderData, useRouteLoaderData } from "@remix-run/react";
 import { and, desc, eq, gt, isNull, or, sql } from "drizzle-orm";
+import { useState } from "react";
 import { AppShell } from "~/components/layout/AppShell";
 import { Footer } from "~/components/layout/Footer";
 import { getCurrentUser } from "~/lib/auth/user.server";
@@ -350,6 +351,9 @@ export default function PostPermalink() {
                   </span>
                   <span>{relativeTime(post.createdAt)}</span>
                   <span>{post.commentCount} comments</span>
+                  {rootUser && rootUser.id !== post.authorId && (
+                    <ReportPostButton postId={post.id} communityId={community.id} />
+                  )}
                   {post.isPinned && (
                     <span style={{ color: "var(--color-success)" }}>📌 Pinned</span>
                   )}
@@ -773,6 +777,100 @@ function OgPreviewCard({ preview, url }: { preview: OgPreview; url: string }) {
         )}
       </div>
     </a>
+  );
+}
+
+function ReportPostButton({
+  postId,
+  communityId,
+}: {
+  postId: string;
+  communityId: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const fetcher = useFetcher<{ ok?: boolean; error?: string }>();
+  const done = fetcher.data?.ok;
+
+  if (done) {
+    return (
+      <span className="text-xs" style={{ color: "var(--color-text-faint)" }}>
+        Reported
+      </span>
+    );
+  }
+
+  if (!open) {
+    return (
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="text-xs hover:underline"
+        style={{
+          color: "var(--color-text-faint)",
+          background: "none",
+          border: "none",
+          cursor: "pointer",
+          padding: 0,
+        }}
+      >
+        Report
+      </button>
+    );
+  }
+
+  return (
+    <fetcher.Form
+      method="post"
+      action="/api/report"
+      className="flex items-center gap-1.5"
+      onSubmit={() => setOpen(false)}
+    >
+      <input type="hidden" name="targetType" value="post" />
+      <input type="hidden" name="targetId" value={postId} />
+      <input type="hidden" name="communityId" value={communityId} />
+      <select
+        name="reason"
+        required
+        className="rounded px-1.5 py-0.5 text-xs"
+        style={{
+          background: "var(--color-bg-elev-2)",
+          border: "1px solid var(--color-border)",
+          color: "var(--color-text-dim)",
+        }}
+      >
+        <option value="">Reason…</option>
+        <option value="spam">Spam</option>
+        <option value="harassment">Harassment</option>
+        <option value="nsfw">NSFW</option>
+        <option value="off_topic">Off topic</option>
+        <option value="other">Other</option>
+      </select>
+      <button
+        type="submit"
+        className="text-xs px-2 py-0.5 rounded"
+        style={{
+          background: "var(--color-danger)",
+          color: "#fff",
+          border: "none",
+          cursor: "pointer",
+        }}
+      >
+        Send
+      </button>
+      <button
+        type="button"
+        onClick={() => setOpen(false)}
+        className="text-xs"
+        style={{
+          color: "var(--color-text-faint)",
+          background: "none",
+          border: "none",
+          cursor: "pointer",
+        }}
+      >
+        ✕
+      </button>
+    </fetcher.Form>
   );
 }
 

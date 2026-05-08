@@ -8,6 +8,7 @@ import {
   useRouteLoaderData,
 } from "@remix-run/react";
 import { and, eq, isNull, ne } from "drizzle-orm";
+import { useState } from "react";
 import type React from "react";
 import { AppShell } from "~/components/layout/AppShell";
 import { Footer } from "~/components/layout/Footer";
@@ -247,6 +248,11 @@ export default function CommunityHub() {
             className="w-full rounded-md mt-3 object-cover"
             style={{ height: "80px" }}
           />
+        )}
+        {rootUser && rootUser.id !== community.ownerId && (
+          <div className="mt-3 pt-3" style={{ borderTop: "1px solid var(--color-border)" }}>
+            <ReportCommunityButton communityId={community.id} />
+          </div>
         )}
       </div>
 
@@ -522,6 +528,107 @@ function JoinButton({
       >
         {pending ? "..." : joined ? "Leave" : "Join"}
       </button>
+    </fetcher.Form>
+  );
+}
+
+function ReportCommunityButton({ communityId }: { communityId: string }) {
+  const [open, setOpen] = useState(false);
+  const fetcher = useFetcher<{ ok?: boolean; error?: string }>();
+  const done = fetcher.data?.ok;
+
+  if (done) {
+    return (
+      <p className="text-xs" style={{ color: "var(--color-text-faint)" }}>
+        Report submitted. Thank you.
+      </p>
+    );
+  }
+
+  if (!open) {
+    return (
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="text-xs hover:underline"
+        style={{
+          color: "var(--color-text-faint)",
+          background: "none",
+          border: "none",
+          cursor: "pointer",
+          padding: 0,
+        }}
+      >
+        Report this community
+      </button>
+    );
+  }
+
+  return (
+    <fetcher.Form
+      method="post"
+      action="/api/report"
+      className="flex flex-col gap-2"
+      onSubmit={() => setOpen(false)}
+    >
+      <input type="hidden" name="targetType" value="community" />
+      <input type="hidden" name="targetId" value={communityId} />
+      <input type="hidden" name="communityId" value={communityId} />
+      <select
+        name="reason"
+        required
+        className="rounded px-2 py-1 text-xs w-full"
+        style={{
+          background: "var(--color-bg-elev-2)",
+          border: "1px solid var(--color-border)",
+          color: "var(--color-text-dim)",
+        }}
+      >
+        <option value="">Select reason…</option>
+        <option value="spam">Spam / fake community</option>
+        <option value="harassment">Harassment</option>
+        <option value="nsfw">Inappropriate content</option>
+        <option value="other">Other</option>
+      </select>
+      <input
+        name="details"
+        type="text"
+        placeholder="Additional details (optional)"
+        maxLength={300}
+        className="rounded px-2 py-1 text-xs w-full"
+        style={{
+          background: "var(--color-bg-elev-2)",
+          border: "1px solid var(--color-border)",
+          color: "var(--color-text)",
+        }}
+      />
+      <div className="flex gap-2">
+        <button
+          type="submit"
+          className="text-xs px-3 py-1 rounded"
+          style={{
+            background: "var(--color-danger)",
+            color: "#fff",
+            border: "none",
+            cursor: "pointer",
+          }}
+        >
+          Submit report
+        </button>
+        <button
+          type="button"
+          onClick={() => setOpen(false)}
+          className="text-xs px-2 py-1 rounded"
+          style={{
+            background: "var(--color-bg-elev-2)",
+            border: "1px solid var(--color-border)",
+            color: "var(--color-text-faint)",
+            cursor: "pointer",
+          }}
+        >
+          Cancel
+        </button>
+      </div>
     </fetcher.Form>
   );
 }
