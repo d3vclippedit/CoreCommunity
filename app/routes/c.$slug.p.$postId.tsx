@@ -20,6 +20,8 @@ import {
   comments,
   communities,
   communityMemberships,
+  giveawayEntries,
+  giveaways,
   pollOptions,
   pollVotes,
   polls,
@@ -162,6 +164,55 @@ export async function loader({ params, request, context }: LoaderFunctionArgs) {
     }
   }
 
+  let giveawayData: {
+    id: string;
+    prize: string;
+    description: string | null;
+    status: string;
+    endsAt: Date | null;
+    minMembershipDays: number | null;
+    minPostCount: number | null;
+    winnerUserId: string | null;
+    hasEntered: boolean;
+    isMod: boolean;
+  } | null = null;
+
+  if (post.type === "giveaway") {
+    const giveaway = await db.query.giveaways.findFirst({
+      where: eq(giveaways.postId, post.id),
+    });
+    if (giveaway) {
+      let hasEntered = false;
+      if (user) {
+        const entry = await db.query.giveawayEntries.findFirst({
+          where: and(
+            eq(giveawayEntries.giveawayId, giveaway.id),
+            eq(giveawayEntries.userId, user.id),
+          ),
+          columns: { id: true },
+        });
+        hasEntered = !!entry;
+      }
+      const modCheck =
+        memberRole === "mod" ||
+        memberRole === "senior_mod" ||
+        memberRole === "admin" ||
+        memberRole === "streamer";
+      giveawayData = {
+        id: giveaway.id,
+        prize: giveaway.prize,
+        description: giveaway.description,
+        status: giveaway.status,
+        endsAt: giveaway.endsAt,
+        minMembershipDays: giveaway.minMembershipDays,
+        minPostCount: giveaway.minPostCount,
+        winnerUserId: giveaway.winnerUserId,
+        hasEntered,
+        isMod: modCheck,
+      };
+    }
+  }
+
   // Increment view count — non-critical, silently ignore failures
   try {
     await db
@@ -186,6 +237,7 @@ export async function loader({ params, request, context }: LoaderFunctionArgs) {
     userCoinBalance,
     isPostAuthor,
     pollData,
+    giveawayData,
   };
 }
 
@@ -265,6 +317,7 @@ export default function PostPermalink() {
     badgeDefs,
     userCoinBalance,
     pollData,
+    giveawayData,
   } = useLoaderData<typeof loader>();
   const root = useRouteLoaderData<typeof rootLoader>("root");
   const rootUser = root?.user ?? null;
@@ -383,6 +436,7 @@ export default function PostPermalink() {
                   />
                 )}
                 {pollData && <PollWidget pollData={pollData} userId={rootUser?.id ?? null} />}
+                {giveawayData && <GiveawayWidget giveaway={giveawayData} isLoggedIn={!!rootUser} />}
                 <div
                   className="flex items-center gap-3 text-xs flex-wrap"
                   style={{ color: "var(--color-text-faint)" }}
@@ -1053,6 +1107,173 @@ function PollWidget({
           {fetcher.data.error}
         </p>
       )}
+    </div>
+  );
+}
+
+function GiveawayWidget({
+  giveaway,
+  isLoggedIn,
+}: {
+  giveaway: {
+    id: string;
+    prize: string;
+    description: string | null;
+    status: string;
+    endsAt: Date | string | null;
+    minMembershipDays: number | null;
+    minPostCount: number | null;
+    winnerUserId: string | null;
+    hasEntered: boolean;
+    isMod: boolean;
+  };
+  isLoggedIn: boolean;
+}) {
+  const fetcher = useFetcher<{ ok?: boolean; error?: string; winnerId?: string }>();
+  const isActive = giveaway.status === "active";
+  const isEnded = giveaway.status === "ended";
+
+  const enteredNow = fetcher.data?.ok && !fetcher.data.winnerId;
+  const drawnNow = !!fetcher.data?.winnerId;
+  const showError = fetcher.data && "error" in fetcher.data ? fetcher.data.error : null;
+
+  const requirements: string[] = [];
+  if (giveaway.minMembershipDays)
+    requirements.push(`Member for ${giveaway.minMembershipDays}+ day(s)`);
+  if (giveaway.minPostCount) requirements.push(`${giveaway.minPostCount}+ post(s) in community`);
+
+  const statusColor = isActive
+    ? "var(--color-success)"
+    : isEnded
+      ? "var(--color-text-faint)"
+      : "var(--color-danger)";
+
+  return (
+    <div
+      className="rounded-md p-4 mb-3 flex flex-col gap-2"
+      style={{ background: "var(--color-bg-elev-2)", border: "1px solid var(--color-border)" }}
+    >
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-sm font-semibold" style={{ color: "var(--color-text)" }}>
+          Prize: {giveaway.prize}
+        </p>
+        <span
+          className="text-xs px-2 py-0.5 rounded-full flex-shrink-0"
+          style={{ border: `1px solid ${statusColor}40`, color: statusColor }}
+        >
+          {isActive ? "Active" : isEnded ? "Ended" : "Cancelled"}
+        </span>
+      </div>
+
+      {giveaway.description && (
+        <p className="text-xs" style={{ color: "var(--color-text-dim)" }}>
+          {giveaway.description}
+        </p>
+      )}
+
+      {requirements.length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          {requirements.map((r) => (
+            <span
+              key={r}
+              className="text-xs px-2 py-0.5 rounded-full"
+              style={{
+                background: "var(--color-bg-elev-1)",
+                border: "1px solid var(--color-border)",
+                color: "var(--color-text-faint)",
+              }}
+            >
+              {r}
+            </span>
+          ))}
+        </div>
+      )}
+
+      {giveaway.endsAt && (
+        <p className="text-xs" style={{ color: "var(--color-text-faint)" }}>
+          Ends: {new Date(giveaway.endsAt).toLocaleDateString()}
+        </p>
+      )}
+
+      {showError && (
+        <p className="text-xs" style={{ color: "var(--color-danger)" }}>
+          {showError}
+        </p>
+      )}
+
+      {(isEnded && giveaway.winnerUserId) || drawnNow ? (
+        <p className="text-xs font-medium" style={{ color: "var(--color-success)" }}>
+          Winner drawn!
+        </p>
+      ) : null}
+
+      <div className="flex gap-2 mt-1">
+        {isActive && isLoggedIn && !giveaway.hasEntered && !enteredNow && (
+          <fetcher.Form method="post" action="/api/giveaway">
+            <input type="hidden" name="intent" value="enter" />
+            <input type="hidden" name="giveawayId" value={giveaway.id} />
+            <button
+              type="submit"
+              disabled={fetcher.state !== "idle"}
+              className="px-3 py-1.5 text-xs font-medium rounded-md"
+              style={{
+                background: "var(--color-text)",
+                color: "var(--color-bg)",
+                border: "none",
+                cursor: "pointer",
+              }}
+            >
+              {fetcher.state !== "idle" ? "Entering…" : "Enter giveaway"}
+            </button>
+          </fetcher.Form>
+        )}
+        {(giveaway.hasEntered || enteredNow) && isActive && (
+          <span
+            className="text-xs px-3 py-1.5 rounded-md"
+            style={{ color: "var(--color-success)", background: "var(--color-bg-elev-1)" }}
+          >
+            Entered ✓
+          </span>
+        )}
+        {giveaway.isMod && isActive && !drawnNow && (
+          <fetcher.Form method="post" action="/api/giveaway">
+            <input type="hidden" name="intent" value="draw" />
+            <input type="hidden" name="giveawayId" value={giveaway.id} />
+            <button
+              type="submit"
+              disabled={fetcher.state !== "idle"}
+              className="px-3 py-1.5 text-xs font-medium rounded-md"
+              style={{
+                background: "var(--color-bg-elev-1)",
+                border: "1px solid var(--color-border)",
+                color: "var(--color-text-dim)",
+                cursor: "pointer",
+              }}
+            >
+              Draw winner
+            </button>
+          </fetcher.Form>
+        )}
+        {giveaway.isMod && isActive && (
+          <fetcher.Form method="post" action="/api/giveaway">
+            <input type="hidden" name="intent" value="cancel" />
+            <input type="hidden" name="giveawayId" value={giveaway.id} />
+            <button
+              type="submit"
+              disabled={fetcher.state !== "idle"}
+              className="px-3 py-1.5 text-xs rounded-md"
+              style={{
+                background: "none",
+                border: "none",
+                color: "var(--color-danger)",
+                cursor: "pointer",
+              }}
+            >
+              Cancel
+            </button>
+          </fetcher.Form>
+        )}
+      </div>
     </div>
   );
 }

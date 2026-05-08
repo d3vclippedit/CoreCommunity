@@ -144,7 +144,6 @@ export default function CommunityHub() {
       <CommunityNavLink to={`/c/${community.slug}`} label="Posts" end />
       <CommunityNavLink to={`/c/${community.slug}/about`} label="About" />
       <CommunityNavLink to={`/c/${community.slug}/members`} label="Members" />
-      <CommunityNavLink to={`/c/${community.slug}/giveaways`} label="Giveaways" />
 
       {isMod && (
         <>

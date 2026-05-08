@@ -24,6 +24,7 @@ import {
   communityCustomRoles,
   communityMemberships,
   communitySections,
+  giveaways,
   pollOptions,
   polls,
   posts,
@@ -252,6 +253,71 @@ export async function action({ params, request, context }: ActionFunctionArgs) {
     return redirect(`/c/${community.slug}/p/${postId}`);
   }
 
+  if (type === "giveaway") {
+    const mem2 = await db.query.communityMemberships.findFirst({
+      where: and(
+        eq(communityMemberships.userId, user.id),
+        eq(communityMemberships.communityId, community.id),
+      ),
+      columns: { role: true },
+    });
+    const modCheck =
+      mem2?.role === "mod" ||
+      mem2?.role === "senior_mod" ||
+      mem2?.role === "admin" ||
+      mem2?.role === "streamer";
+    if (!modCheck) return { error: "Only moderators can create giveaways." };
+
+    const prize = (form.get("gPrize") as string | null)?.trim() ?? "";
+    const description = (form.get("gDescription") as string | null)?.trim() || null;
+    const endsAtStr = form.get("gEndsAt") as string | null;
+    const minMembershipDays = form.get("gMinDays") ? Number(form.get("gMinDays")) : null;
+    const minPostCount = form.get("gMinPosts") ? Number(form.get("gMinPosts")) : null;
+
+    if (!prize) return { error: "Prize is required." };
+    const endsAt = endsAtStr ? new Date(endsAtStr) : null;
+    if (endsAt && Number.isNaN(endsAt.getTime())) return { error: "Invalid end date." };
+
+    await db.insert(posts).values({
+      id: postId,
+      communityId: community.id,
+      sectionId: section.id,
+      authorId: user.id,
+      type: "giveaway",
+      title,
+      body: null,
+      url: null,
+      embedKind: null,
+      embedRef: null,
+      score: 0,
+      upvotes: 0,
+      downvotes: 0,
+      commentCount: 0,
+      isPinned: false,
+      isFeatured: false,
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    await db.insert(giveaways).values({
+      id: generateId(),
+      communityId: community.id,
+      postId,
+      creatorId: user.id,
+      title,
+      description,
+      prize,
+      status: "active",
+      endsAt,
+      minMembershipDays: minMembershipDays && minMembershipDays > 0 ? minMembershipDays : null,
+      minPostCount: minPostCount && minPostCount > 0 ? minPostCount : null,
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    return redirect(`/c/${community.slug}/p/${postId}`);
+  }
+
   const postType =
     type === "link" ? "link" : type === "image" ? "image" : type === "video" ? "video" : "text";
   const postUrl = type === "link" ? url : type === "image" || type === "video" ? mediaUrl : null;
@@ -280,7 +346,7 @@ export async function action({ params, request, context }: ActionFunctionArgs) {
   return redirect(`/c/${community.slug}/p/${postId}`);
 }
 
-type Tab = "text" | "link" | "image" | "video" | "poll";
+type Tab = "text" | "link" | "image" | "video" | "poll" | "giveaway";
 
 type TiptapEditorType = React.ComponentType<{
   onChange: (html: string) => void;
@@ -462,6 +528,7 @@ export default function Submit() {
     { id: "image", label: "Image", locked: !perms.canPostImages },
     { id: "video", label: "Video", locked: !perms.canPostVideos },
     ...(isMod ? [{ id: "poll" as Tab, label: "Poll" }] : []),
+    ...(isMod ? [{ id: "giveaway" as Tab, label: "Giveaway" }] : []),
   ];
 
   const submitDisabled =
@@ -738,9 +805,72 @@ export default function Submit() {
               </div>
             )}
 
+            {tab === "giveaway" && (
+              <div className="flex flex-col gap-3">
+                <Input
+                  id="gPrize"
+                  name="gPrize"
+                  type="text"
+                  label="Prize"
+                  placeholder="$25 gift card"
+                  required
+                />
+                <div className="flex flex-col gap-1.5">
+                  <label
+                    htmlFor="gDescription"
+                    className="text-sm font-medium"
+                    style={{ color: "var(--color-text)" }}
+                  >
+                    Description <span style={{ color: "var(--color-text-faint)" }}>(optional)</span>
+                  </label>
+                  <textarea
+                    id="gDescription"
+                    name="gDescription"
+                    rows={2}
+                    placeholder="Tell members what this is about…"
+                    className="w-full rounded-md px-3 py-2 text-sm resize-none"
+                    style={{
+                      background: "var(--color-bg-elev-2)",
+                      border: "1px solid var(--color-border)",
+                      color: "var(--color-text)",
+                      outline: "none",
+                    }}
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <Input
+                    id="gEndsAt"
+                    name="gEndsAt"
+                    type="datetime-local"
+                    label="End date (optional)"
+                  />
+                  <Input
+                    id="gMinDays"
+                    name="gMinDays"
+                    type="number"
+                    label="Min. membership days"
+                    placeholder="0 = none"
+                    min="0"
+                  />
+                </div>
+                <Input
+                  id="gMinPosts"
+                  name="gMinPosts"
+                  type="number"
+                  label="Min. post count"
+                  placeholder="0 = none"
+                  min="0"
+                />
+              </div>
+            )}
+
             <div className="flex gap-3 pt-1">
               <Button type="submit" loading={nav.state === "submitting"} disabled={submitDisabled}>
-                {nav.state === "submitting" ? "Posting…" : "Post"}
+                {nav.state === "submitting"
+                  ? "Posting…"
+                  : tab === "giveaway"
+                    ? "Create Giveaway"
+                    : "Post"}
               </Button>
               <Link
                 to={`/c/${slug}`}

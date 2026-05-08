@@ -191,7 +191,7 @@ export const communitySections = sqliteTable("community_sections", {
 
 // ─── Posts ────────────────────────────────────────────────────────────────────
 
-export type PostType = "text" | "image" | "link" | "video" | "poll";
+export type PostType = "text" | "image" | "link" | "video" | "poll" | "giveaway";
 export type EmbedKind = "twitch_clip" | "twitch_vod" | "youtube" | null;
 
 export const posts = sqliteTable("posts", {
@@ -617,6 +617,7 @@ export const giveaways = sqliteTable("giveaways", {
   communityId: text("community_id")
     .notNull()
     .references(() => communities.id, { onDelete: "cascade" }),
+  postId: text("post_id").references(() => posts.id, { onDelete: "cascade" }),
   creatorId: text("creator_id")
     .notNull()
     .references(() => users.id),

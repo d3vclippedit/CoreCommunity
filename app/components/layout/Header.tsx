@@ -1,7 +1,7 @@
 import { Form, Link, useLocation, useRouteLoaderData } from "@remix-run/react";
 import { Coins } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import coreMiniUrl from "~/assets/CormunitiesTop.png";
+import coreMiniUrl from "~/assets/logotop.png";
 import { cn } from "~/lib/cn";
 import { formatCoins } from "~/lib/coins";
 import type { loader as rootLoader } from "~/root";
