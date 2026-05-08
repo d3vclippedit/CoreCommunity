@@ -249,39 +249,45 @@ export default function Index() {
 function FeedPostCard({ post }: { post: FeedPost }) {
   return (
     <div
-      className="rounded-lg p-4 flex gap-3 transition-colors hover:border-[--color-border]"
+      className="rounded-lg p-4 flex gap-4 transition-colors"
       style={{
         background: "var(--color-bg-elev-1)",
         border: "1px solid var(--color-border)",
       }}
     >
-      {/* Score */}
-      <div className="flex flex-col items-center gap-0.5 flex-shrink-0 w-8 text-center pt-0.5">
-        <span className="text-sm font-semibold" style={{ color: "var(--color-text)" }}>
-          {post.score}
-        </span>
-      </div>
+      {/* Community icon */}
+      <Link
+        to={`/c/${post.communitySlug}`}
+        className="flex-shrink-0"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <CommunityAvatar
+          name={post.communityName ?? ""}
+          iconUrl={post.communityIconUrl}
+          size={64}
+        />
+      </Link>
 
       {/* Main content */}
       <div className="flex-1 min-w-0">
-        {/* Community badge */}
-        <Link
-          to={`/c/${post.communitySlug}`}
-          className="inline-flex items-center gap-1.5 mb-1.5 no-underline group"
-          onClick={(e) => e.stopPropagation()}
-        >
-          <CommunityAvatar
-            name={post.communityName ?? ""}
-            iconUrl={post.communityIconUrl}
-            size={16}
-          />
-          <span
-            className="text-xs font-medium group-hover:underline"
-            style={{ color: "var(--color-text-dim)" }}
+        {/* Community name + score */}
+        <div className="flex items-center justify-between mb-1.5">
+          <Link
+            to={`/c/${post.communitySlug}`}
+            className="no-underline group"
+            onClick={(e) => e.stopPropagation()}
           >
-            c/{post.communitySlug}
+            <span
+              className="text-xs font-medium group-hover:underline"
+              style={{ color: "var(--color-text-dim)" }}
+            >
+              c/{post.communitySlug}
+            </span>
+          </Link>
+          <span className="text-sm font-semibold" style={{ color: "var(--color-text)" }}>
+            {post.score}
           </span>
-        </Link>
+        </div>
 
         {/* Title */}
         <div className="flex items-start gap-2">

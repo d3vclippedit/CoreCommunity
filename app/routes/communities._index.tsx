@@ -1,13 +1,13 @@
 import type { LoaderFunctionArgs, MetaFunction } from "@remix-run/cloudflare";
 import { Link, useFetcher, useLoaderData, useRouteLoaderData } from "@remix-run/react";
-import { and, desc, eq, inArray, isNotNull, isNull, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { AppShell } from "~/components/layout/AppShell";
 import { Footer } from "~/components/layout/Footer";
 import { Header } from "~/components/layout/Header";
 import { getCurrentUser } from "~/lib/auth/user.server";
 import { createDb } from "~/lib/db/index";
 import type { loader as rootLoader } from "~/root";
-import { badges, communities, communityMemberships, posts } from "../../db/schema";
+import { communities, communityMemberships, postBadgeApplications, posts } from "../../db/schema";
 
 export const meta: MetaFunction = () => [
   { title: "Communities — Cormunities" },
@@ -55,10 +55,10 @@ export async function loader({ request, context }: LoaderFunctionArgs) {
     string,
     { postCount: number; imageCount: number; videoCount: number }
   >();
-  let badgeCountMap = new Map<string, number>();
+  let badgeCoinsMap = new Map<string, number>();
 
   if (communityIds.length > 0) {
-    const [postStatRows, badgeCountRows] = await Promise.all([
+    const [postStatRows, badgeCoinsRows] = await Promise.all([
       db
         .select({
           communityId: posts.communityId,
@@ -71,18 +71,12 @@ export async function loader({ request, context }: LoaderFunctionArgs) {
         .groupBy(posts.communityId),
       db
         .select({
-          communityId: badges.communityId,
-          count: sql<number>`count(*)`,
+          communityId: postBadgeApplications.communityId,
+          totalCoins: sql<number>`coalesce(sum(${postBadgeApplications.coinAmount}), 0)`,
         })
-        .from(badges)
-        .where(
-          and(
-            eq(badges.scope, "community"),
-            isNotNull(badges.communityId),
-            inArray(badges.communityId, communityIds),
-          ),
-        )
-        .groupBy(badges.communityId),
+        .from(postBadgeApplications)
+        .where(inArray(postBadgeApplications.communityId, communityIds))
+        .groupBy(postBadgeApplications.communityId),
     ]);
 
     postStatsMap = new Map(
@@ -91,7 +85,7 @@ export async function loader({ request, context }: LoaderFunctionArgs) {
         { postCount: s.postCount, imageCount: s.imageCount, videoCount: s.videoCount },
       ]),
     );
-    badgeCountMap = new Map(badgeCountRows.map((b) => [b.communityId as string, b.count]));
+    badgeCoinsMap = new Map(badgeCoinsRows.map((b) => [b.communityId, b.totalCoins]));
   }
 
   const enriched = rows.map((c) => {
@@ -101,7 +95,7 @@ export async function loader({ request, context }: LoaderFunctionArgs) {
       postCount: ps?.postCount ?? 0,
       imageCount: ps?.imageCount ?? 0,
       videoCount: ps?.videoCount ?? 0,
-      badgeCount: badgeCountMap.get(c.id) ?? 0,
+      badgeCoinsCC: badgeCoinsMap.get(c.id) ?? 0,
     };
   });
 
@@ -179,7 +173,7 @@ type Community = {
   postCount: number;
   imageCount: number;
   videoCount: number;
-  badgeCount: number;
+  badgeCoinsCC: number;
 };
 
 function CommunityCard({
@@ -265,7 +259,10 @@ function CommunityCard({
         <div className="grid grid-cols-2 gap-x-4 gap-y-1.5">
           {[
             { label: "Members", value: formatCount(c.memberCount) },
-            { label: "Badges", value: c.badgeCount > 0 ? String(c.badgeCount) : "—" },
+            {
+              label: "Badges",
+              value: c.badgeCoinsCC > 0 ? `${formatCount(c.badgeCoinsCC)} cc` : "—",
+            },
             { label: "Posts", value: formatCount(c.postCount) },
             { label: "Images", value: formatCount(c.imageCount) },
             { label: "Videos", value: formatCount(c.videoCount) },
