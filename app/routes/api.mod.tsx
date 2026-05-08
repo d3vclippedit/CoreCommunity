@@ -3,9 +3,9 @@
  * POST with `action` field describing the operation.
  */
 import type { ActionFunctionArgs } from "@remix-run/cloudflare";
-import { redirect } from "@remix-run/cloudflare";
+import { json, redirect } from "@remix-run/cloudflare";
 import { and, eq, isNull } from "drizzle-orm";
-import { getCurrentUser, requireUser } from "~/lib/auth/user.server";
+import { getCurrentUser } from "~/lib/auth/user.server";
 import { createDb } from "~/lib/db/index";
 import { canBanUser, canFeaturePost, canPinPost, canTimeoutUser, isStaff } from "~/lib/permissions";
 import { generateId } from "~/lib/utils";
@@ -20,7 +20,8 @@ import {
 
 export async function action({ request, context }: ActionFunctionArgs) {
   const { env } = context.cloudflare;
-  const user = requireUser(await getCurrentUser(request, env));
+  const user = await getCurrentUser(request, env);
+  if (!user) return json({ error: "Unauthorized" }, { status: 401 });
   const db = createDb(env.DB);
 
   const form = await request.formData();

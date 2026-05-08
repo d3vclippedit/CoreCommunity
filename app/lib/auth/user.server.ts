@@ -1,3 +1,4 @@
+import { redirect } from "@remix-run/cloudflare";
 import { eq } from "drizzle-orm";
 import { createDb } from "~/lib/db/index";
 import { users } from "../../../db/schema";
@@ -40,7 +41,7 @@ export async function getCurrentUser(request: Request, env: Env): Promise<Sessio
 }
 
 export function requireUser(user: SessionUser | null): SessionUser {
-  if (!user) throw new Response("Unauthorized", { status: 401 });
+  if (!user) throw redirect("/auth/login");
   return user;
 }
 
