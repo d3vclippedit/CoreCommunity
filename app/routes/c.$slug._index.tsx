@@ -1,6 +1,8 @@
 import type { LoaderFunctionArgs, MetaFunction } from "@remix-run/cloudflare";
 import { Link, useLoaderData, useSearchParams } from "@remix-run/react";
 import { and, desc, eq, isNull } from "drizzle-orm";
+import { useState } from "react";
+import { ExpandChevron, ExpandedPostContent, detectEmbed } from "~/components/PostExpand";
 import { getCurrentUser } from "~/lib/auth/user.server";
 import { getBulkPostBadgeSummary } from "~/lib/badges.server";
 import { createDb } from "~/lib/db/index";
@@ -192,198 +194,242 @@ function formatCC(n: number): string {
   return String(n);
 }
 
+type PostCardPost = {
+  id: string;
+  title: string;
+  type: string;
+  url: string | null;
+  imageUrl: string | null;
+  body: string | null;
+  score: number;
+  commentCount: number;
+  isPinned: boolean;
+  createdAt: string;
+  authorHandle: string;
+  badgeCoinsCC: number;
+  badges: { icon: string; name: string; count: number; totalCoins: number }[];
+};
+
 function PostCard({
   post,
   communitySlug,
 }: {
-  post: {
-    id: string;
-    title: string;
-    type: string;
-    url: string | null;
-    imageUrl: string | null;
-    body: string | null;
-    score: number;
-    commentCount: number;
-    isPinned: boolean;
-    createdAt: string;
-    authorHandle: string;
-    badgeCoinsCC: number;
-    badges: { icon: string; name: string; count: number; totalCoins: number }[];
-  };
+  post: PostCardPost;
   communitySlug: string;
 }) {
+  const [expanded, setExpanded] = useState(false);
   const tier = getMilestoneTier(post.badgeCoinsCC);
-  const hasMedia = (post.type === "image" && !!post.imageUrl) || post.type === "video";
   const caption = post.body ? post.body.replace(/<[^>]*>/g, "").trim() : null;
+
+  const isExpandable =
+    (post.type === "image" && !!post.imageUrl) ||
+    (post.type === "video" && !!post.url) ||
+    (post.type === "text" && !!post.body) ||
+    (post.type === "link" && !!post.url && !!detectEmbed(post.url));
+
+  const hasThumb =
+    !expanded && ((post.type === "image" && !!post.imageUrl) || post.type === "video");
+  const ytId =
+    post.type === "video"
+      ? post.url?.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/)?.[1]
+      : null;
 
   return (
     <div
-      className={`post-card rounded-lg p-4 flex gap-3${tier ? ` ${tier.className}` : ""}`}
+      className={`post-card rounded-lg p-4${tier ? ` ${tier.className}` : ""}${isExpandable ? " cursor-pointer select-none" : ""}`}
       style={{
-        background: "var(--color-bg-elev-1)",
+        background: expanded ? "var(--color-bg-elev-2)" : "var(--color-bg-elev-1)",
         border: `1px solid ${tier ? tier.borderColor : "var(--color-border)"}`,
+        transition: "background 0.15s ease",
+      }}
+      onClick={(e) => {
+        if ((e.target as HTMLElement).closest("a, button")) return;
+        if (isExpandable) setExpanded((v) => !v);
+      }}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          if (isExpandable) setExpanded((v) => !v);
+        }
       }}
     >
-      {/* Vote score */}
-      <div className="flex flex-col items-center gap-0.5 flex-shrink-0 w-8 text-center pt-0.5">
-        <span className="text-sm font-semibold" style={{ color: "var(--color-text)" }}>
-          {post.score}
-        </span>
-      </div>
-
-      {/* Content */}
-      <div className="flex-1 min-w-0">
-        <div className="flex items-start gap-1.5 mb-1">
-          {post.isPinned && (
-            <span
-              className="text-xs font-medium flex-shrink-0 mt-0.5"
-              style={{ color: "var(--color-success)" }}
-            >
-              📌
-            </span>
-          )}
-          <Link
-            to={`/c/${communitySlug}/p/${post.id}`}
-            className="text-sm font-medium no-underline hover:underline leading-snug"
-            style={{ color: "var(--color-text)" }}
-          >
-            {post.title}
-          </Link>
-          {(post.type === "image" || post.type === "video" || post.type === "link") && (
-            <span
-              className="flex-shrink-0 text-xs px-1.5 py-0.5 rounded mt-0.5"
-              style={{ background: "var(--color-bg-elev-2)", color: "var(--color-text-faint)" }}
-            >
-              {post.type}
-            </span>
-          )}
+      {/* Top row: score | content | thumb | chevron */}
+      <div className="flex gap-3">
+        {/* Vote score */}
+        <div className="flex flex-col items-center gap-0.5 flex-shrink-0 w-8 text-center pt-0.5">
+          <span className="text-sm font-semibold" style={{ color: "var(--color-text)" }}>
+            {post.score}
+          </span>
         </div>
 
-        {caption && (
-          <p
-            className="text-xs mb-1.5 leading-relaxed"
+        {/* Content */}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-start gap-1.5 mb-1">
+            {post.isPinned && (
+              <span
+                className="text-xs font-medium flex-shrink-0 mt-0.5"
+                style={{ color: "var(--color-success)" }}
+              >
+                📌
+              </span>
+            )}
+            <Link
+              to={`/c/${communitySlug}/p/${post.id}`}
+              className="text-sm font-medium no-underline hover:underline leading-snug"
+              style={{ color: "var(--color-text)" }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              {post.title}
+            </Link>
+            {(post.type === "image" || post.type === "video" || post.type === "link") && (
+              <span
+                className="flex-shrink-0 text-xs px-1.5 py-0.5 rounded mt-0.5"
+                style={{ background: "var(--color-bg-elev-2)", color: "var(--color-text-faint)" }}
+              >
+                {post.type}
+              </span>
+            )}
+          </div>
+
+          {caption && !expanded && (
+            <p
+              className="text-xs mb-1.5 leading-relaxed"
+              style={{
+                color: "var(--color-text-dim)",
+                display: "-webkit-box",
+                WebkitLineClamp: 2,
+                WebkitBoxOrient: "vertical",
+                overflow: "hidden",
+              }}
+            >
+              {caption}
+            </p>
+          )}
+
+          {post.badges.length > 0 && (
+            <div className="flex items-center gap-2 mb-1.5">
+              <div className="flex items-center gap-0.5">
+                {post.badges.slice(0, 4).map((b) => (
+                  <span
+                    key={b.name}
+                    className="text-sm leading-none"
+                    title={`${b.name} ×${b.count}`}
+                  >
+                    {b.icon}
+                  </span>
+                ))}
+              </div>
+              <span
+                className="text-xs font-semibold tabular-nums"
+                style={{ color: tier ? tier.color : "var(--color-text-faint)" }}
+              >
+                {formatCC(post.badgeCoinsCC)} cc
+              </span>
+              {tier && (
+                <span
+                  className="text-xs px-1.5 py-0.5 rounded-full font-medium"
+                  style={{ background: tier.bg, color: tier.color }}
+                >
+                  {tier.label}
+                </span>
+              )}
+            </div>
+          )}
+
+          <div
+            className="flex items-center gap-3 text-xs"
+            style={{ color: "var(--color-text-faint)" }}
+          >
+            <span>by {post.authorHandle}</span>
+            <span>{relativeTime(post.createdAt)}</span>
+            <Link
+              to={`/c/${communitySlug}/p/${post.id}`}
+              className="no-underline hover:underline"
+              style={{ color: "var(--color-text-faint)" }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              {post.commentCount} comment{post.commentCount !== 1 ? "s" : ""}
+            </Link>
+          </div>
+        </div>
+
+        {/* Thumbnail (collapsed only) */}
+        {hasThumb && (
+          <div
+            className="post-thumb flex-shrink-0 relative flex items-center justify-center"
             style={{
-              color: "var(--color-text-dim)",
-              display: "-webkit-box",
-              WebkitLineClamp: 2,
-              WebkitBoxOrient: "vertical",
-              overflow: "hidden",
+              width: 128,
+              height: 96,
+              background: "var(--color-bg-elev-2)",
+              border: "1px solid var(--color-border)",
             }}
           >
-            {caption}
-          </p>
-        )}
-
-        {post.badges.length > 0 && (
-          <div className="flex items-center gap-2 mb-1.5">
-            <div className="flex items-center gap-0.5">
-              {post.badges.slice(0, 4).map((b) => (
-                <span key={b.name} className="text-sm leading-none" title={`${b.name} ×${b.count}`}>
-                  {b.icon}
-                </span>
-              ))}
-            </div>
-            <span
-              className="text-xs font-semibold tabular-nums"
-              style={{ color: tier ? tier.color : "var(--color-text-faint)" }}
-            >
-              {formatCC(post.badgeCoinsCC)} cc
-            </span>
-            {tier && (
-              <span
-                className="text-xs px-1.5 py-0.5 rounded-full font-medium"
-                style={{ background: tier.bg, color: tier.color }}
-              >
-                {tier.label}
-              </span>
+            {post.type === "image" && post.imageUrl && (
+              <img
+                src={post.imageUrl}
+                alt=""
+                loading="lazy"
+                className="w-full h-full"
+                style={{ objectFit: "contain" }}
+              />
+            )}
+            {post.type === "video" && (
+              <>
+                {ytId && (
+                  <img
+                    src={`https://img.youtube.com/vi/${ytId}/mqdefault.jpg`}
+                    alt=""
+                    loading="lazy"
+                    className="absolute inset-0 w-full h-full object-cover"
+                  />
+                )}
+                <div
+                  className="relative z-10 flex items-center justify-center rounded-full"
+                  style={{
+                    width: 32,
+                    height: 32,
+                    background: ytId ? "rgba(0,0,0,0.55)" : "rgba(245,245,247,0.06)",
+                    border: "1.5px solid rgba(245,245,247,0.25)",
+                  }}
+                >
+                  <svg
+                    width="11"
+                    height="11"
+                    viewBox="0 0 11 11"
+                    fill="currentColor"
+                    style={{ color: "var(--color-text)", marginLeft: 2 }}
+                    aria-hidden="true"
+                  >
+                    <path d="M1.5 1.5L9.5 5.5L1.5 9.5V1.5Z" />
+                  </svg>
+                </div>
+              </>
             )}
           </div>
         )}
 
-        <div
-          className="flex items-center gap-3 text-xs"
-          style={{ color: "var(--color-text-faint)" }}
-        >
-          <span>by {post.authorHandle}</span>
-          <span>{relativeTime(post.createdAt)}</span>
-          <Link
-            to={`/c/${communitySlug}/p/${post.id}`}
-            className="no-underline hover:underline"
-            style={{ color: "var(--color-text-faint)" }}
-          >
-            {post.commentCount} comment{post.commentCount !== 1 ? "s" : ""}
-          </Link>
-        </div>
+        {/* Expand chevron */}
+        {isExpandable && <ExpandChevron expanded={expanded} />}
       </div>
 
-      {/* Media thumbnail */}
-      {hasMedia && <MediaThumb type={post.type} imageUrl={post.imageUrl} url={post.url} />}
+      {/* Expanded content */}
+      {expanded && (
+        <div className="expand-in mt-3 pt-3" style={{ borderTop: "1px solid var(--color-border)" }}>
+          {caption && post.type !== "text" && (
+            <p className="text-xs mb-3 leading-relaxed" style={{ color: "var(--color-text-dim)" }}>
+              {caption}
+            </p>
+          )}
+          <ExpandedPostContent
+            type={post.type}
+            url={post.url}
+            imageUrl={post.imageUrl}
+            body={post.body}
+            title={post.title}
+          />
+        </div>
+      )}
     </div>
   );
-}
-
-function MediaThumb({
-  type,
-  imageUrl,
-  url,
-}: {
-  type: string;
-  imageUrl?: string | null;
-  url?: string | null;
-}) {
-  const thumbStyle = {
-    width: 128,
-    height: 96,
-    background: "var(--color-bg-elev-2)",
-    border: "1px solid var(--color-border)",
-  };
-
-  if (type === "image" && imageUrl) {
-    return (
-      <div className="post-thumb" style={thumbStyle}>
-        <img src={imageUrl} alt="" loading="lazy" />
-      </div>
-    );
-  }
-
-  if (type === "video") {
-    const ytId = url?.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/)?.[1];
-    return (
-      <div className="post-thumb relative flex items-center justify-center" style={thumbStyle}>
-        {ytId && (
-          <img
-            src={`https://img.youtube.com/vi/${ytId}/mqdefault.jpg`}
-            alt=""
-            loading="lazy"
-            className="absolute inset-0 w-full h-full object-cover"
-          />
-        )}
-        <div
-          className="relative z-10 flex items-center justify-center rounded-full"
-          style={{
-            width: 32,
-            height: 32,
-            background: ytId ? "rgba(0,0,0,0.55)" : "rgba(245,245,247,0.06)",
-            border: "1.5px solid rgba(245,245,247,0.25)",
-          }}
-        >
-          <svg
-            width="11"
-            height="11"
-            viewBox="0 0 11 11"
-            fill="currentColor"
-            style={{ color: "var(--color-text)", marginLeft: 2 }}
-            aria-hidden="true"
-          >
-            <path d="M1.5 1.5L9.5 5.5L1.5 9.5V1.5Z" />
-          </svg>
-        </div>
-      </div>
-    );
-  }
-
-  return null;
 }
 
 function relativeTime(dateStr: string): string {
