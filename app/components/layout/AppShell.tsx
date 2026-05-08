@@ -49,7 +49,7 @@ export function AppShell({ leftNav, rightRail, children, className, transparent 
               className="flex-1 min-w-0 overflow-y-auto"
               style={{ maxWidth: rightRail ? "720px" : undefined }}
             >
-              <div className="pb-8">{children}</div>
+              <div className="pb-8 px-4 md:px-6">{children}</div>
             </main>
 
             {rightRail && (
@@ -57,7 +57,7 @@ export function AppShell({ leftNav, rightRail, children, className, transparent 
                 className="hidden xl:flex flex-col flex-shrink-0 w-80 xl:w-96 overflow-y-auto"
                 aria-label="Community info"
               >
-                <div className="space-y-4 pb-8">{rightRail}</div>
+                <div className="space-y-4 pb-8 pl-2 pr-4">{rightRail}</div>
               </aside>
             )}
           </div>
