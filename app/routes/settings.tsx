@@ -7,6 +7,7 @@ import {
   useSearchParams,
 } from "@remix-run/react";
 import { eq } from "drizzle-orm";
+import { useRef, useState } from "react";
 import { AppShell } from "~/components/layout/AppShell";
 import { Footer } from "~/components/layout/Footer";
 import { Header } from "~/components/layout/Header";
@@ -166,6 +167,7 @@ export default function SettingsPage() {
               </h2>
               <Form method="post" className="flex flex-col gap-4">
                 <input type="hidden" name="_intent" value="profile" />
+                <AvatarUpload currentUrl={user.avatarUrl} displayName={user.displayName} />
                 <div className="flex flex-col gap-1.5">
                   <p className="text-sm font-medium" style={{ color: "var(--color-text-dim)" }}>
                     Handle
@@ -390,6 +392,109 @@ export default function SettingsPage() {
         </div>
       </AppShell>
       <Footer />
+    </div>
+  );
+}
+
+function AvatarUpload({
+  currentUrl,
+  displayName,
+}: { currentUrl?: string | null; displayName: string }) {
+  const [url, setUrl] = useState(currentUrl ?? "");
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  const initials = displayName
+    .split(" ")
+    .slice(0, 2)
+    .map((w) => w[0])
+    .join("")
+    .toUpperCase();
+
+  async function handleFile(file: File) {
+    setError(null);
+    setUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const res = await fetch("/api/upload/avatar", { method: "POST", body: fd });
+      const json = (await res.json()) as { url?: string; error?: string };
+      if (!res.ok || !json.url) {
+        setError(json.error ?? "Upload failed");
+      } else {
+        setUrl(json.url);
+      }
+    } catch {
+      setError("Upload failed. Check your connection.");
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-1.5">
+      <p className="text-sm font-medium" style={{ color: "var(--color-text)" }}>
+        Profile picture
+      </p>
+      <input
+        ref={fileRef}
+        type="file"
+        accept="image/png,image/jpeg,image/webp"
+        className="hidden"
+        onChange={(e) => {
+          const f = e.target.files?.[0];
+          if (f) handleFile(f);
+          e.target.value = "";
+        }}
+      />
+      <div className="flex items-center gap-4">
+        {url ? (
+          <img
+            src={url}
+            alt={displayName}
+            className="rounded-full object-cover flex-shrink-0"
+            style={{ width: 64, height: 64, border: "1px solid var(--color-border)" }}
+          />
+        ) : (
+          <div
+            className="flex items-center justify-center rounded-full flex-shrink-0 text-sm font-semibold select-none"
+            style={{
+              width: 64,
+              height: 64,
+              background: "var(--color-bg-elev-2)",
+              border: "1px solid var(--color-border)",
+              color: "var(--color-text-dim)",
+            }}
+          >
+            {initials}
+          </div>
+        )}
+        <div className="flex flex-col gap-2">
+          <button
+            type="button"
+            disabled={uploading}
+            onClick={() => fileRef.current?.click()}
+            className="px-3 py-1.5 text-sm rounded-md transition-colors"
+            style={{
+              background: "var(--color-bg-elev-2)",
+              border: "1px solid var(--color-border)",
+              color: uploading ? "var(--color-text-faint)" : "var(--color-text)",
+              cursor: uploading ? "not-allowed" : "pointer",
+            }}
+          >
+            {uploading ? "Uploading…" : url ? "Change picture" : "Upload picture"}
+          </button>
+          <p className="text-xs" style={{ color: "var(--color-text-faint)" }}>
+            PNG, JPG or WebP · Max 2 MB · Transparent background supported
+          </p>
+        </div>
+      </div>
+      {error && (
+        <p className="text-xs" style={{ color: "var(--color-danger)" }}>
+          {error}
+        </p>
+      )}
     </div>
   );
 }

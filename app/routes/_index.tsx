@@ -1,6 +1,6 @@
 import type { LoaderFunctionArgs, MetaFunction } from "@remix-run/cloudflare";
 import { Link, useLoaderData, useSearchParams } from "@remix-run/react";
-import { and, desc, eq, isNull } from "drizzle-orm";
+import { and, desc, eq, inArray, isNull } from "drizzle-orm";
 import { useEffect, useRef } from "react";
 import { CoreLogo } from "~/components/CoreLogo";
 import { AppShell } from "~/components/layout/AppShell";
@@ -9,7 +9,7 @@ import { Header } from "~/components/layout/Header";
 import { getCurrentUser } from "~/lib/auth/user.server";
 import { getBulkPostBadgeSummary } from "~/lib/badges.server";
 import { createDb } from "~/lib/db/index";
-import { communities, communityMemberships, posts, users } from "../../db/schema";
+import { communities, communityMemberships, follows, posts, users } from "../../db/schema";
 import { CommunityAvatar } from "./communities._index";
 
 export const meta: MetaFunction = () => [
@@ -24,7 +24,7 @@ export const meta: MetaFunction = () => [
   { property: "og:type", content: "website" },
 ];
 
-type Tab = "all" | "discover";
+type Tab = "all" | "discover" | "following";
 type Sort = "hot" | "new" | "top";
 
 type FeedPost = {
@@ -115,8 +115,67 @@ export async function loader({ request, context }: LoaderFunctionArgs) {
     };
   }
 
-  // All posts — engagement-ranked
   const orderBy = sort === "new" ? desc(posts.createdAt) : desc(posts.score);
+
+  // Following tab — only posts from people the user follows
+  if (tab === "following") {
+    const followingRows = await db
+      .select({ followeeId: follows.followeeId })
+      .from(follows)
+      .where(eq(follows.followerId, user.id));
+    const followingIds = followingRows.map((r) => r.followeeId);
+
+    if (followingIds.length === 0) {
+      return {
+        user,
+        tab,
+        sort,
+        posts: [] as FeedPost[],
+        discoverCommunities: [] as DiscoverCommunity[],
+        joinedSlugs: [] as string[],
+      };
+    }
+
+    const rawPosts = await db
+      .select({
+        id: posts.id,
+        title: posts.title,
+        type: posts.type,
+        url: posts.url,
+        score: posts.score,
+        commentCount: posts.commentCount,
+        isPinned: posts.isPinned,
+        createdAt: posts.createdAt,
+        authorHandle: users.handle,
+        communitySlug: communities.slug,
+        communityName: communities.name,
+        communityIconUrl: communities.iconUrl,
+      })
+      .from(posts)
+      .innerJoin(users, eq(posts.authorId, users.id))
+      .innerJoin(
+        communities,
+        and(eq(posts.communityId, communities.id), isNull(communities.deletedAt)),
+      )
+      .where(and(isNull(posts.removedAt), inArray(posts.authorId, followingIds)))
+      .orderBy(orderBy)
+      .limit(50);
+
+    return {
+      user,
+      tab,
+      sort,
+      posts: rawPosts.map((p) => ({
+        ...p,
+        badgeCoinsCC: 0,
+        badges: [] as { icon: string; name: string; count: number; totalCoins: number }[],
+      })),
+      discoverCommunities: [] as DiscoverCommunity[],
+      joinedSlugs: [] as string[],
+    };
+  }
+
+  // All posts — engagement-ranked
   const whereClause = isNull(posts.removedAt);
 
   const rawPosts = await db
@@ -209,25 +268,25 @@ export default function Index() {
               border: "1px solid var(--color-border)",
             }}
           >
-            {(["all", "discover"] as Tab[]).map((t) => (
+            {(["all", "following", "discover"] as Tab[]).map((t) => (
               <button
                 key={t}
                 type="button"
                 onClick={() => setTab(t)}
-                className="flex-1 py-1.5 text-sm font-medium rounded-md transition-colors capitalize"
+                className="flex-1 py-1.5 text-sm font-medium rounded-md transition-colors"
                 style={
                   tab === t
                     ? { background: "var(--color-bg-elev-2)", color: "var(--color-text)" }
                     : { color: "var(--color-text-faint)" }
                 }
               >
-                {t === "all" ? "All Posts" : "Discover"}
+                {t === "all" ? "All Posts" : t === "following" ? "Following" : "Discover"}
               </button>
             ))}
           </div>
 
           {/* Sort controls (only for post tabs) */}
-          {tab !== "discover" && (
+          {tab !== "discover" && tab !== "following" && (
             <div className="flex items-center gap-2 mb-4">
               {(["hot", "new", "top"] as Sort[]).map((s) => (
                 <button
@@ -532,15 +591,26 @@ function DiscoverCard({ community: c }: { community: DiscoverCommunity }) {
   );
 }
 
-function EmptyFeed({ tab: _tab }: { tab: Tab }) {
+function EmptyFeed({ tab }: { tab: Tab }) {
   return (
     <div
       className="rounded-lg p-8 text-center"
       style={{ background: "var(--color-bg-elev-1)", border: "1px solid var(--color-border)" }}
     >
-      <p className="text-sm" style={{ color: "var(--color-text-dim)" }}>
-        No posts yet. Check back soon.
-      </p>
+      {tab === "following" ? (
+        <>
+          <p className="text-sm mb-2" style={{ color: "var(--color-text-dim)" }}>
+            You're not following anyone yet.
+          </p>
+          <p className="text-xs" style={{ color: "var(--color-text-faint)" }}>
+            Visit a user's profile and click <strong>Follow</strong> to see their posts here.
+          </p>
+        </>
+      ) : (
+        <p className="text-sm" style={{ color: "var(--color-text-dim)" }}>
+          No posts yet. Check back soon.
+        </p>
+      )}
     </div>
   );
 }
