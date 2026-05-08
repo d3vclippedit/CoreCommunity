@@ -7,6 +7,7 @@ import { AppShell } from "~/components/layout/AppShell";
 import { Footer } from "~/components/layout/Footer";
 import { Header } from "~/components/layout/Header";
 import { getCurrentUser } from "~/lib/auth/user.server";
+import { getBulkPostBadgeSummary } from "~/lib/badges.server";
 import { createDb } from "~/lib/db/index";
 import { communities, communityMemberships, posts, users } from "../../db/schema";
 import { CommunityAvatar } from "./communities._index";
@@ -39,6 +40,8 @@ type FeedPost = {
   communitySlug: string | null;
   communityName: string | null;
   communityIconUrl: string | null;
+  badgeCoinsCC: number;
+  badges: { icon: string; name: string; count: number; totalCoins: number }[];
 };
 
 type DiscoverCommunity = {
@@ -131,7 +134,7 @@ export async function loader({ request, context }: LoaderFunctionArgs) {
       ? and(isNull(posts.removedAt), inArray(posts.communityId, joinedIds))
       : isNull(posts.removedAt);
 
-  const feedPosts = await db
+  const rawPosts = await db
     .select({
       id: posts.id,
       title: posts.title,
@@ -154,13 +157,43 @@ export async function loader({ request, context }: LoaderFunctionArgs) {
     )
     .where(whereClause)
     .orderBy(orderBy)
-    .limit(50);
+    .limit(100);
+
+  const badgeRows = await getBulkPostBadgeSummary(
+    db,
+    rawPosts.map((p) => p.id),
+  );
+
+  const badgeMap = new Map<string, typeof badgeRows>();
+  for (const b of badgeRows) {
+    if (!badgeMap.has(b.postId)) badgeMap.set(b.postId, []);
+    badgeMap.get(b.postId)!.push(b);
+  }
+
+  const feedPosts = rawPosts.map((p) => {
+    const badges = badgeMap.get(p.id) ?? [];
+    const badgeCoinsCC = badges.reduce((s, b) => s + b.totalCoins, 0);
+    return {
+      ...p,
+      badgeCoinsCC,
+      badges: badges.map((b) => ({
+        icon: b.icon,
+        name: b.name,
+        count: b.count,
+        totalCoins: b.totalCoins,
+      })),
+    };
+  });
+
+  if (sort !== "new") {
+    feedPosts.sort((a, b) => b.score + b.badgeCoinsCC / 11 - (a.score + a.badgeCoinsCC / 11));
+  }
 
   return {
     user,
     tab,
     sort,
-    posts: feedPosts,
+    posts: feedPosts.slice(0, 50),
     discoverCommunities: [] as DiscoverCommunity[],
     joinedSlugs: [] as string[],
   };
@@ -246,10 +279,53 @@ export default function Index() {
   );
 }
 
+const FEED_MILESTONE_TIERS = [
+  {
+    min: 500_000,
+    label: "Legendary",
+    className: "post-milestone-legendary",
+    color: "rgba(255,60,120,1)",
+    bg: "rgba(255,60,120,0.1)",
+  },
+  {
+    min: 100_000,
+    label: "Gold",
+    className: "post-milestone-gold",
+    color: "rgba(255,196,0,1)",
+    bg: "rgba(255,196,0,0.1)",
+  },
+  {
+    min: 25_000,
+    label: "Silver",
+    className: "post-milestone-silver",
+    color: "rgba(190,190,215,1)",
+    bg: "rgba(190,190,215,0.1)",
+  },
+  {
+    min: 10_000,
+    label: "Bronze",
+    className: "post-milestone-bronze",
+    color: "rgba(205,127,50,1)",
+    bg: "rgba(205,127,50,0.1)",
+  },
+];
+
+function getFeedMilestoneTier(cc: number) {
+  return FEED_MILESTONE_TIERS.find((t) => cc >= t.min) ?? null;
+}
+
+function formatFeedCC(n: number): string {
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}k`;
+  return String(n);
+}
+
 function FeedPostCard({ post }: { post: FeedPost }) {
+  const tier = getFeedMilestoneTier(post.badgeCoinsCC);
+
   return (
     <div
-      className="rounded-lg p-4 flex gap-4 transition-colors"
+      className={`rounded-lg p-4 flex gap-4 transition-colors${tier ? ` ${tier.className}` : ""}`}
       style={{
         background: "var(--color-bg-elev-1)",
         border: "1px solid var(--color-border)",
@@ -324,6 +400,33 @@ function FeedPostCard({ post }: { post: FeedPost }) {
             </span>
           )}
         </div>
+
+        {/* Badge strip */}
+        {post.badges.length > 0 && (
+          <div className="flex items-center gap-2 mt-1.5">
+            <div className="flex items-center gap-0.5">
+              {post.badges.slice(0, 4).map((b) => (
+                <span key={b.name} className="text-sm leading-none" title={`${b.name} ×${b.count}`}>
+                  {b.icon}
+                </span>
+              ))}
+            </div>
+            <span
+              className="text-xs font-semibold tabular-nums"
+              style={{ color: tier ? tier.color : "var(--color-text-faint)" }}
+            >
+              {formatFeedCC(post.badgeCoinsCC)} cc
+            </span>
+            {tier && (
+              <span
+                className="text-xs px-1.5 py-0.5 rounded-full font-medium"
+                style={{ background: tier.bg, color: tier.color }}
+              >
+                {tier.label}
+              </span>
+            )}
+          </div>
+        )}
 
         {/* Meta */}
         <div

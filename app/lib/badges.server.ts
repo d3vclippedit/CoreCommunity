@@ -1,7 +1,7 @@
 // Badge application — atomic: debit coins → record application → boost post score
 // All-or-nothing via D1 transaction. Earnings recorded server-side only.
 
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 import { debitCoins } from "~/lib/coins.server";
 import type { createDb } from "~/lib/db/index";
 import {
@@ -131,6 +131,29 @@ export async function getPostBadgeSummary(db: Db, postId: string) {
     .orderBy(postBadgeDefinitions.displayOrder);
 
   return rows;
+}
+
+// Bulk badge summary for feed loaders — returns flat rows grouped by postId+badge
+export async function getBulkPostBadgeSummary(db: Db, postIds: string[]) {
+  if (postIds.length === 0) return [];
+  return db
+    .select({
+      postId: postBadgeApplications.postId,
+      badgeDefinitionId: postBadgeApplications.badgeDefinitionId,
+      count: sql<number>`cast(count(*) as integer)`,
+      totalCoins: sql<number>`cast(sum(${postBadgeApplications.coinAmount}) as integer)`,
+      name: postBadgeDefinitions.name,
+      icon: postBadgeDefinitions.icon,
+      displayOrder: postBadgeDefinitions.displayOrder,
+    })
+    .from(postBadgeApplications)
+    .innerJoin(
+      postBadgeDefinitions,
+      eq(postBadgeApplications.badgeDefinitionId, postBadgeDefinitions.id),
+    )
+    .where(inArray(postBadgeApplications.postId, postIds))
+    .groupBy(postBadgeApplications.postId, postBadgeApplications.badgeDefinitionId)
+    .orderBy(postBadgeDefinitions.displayOrder);
 }
 
 // Verify user has enough coins for a badge

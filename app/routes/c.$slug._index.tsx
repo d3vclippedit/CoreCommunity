@@ -2,6 +2,7 @@ import type { LoaderFunctionArgs, MetaFunction } from "@remix-run/cloudflare";
 import { Link, useLoaderData, useSearchParams } from "@remix-run/react";
 import { and, desc, eq, isNull } from "drizzle-orm";
 import { getCurrentUser } from "~/lib/auth/user.server";
+import { getBulkPostBadgeSummary } from "~/lib/badges.server";
 import { createDb } from "~/lib/db/index";
 import { communities, posts, users } from "../../db/schema";
 
@@ -53,9 +54,37 @@ export async function loader({ params, request, context }: LoaderFunctionArgs) {
     .innerJoin(users, eq(posts.authorId, users.id))
     .where(baseWhere)
     .orderBy(orderBy)
-    .limit(50);
+    .limit(100);
 
-  return { community, posts: rows, sort, user };
+  const postIds = rows.map((r) => r.id);
+  const badgeRows = await getBulkPostBadgeSummary(db, postIds);
+
+  const badgeMap = new Map<string, typeof badgeRows>();
+  for (const b of badgeRows) {
+    if (!badgeMap.has(b.postId)) badgeMap.set(b.postId, []);
+    badgeMap.get(b.postId)!.push(b);
+  }
+
+  const enriched = rows.map((p) => {
+    const badges = badgeMap.get(p.id) ?? [];
+    const badgeCoinsCC = badges.reduce((s, b) => s + b.totalCoins, 0);
+    return {
+      ...p,
+      badgeCoinsCC,
+      badges: badges.map((b) => ({
+        icon: b.icon,
+        name: b.name,
+        count: b.count,
+        totalCoins: b.totalCoins,
+      })),
+    };
+  });
+
+  if (sort !== "new") {
+    enriched.sort((a, b) => b.score + b.badgeCoinsCC / 11 - (a.score + a.badgeCoinsCC / 11));
+  }
+
+  return { community, posts: enriched.slice(0, 50), sort, user };
 }
 
 export default function CommunityFeed() {
@@ -112,6 +141,47 @@ export default function CommunityFeed() {
   );
 }
 
+const MILESTONE_TIERS = [
+  {
+    min: 500_000,
+    label: "Legendary",
+    className: "post-milestone-legendary",
+    color: "rgba(255,60,120,1)",
+    bg: "rgba(255,60,120,0.1)",
+  },
+  {
+    min: 100_000,
+    label: "Gold",
+    className: "post-milestone-gold",
+    color: "rgba(255,196,0,1)",
+    bg: "rgba(255,196,0,0.1)",
+  },
+  {
+    min: 25_000,
+    label: "Silver",
+    className: "post-milestone-silver",
+    color: "rgba(190,190,215,1)",
+    bg: "rgba(190,190,215,0.1)",
+  },
+  {
+    min: 10_000,
+    label: "Bronze",
+    className: "post-milestone-bronze",
+    color: "rgba(205,127,50,1)",
+    bg: "rgba(205,127,50,0.1)",
+  },
+];
+
+function getMilestoneTier(cc: number) {
+  return MILESTONE_TIERS.find((t) => cc >= t.min) ?? null;
+}
+
+function formatCC(n: number): string {
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}k`;
+  return String(n);
+}
+
 function PostCard({
   post,
   communitySlug,
@@ -125,12 +195,16 @@ function PostCard({
     isPinned: boolean;
     createdAt: string;
     authorHandle: string;
+    badgeCoinsCC: number;
+    badges: { icon: string; name: string; count: number; totalCoins: number }[];
   };
   communitySlug: string;
 }) {
+  const tier = getMilestoneTier(post.badgeCoinsCC);
+
   return (
     <div
-      className="rounded-lg p-4 flex gap-3"
+      className={`rounded-lg p-4 flex gap-3${tier ? ` ${tier.className}` : ""}`}
       style={{
         background: "var(--color-bg-elev-1)",
         border: "1px solid var(--color-border)",
@@ -159,6 +233,32 @@ function PostCard({
             {post.title}
           </Link>
         </div>
+
+        {post.badges.length > 0 && (
+          <div className="flex items-center gap-2 mb-1.5">
+            <div className="flex items-center gap-0.5">
+              {post.badges.slice(0, 4).map((b) => (
+                <span key={b.name} className="text-sm leading-none" title={`${b.name} ×${b.count}`}>
+                  {b.icon}
+                </span>
+              ))}
+            </div>
+            <span
+              className="text-xs font-semibold tabular-nums"
+              style={{ color: tier ? tier.color : "var(--color-text-faint)" }}
+            >
+              {formatCC(post.badgeCoinsCC)} cc
+            </span>
+            {tier && (
+              <span
+                className="text-xs px-1.5 py-0.5 rounded-full font-medium"
+                style={{ background: tier.bg, color: tier.color }}
+              >
+                {tier.label}
+              </span>
+            )}
+          </div>
+        )}
 
         <div
           className="flex items-center gap-3 text-xs"
