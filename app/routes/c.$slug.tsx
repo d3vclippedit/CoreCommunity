@@ -175,7 +175,7 @@ export default function CommunityHub() {
               src={`https://www.twitch.tv/embed/${twitchChannel}/chat?parent=${host}&darkpopout`}
               title={`${community.name} live chat`}
               width="100%"
-              height="600"
+              height="800"
               style={{ display: "block" }}
             />
           </div>
