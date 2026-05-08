@@ -173,6 +173,7 @@ export async function loader({ params, request, context }: LoaderFunctionArgs) {
     minMembershipDays: number | null;
     minPostCount: number | null;
     winnerUserId: string | null;
+    winnerHandle: string | null;
     hasEntered: boolean;
     isMod: boolean;
   } | null = null;
@@ -198,6 +199,14 @@ export async function loader({ params, request, context }: LoaderFunctionArgs) {
         memberRole === "senior_mod" ||
         memberRole === "admin" ||
         memberRole === "streamer";
+      let winnerHandle: string | null = null;
+      if (giveaway.winnerUserId) {
+        const wu = await db.query.users.findFirst({
+          where: eq(users.id, giveaway.winnerUserId),
+          columns: { handle: true },
+        });
+        winnerHandle = wu?.handle ?? null;
+      }
       giveawayData = {
         id: giveaway.id,
         prize: giveaway.prize,
@@ -207,6 +216,7 @@ export async function loader({ params, request, context }: LoaderFunctionArgs) {
         minMembershipDays: giveaway.minMembershipDays,
         minPostCount: giveaway.minPostCount,
         winnerUserId: giveaway.winnerUserId,
+        winnerHandle,
         hasEntered,
         isMod: modCheck,
       };
@@ -1124,18 +1134,30 @@ function GiveawayWidget({
     minMembershipDays: number | null;
     minPostCount: number | null;
     winnerUserId: string | null;
+    winnerHandle: string | null;
     hasEntered: boolean;
     isMod: boolean;
   };
   isLoggedIn: boolean;
 }) {
-  const fetcher = useFetcher<{ ok?: boolean; error?: string; winnerId?: string }>();
+  const fetcher = useFetcher<{
+    ok?: boolean;
+    error?: string;
+    winnerId?: string;
+    winnerHandle?: string | null;
+  }>();
   const isActive = giveaway.status === "active";
   const isEnded = giveaway.status === "ended";
 
   const enteredNow = fetcher.data?.ok && !fetcher.data.winnerId;
   const drawnNow = !!fetcher.data?.winnerId;
   const showError = fetcher.data && "error" in fetcher.data ? fetcher.data.error : null;
+
+  const winnerDisplay = drawnNow
+    ? fetcher.data?.winnerHandle
+    : isEnded
+      ? giveaway.winnerHandle
+      : null;
 
   const requirements: string[] = [];
   if (giveaway.minMembershipDays)
@@ -1202,8 +1224,8 @@ function GiveawayWidget({
       )}
 
       {(isEnded && giveaway.winnerUserId) || drawnNow ? (
-        <p className="text-xs font-medium" style={{ color: "var(--color-success)" }}>
-          Winner drawn!
+        <p className="text-sm font-semibold" style={{ color: "var(--color-success)" }}>
+          {winnerDisplay ? `🎉 @${winnerDisplay} won the giveaway!` : "🎉 A winner has been drawn!"}
         </p>
       ) : null}
 

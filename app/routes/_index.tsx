@@ -35,6 +35,8 @@ type FeedPost = {
   url: string | null;
   imageUrl: string | null;
   body: string | null;
+  embedKind: string | null;
+  embedRef: string | null;
   score: number;
   commentCount: number;
   isPinned: boolean;
@@ -154,6 +156,8 @@ export async function loader({ request, context }: LoaderFunctionArgs) {
         url: posts.url,
         imageUrl: posts.imageUrl,
         body: posts.body,
+        embedKind: posts.embedKind,
+        embedRef: posts.embedRef,
         score: posts.score,
         commentCount: posts.commentCount,
         isPinned: posts.isPinned,
@@ -198,6 +202,8 @@ export async function loader({ request, context }: LoaderFunctionArgs) {
       url: posts.url,
       imageUrl: posts.imageUrl,
       body: posts.body,
+      embedKind: posts.embedKind,
+      embedRef: posts.embedRef,
       score: posts.score,
       commentCount: posts.commentCount,
       isPinned: posts.isPinned,
@@ -392,8 +398,7 @@ function FeedPostCard({ post }: { post: FeedPost }) {
   const isExpandable =
     (post.type === "image" && !!post.imageUrl) ||
     (post.type === "video" && !!post.url) ||
-    (post.type === "text" && !!post.body) ||
-    (post.type === "link" && !!post.url && !!detectEmbed(post.url));
+    (post.type === "link" && (!!post.embedKind || (!!post.url && !!detectEmbed(post.url))));
 
   const hasThumb =
     !expanded && ((post.type === "image" && !!post.imageUrl) || post.type === "video");
@@ -634,6 +639,8 @@ function FeedPostCard({ post }: { post: FeedPost }) {
             imageUrl={post.imageUrl}
             body={post.body}
             title={post.title}
+            embedKind={post.embedKind}
+            embedRef={post.embedRef}
           />
         </div>
       )}

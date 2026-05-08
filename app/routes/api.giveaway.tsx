@@ -5,7 +5,7 @@ import { getCurrentUser } from "~/lib/auth/user.server";
 import { createDb } from "~/lib/db/index";
 import { checkRateLimit } from "~/lib/ratelimit";
 import { generateId } from "~/lib/utils";
-import { communityMemberships, giveawayEntries, giveaways, posts } from "../../db/schema";
+import { communityMemberships, giveawayEntries, giveaways, posts, users } from "../../db/schema";
 
 // Giveaway creation is handled via the post submit page (type=giveaway tab).
 // This API handles enter, draw, and cancel intents only.
@@ -122,7 +122,14 @@ export async function action({ request, context }: ActionFunctionArgs) {
       .set({ winnerUserId: winner?.userId, winnerDrawnAt: now, status: "ended", updatedAt: now })
       .where(eq(giveaways.id, giveawayId));
 
-    return { ok: true, winnerId: winner?.userId };
+    const winnerUser = winner
+      ? await db.query.users.findFirst({
+          where: eq(users.id, winner.userId),
+          columns: { handle: true },
+        })
+      : null;
+
+    return { ok: true, winnerId: winner?.userId, winnerHandle: winnerUser?.handle ?? null };
   }
 
   if (intent === "cancel") {

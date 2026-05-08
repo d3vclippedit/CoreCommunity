@@ -99,6 +99,8 @@ export async function loader({ request, context }: LoaderFunctionArgs) {
     };
   });
 
+  enriched.sort((a, b) => b.memberCount - a.memberCount || b.badgeCoinsCC - a.badgeCoinsCC);
+
   return { communities: enriched, joinedIds: [...joinedIds] };
 }
 

@@ -1,4 +1,4 @@
-import coreLogoUrl from "~/assets/Main.png";
+import coreLogoUrl from "~/assets/Main2.png";
 
 export function CoreLogo({
   className,

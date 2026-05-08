@@ -1,3 +1,5 @@
+import { type EmbedKind, getEmbedSrc } from "~/lib/embeds";
+
 export function detectEmbed(url: string) {
   const ytMatch = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
   if (ytMatch) return { kind: "youtube" as const, id: ytMatch[1] };
@@ -96,12 +98,16 @@ export function ExpandedPostContent({
   imageUrl,
   body,
   title,
+  embedKind,
+  embedRef,
 }: {
   type: string;
   url?: string | null;
   imageUrl?: string | null;
   body?: string | null;
   title: string;
+  embedKind?: string | null;
+  embedRef?: string | null;
 }) {
   if (type === "image" && imageUrl) {
     return (
@@ -119,6 +125,26 @@ export function ExpandedPostContent({
   }
 
   if ((type === "video" || type === "link") && url) {
+    // Use stored embed data (set at post creation) — more reliable than regex detection
+    if (embedKind && embedRef) {
+      const parent = window.location.hostname;
+      const src = getEmbedSrc(embedKind as Exclude<EmbedKind, null>, embedRef, parent);
+      return (
+        <div
+          className="relative w-full rounded-md overflow-hidden"
+          style={{ paddingTop: "56.25%" }}
+        >
+          <iframe
+            src={src}
+            className="absolute inset-0 w-full h-full"
+            allowFullScreen
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            title="Embedded content"
+          />
+        </div>
+      );
+    }
+    // Fallback: detect from raw URL
     const embed = detectEmbed(url);
     if (embed) return <EmbedPlayer url={url} />;
     if (type === "link") {
