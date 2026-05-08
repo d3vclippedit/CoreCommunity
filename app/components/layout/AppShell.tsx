@@ -38,7 +38,7 @@ export function AppShell({ leftNav, rightRail, children, className, transparent 
           >
             {leftNav && (
               <aside
-                className="hidden lg:flex flex-col flex-shrink-0 w-72 xl:w-80 overflow-y-auto"
+                className="hidden lg:flex flex-col flex-shrink-0 w-80 xl:w-96 overflow-y-auto"
                 aria-label="Community navigation"
               >
                 <div className="pb-8 pr-4">{leftNav}</div>
@@ -54,7 +54,7 @@ export function AppShell({ leftNav, rightRail, children, className, transparent 
 
             {rightRail && (
               <aside
-                className="hidden xl:flex flex-col flex-shrink-0 w-80 xl:w-96 overflow-y-auto"
+                className="hidden xl:flex flex-col flex-shrink-0 w-48 xl:w-56 overflow-y-auto"
                 aria-label="Community info"
               >
                 <div className="space-y-4 pb-8 pl-2 pr-4">{rightRail}</div>
