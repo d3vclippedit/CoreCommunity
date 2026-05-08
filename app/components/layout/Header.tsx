@@ -1,5 +1,6 @@
 import { Form, Link, useLocation, useRouteLoaderData } from "@remix-run/react";
 import { Coins } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import coreMiniUrl from "~/assets/CormunitiesTop.png";
 import { cn } from "~/lib/cn";
 import { formatCoins } from "~/lib/coins";
@@ -189,25 +190,77 @@ function UserMenu({
 }: {
   user: { displayName: string; handle: string; avatarUrl?: string | null };
 }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    function handle(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener("mousedown", handle);
+    return () => document.removeEventListener("mousedown", handle);
+  }, [open]);
+
   return (
-    <div className="flex items-center gap-1">
-      <Link
-        to={`/u/${user.handle}`}
-        className="flex items-center gap-2 px-2 py-1 rounded-md transition-colors no-underline"
-        style={{ color: "var(--color-text)" }}
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className="flex items-center gap-2 px-2 py-1 rounded-md transition-colors"
+        style={{
+          color: "var(--color-text)",
+          background: "none",
+          border: "none",
+          cursor: "pointer",
+        }}
       >
         <Avatar displayName={user.displayName} avatarUrl={user.avatarUrl} size={28} />
         <span className="hidden sm:block text-sm font-medium">{user.displayName}</span>
-      </Link>
-      <Form method="post" action="/auth/logout">
-        <button
-          type="submit"
-          className="px-2 py-1 text-xs rounded-md transition-colors"
-          style={{ color: "var(--color-text-faint)" }}
+      </button>
+
+      {open && (
+        <div
+          className="absolute right-0 mt-1 w-44 rounded-lg py-1 z-50"
+          style={{
+            background: "var(--color-bg-elev-1)",
+            border: "1px solid var(--color-border)",
+            boxShadow: "0 8px 24px rgba(0,0,0,0.4)",
+          }}
         >
-          Log out
-        </button>
-      </Form>
+          <Link
+            to={`/u/${user.handle}`}
+            onClick={() => setOpen(false)}
+            className="flex items-center px-3 py-2 text-sm no-underline transition-colors hover:opacity-80"
+            style={{ color: "var(--color-text)", display: "flex" }}
+          >
+            View profile
+          </Link>
+          <Link
+            to="/settings"
+            onClick={() => setOpen(false)}
+            className="flex items-center px-3 py-2 text-sm no-underline transition-colors hover:opacity-80"
+            style={{ color: "var(--color-text)", display: "flex" }}
+          >
+            Account settings
+          </Link>
+          <div style={{ borderTop: "1px solid var(--color-border)", margin: "4px 0" }} />
+          <Form method="post" action="/auth/logout">
+            <button
+              type="submit"
+              className="w-full text-left flex items-center px-3 py-2 text-sm transition-colors hover:opacity-80"
+              style={{
+                color: "var(--color-danger)",
+                background: "none",
+                border: "none",
+                cursor: "pointer",
+              }}
+            >
+              Log out
+            </button>
+          </Form>
+        </div>
+      )}
     </div>
   );
 }
