@@ -27,73 +27,78 @@ export async function loader({ request, context }: LoaderFunctionArgs) {
 export async function action({ request, context }: ActionFunctionArgs) {
   const { env } = context.cloudflare;
 
-  const ipRl = await checkRateLimit(env.KV, "login_ip", getIp(request), 5, 30);
-  if (!ipRl.allowed) {
-    return {
-      error: `Too many attempts. Try again in ${Math.ceil(ipRl.retryAfterSeconds / 60)} minutes.`,
-    };
-  }
+  try {
+    const ipRl = await checkRateLimit(env.KV, "login_ip", getIp(request), 5, 30);
+    if (!ipRl.allowed) {
+      return {
+        error: `Too many attempts. Try again in ${Math.ceil(ipRl.retryAfterSeconds / 60)} minutes.`,
+      };
+    }
 
-  const form = await request.formData();
-  const identifier = (form.get("identifier") as string | null)?.trim() ?? "";
-  const password = (form.get("password") as string | null) ?? "";
-  const redirectTo = (form.get("redirectTo") as string | null) ?? "/";
+    const form = await request.formData();
+    const identifier = (form.get("identifier") as string | null)?.trim() ?? "";
+    const password = (form.get("password") as string | null) ?? "";
+    const redirectTo = (form.get("redirectTo") as string | null) ?? "/";
 
-  if (!identifier || !password) {
-    return { error: "Please enter your email or handle and password." };
-  }
+    if (!identifier || !password) {
+      return { error: "Please enter your email or handle and password." };
+    }
 
-  const db = createDb(env.DB);
-  const isEmail = identifier.includes("@");
-  const cleanIdentifier = isEmail
-    ? identifier.toLowerCase()
-    : identifier.replace(/^@/, "").toLowerCase();
+    const db = createDb(env.DB);
+    const isEmail = identifier.includes("@");
+    const cleanIdentifier = isEmail
+      ? identifier.toLowerCase()
+      : identifier.replace(/^@/, "").toLowerCase();
 
-  const user = await db.query.users.findFirst({
-    where: isEmail ? eq(users.email, cleanIdentifier) : eq(users.handle, cleanIdentifier),
-    columns: {
-      id: true,
-      email: true,
-      handle: true,
-      passwordHash: true,
-      deletedAt: true,
-    },
-  });
+    const user = await db.query.users.findFirst({
+      where: isEmail ? eq(users.email, cleanIdentifier) : eq(users.handle, cleanIdentifier),
+      columns: {
+        id: true,
+        email: true,
+        handle: true,
+        passwordHash: true,
+        deletedAt: true,
+      },
+    });
 
-  // Rate limit per email too
-  const emailRl = await checkRateLimit(env.KV, "login_email", cleanIdentifier, 5, 30);
+    // Rate limit per email too
+    const emailRl = await checkRateLimit(env.KV, "login_email", cleanIdentifier, 5, 30);
 
-  // First-login password setup: D3V founder account only
-  if (
-    user &&
-    !user.deletedAt &&
-    user.handle === "d3v" &&
-    user.passwordHash === "__founder_unset__"
-  ) {
-    const pwErr = validatePassword(password);
-    if (pwErr) return { error: PASSWORD_ERROR_MESSAGES[pwErr] };
-    const hash = await hashPassword(password);
-    await db
-      .update(users)
-      .set({ passwordHash: hash, updatedAt: new Date() })
-      .where(eq(users.id, user.id));
+    // First-login password setup: D3V founder account only
+    if (
+      user &&
+      !user.deletedAt &&
+      user.handle === "d3v" &&
+      user.passwordHash === "__founder_unset__"
+    ) {
+      const pwErr = validatePassword(password);
+      if (pwErr) return { error: PASSWORD_ERROR_MESSAGES[pwErr] };
+      const hash = await hashPassword(password);
+      await db
+        .update(users)
+        .set({ passwordHash: hash, updatedAt: new Date() })
+        .where(eq(users.id, user.id));
+      const token = await createSession(env.KV, user.id);
+      return redirect(redirectTo.startsWith("/") ? redirectTo : "/", {
+        headers: { "Set-Cookie": makeSessionCookie(token) },
+      });
+    }
+
+    const valid = user && !user.deletedAt && (await verifyPassword(password, user.passwordHash));
+
+    if (!valid || !emailRl.allowed) {
+      return { error: "Incorrect email/handle or password." };
+    }
+
     const token = await createSession(env.KV, user.id);
-    return redirect(redirectTo.startsWith("/") ? redirectTo : "/", {
+    const safeRedirect = redirectTo.startsWith("/") ? redirectTo : "/";
+    return redirect(safeRedirect, {
       headers: { "Set-Cookie": makeSessionCookie(token) },
     });
+  } catch (err) {
+    console.error("Login error:", err);
+    return { error: "Something went wrong. Please try again in a moment." };
   }
-
-  const valid = user && !user.deletedAt && (await verifyPassword(password, user.passwordHash));
-
-  if (!valid || !emailRl.allowed) {
-    return { error: "Incorrect email/handle or password." };
-  }
-
-  const token = await createSession(env.KV, user.id);
-  const safeRedirect = redirectTo.startsWith("/") ? redirectTo : "/";
-  return redirect(safeRedirect, {
-    headers: { "Set-Cookie": makeSessionCookie(token) },
-  });
 }
 
 export default function Login() {

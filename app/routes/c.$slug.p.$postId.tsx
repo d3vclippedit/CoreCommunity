@@ -283,6 +283,27 @@ export default function PostPermalink() {
                     {new URL(post.url).hostname}
                   </a>
                 )}
+                {post.type === "image" && post.url && (
+                  <div className="mb-3 rounded-md overflow-hidden">
+                    <img
+                      src={post.url}
+                      alt={post.title}
+                      className="max-w-full rounded-md"
+                      style={{ maxHeight: "600px", objectFit: "contain", display: "block" }}
+                    />
+                  </div>
+                )}
+                {post.type === "video" && post.url && (
+                  <div className="mb-3 rounded-md overflow-hidden">
+                    {/* biome-ignore lint/a11y/useMediaCaption: user-uploaded clips, no caption track available */}
+                    <video
+                      src={post.url}
+                      controls
+                      className="w-full rounded-md"
+                      style={{ maxHeight: "540px", display: "block" }}
+                    />
+                  </div>
+                )}
                 {post.type === "link" && post.url && !post.embedKind && ogPreview && (
                   <OgPreviewCard preview={ogPreview} url={post.url} />
                 )}

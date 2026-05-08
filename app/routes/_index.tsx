@@ -30,7 +30,7 @@ type Sort = "hot" | "new" | "top";
 type FeedPost = {
   id: string;
   title: string;
-  type: string;
+  type: string; // "text" | "link" | "image" | "video"
   url: string | null;
   score: number;
   commentCount: number;
@@ -454,6 +454,22 @@ function FeedPostCard({ post }: { post: FeedPost }) {
                   return "link";
                 }
               })()}
+            </span>
+          )}
+          {post.type === "image" && (
+            <span
+              className="text-xs flex-shrink-0 mt-0.5 px-1.5 py-0.5 rounded"
+              style={{ background: "var(--color-bg-elev-2)", color: "var(--color-text-faint)" }}
+            >
+              image
+            </span>
+          )}
+          {post.type === "video" && (
+            <span
+              className="text-xs flex-shrink-0 mt-0.5 px-1.5 py-0.5 rounded"
+              style={{ background: "var(--color-bg-elev-2)", color: "var(--color-text-faint)" }}
+            >
+              video
             </span>
           )}
         </div>
