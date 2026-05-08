@@ -41,11 +41,11 @@ export function Header({ user }: HeaderProps) {
           <img
             src={coreMiniUrl}
             alt="Cormunities"
+            className="header-logo"
             style={{
               height: 36,
               width: "auto",
               mixBlendMode: "screen",
-              filter: "brightness(1.05)",
               display: "block",
             }}
           />
