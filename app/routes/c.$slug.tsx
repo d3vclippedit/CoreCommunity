@@ -152,14 +152,21 @@ export default function CommunityHub() {
             className="rounded-md overflow-hidden"
             style={{ border: "1px solid var(--color-border)" }}
           >
-            <iframe
-              src={`https://player.twitch.tv/?channel=${twitchChannel}&parent=${host}&muted=true`}
-              title={`${community.name} live stream`}
-              width="100%"
-              height="160"
-              allowFullScreen
-              style={{ display: "block" }}
-            />
+            <div style={{ position: "relative", paddingTop: "56.25%" }}>
+              <iframe
+                src={`https://player.twitch.tv/?channel=${twitchChannel}&parent=${host}&muted=true`}
+                title={`${community.name} live stream`}
+                allowFullScreen
+                style={{
+                  position: "absolute",
+                  top: 0,
+                  left: 0,
+                  width: "100%",
+                  height: "100%",
+                  display: "block",
+                }}
+              />
+            </div>
           </div>
           <p
             className="text-xs font-semibold uppercase tracking-wide mt-1"
