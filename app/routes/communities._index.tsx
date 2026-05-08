@@ -198,7 +198,7 @@ function CommunityCard({
       }}
     >
       {/* ── Hero image (top half) ── */}
-      <Link to={`/c/${c.slug}`} className="block relative flex-shrink-0 h-[77px] md:h-[112px]">
+      <Link to={`/c/${c.slug}`} className="block relative flex-shrink-0 h-[140px] md:h-[185px]">
         {c.bannerUrl ? (
           <img src={c.bannerUrl} alt="" aria-hidden="true" className="w-full h-full object-cover" />
         ) : (
@@ -227,8 +227,11 @@ function CommunityCard({
           </div>
         )}
 
-        {/* Avatar overlapping bottom of hero */}
-        <div className="absolute" style={{ bottom: "-36px", left: "12px" }}>
+        {/* Avatar overlapping bottom of hero — dark ring prevents gradient bleed */}
+        <div
+          className="absolute rounded-full"
+          style={{ bottom: "-36px", left: "12px", padding: "3px", background: "var(--color-bg)" }}
+        >
           <CommunityAvatar name={c.name} iconUrl={c.iconUrl} size={80} accentColor={accent} />
         </div>
       </Link>
