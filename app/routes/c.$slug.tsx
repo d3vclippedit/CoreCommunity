@@ -14,6 +14,7 @@ import { Footer } from "~/components/layout/Footer";
 import { Header } from "~/components/layout/Header";
 import { getCurrentUser } from "~/lib/auth/user.server";
 import { createDb } from "~/lib/db/index";
+import { isTwitchLive } from "~/lib/twitch.server";
 import type { loader as rootLoader } from "~/root";
 import { communities, communityMemberships, users } from "../../db/schema";
 import { CommunityAvatar } from "./communities._index";
@@ -72,17 +73,25 @@ export async function loader({ params, request, context }: LoaderFunctionArgs) {
 
   const host = new URL(request.url).hostname;
 
+  const twitchChannel = community.twitchChannel ?? null;
+  const isLive =
+    twitchChannel && env.TWITCH_CLIENT_ID && env.TWITCH_CLIENT_SECRET
+      ? await isTwitchLive(twitchChannel, env).catch(() => false)
+      : false;
+
   return {
     community,
     membership: membership ?? null,
     staffRows,
     ownerUser: ownerUser ?? null,
     host,
+    isLive,
   };
 }
 
 export default function CommunityHub() {
-  const { community, membership, staffRows, ownerUser, host } = useLoaderData<typeof loader>();
+  const { community, membership, staffRows, ownerUser, host, isLive } =
+    useLoaderData<typeof loader>();
   const root = useRouteLoaderData<typeof rootLoader>("root");
   const rootUser = root?.user ?? null;
 
@@ -139,44 +148,76 @@ export default function CommunityHub() {
 
       {twitchChannel && (
         <div className="mt-4 flex flex-col gap-2">
-          <p
-            className="text-xs font-semibold uppercase tracking-wide"
-            style={{ color: "var(--color-text-faint)" }}
-          >
-            Live stream
-          </p>
-          <div
-            className="rounded-md overflow-hidden"
-            style={{ border: "1px solid var(--color-border)" }}
-          >
-            <iframe
-              src={`https://player.twitch.tv/?channel=${twitchChannel}&parent=${host}&muted=true`}
-              title={`${community.name} live stream`}
-              width="100%"
-              height="160"
-              allowFullScreen
-              style={{ display: "block" }}
-            />
+          <div className="flex items-center gap-2">
+            <p
+              className="text-xs font-semibold uppercase tracking-wide"
+              style={{ color: "var(--color-text-faint)" }}
+            >
+              Live stream
+            </p>
+            {isLive && (
+              <span
+                className="text-xs px-1.5 py-0.5 rounded-full font-medium"
+                style={{ background: "rgba(229,72,77,0.15)", color: "var(--color-danger)" }}
+              >
+                LIVE
+              </span>
+            )}
           </div>
 
-          <p
-            className="text-xs font-semibold uppercase tracking-wide mt-1"
-            style={{ color: "var(--color-text-faint)" }}
-          >
-            Live chat
-          </p>
-          <div
-            className="rounded-md overflow-hidden"
-            style={{ border: "1px solid var(--color-border)" }}
-          >
-            <iframe
-              src={`https://www.twitch.tv/embed/${twitchChannel}/chat?parent=${host}&darkpopout`}
-              title={`${community.name} live chat`}
-              width="100%"
-              height="400"
-              style={{ display: "block" }}
-            />
-          </div>
+          {isLive ? (
+            <>
+              <div
+                className="rounded-md overflow-hidden"
+                style={{ border: "1px solid var(--color-border)" }}
+              >
+                <iframe
+                  src={`https://player.twitch.tv/?channel=${twitchChannel}&parent=${host}&muted=true`}
+                  title={`${community.name} live stream`}
+                  width="100%"
+                  height="160"
+                  allowFullScreen
+                  style={{ display: "block" }}
+                />
+              </div>
+              <p
+                className="text-xs font-semibold uppercase tracking-wide mt-1"
+                style={{ color: "var(--color-text-faint)" }}
+              >
+                Live chat
+              </p>
+              <div
+                className="rounded-md overflow-hidden"
+                style={{ border: "1px solid var(--color-border)" }}
+              >
+                <iframe
+                  src={`https://www.twitch.tv/embed/${twitchChannel}/chat?parent=${host}&darkpopout`}
+                  title={`${community.name} live chat`}
+                  width="100%"
+                  height="400"
+                  style={{ display: "block" }}
+                />
+              </div>
+            </>
+          ) : (
+            <a
+              href={`https://twitch.tv/${twitchChannel}`}
+              target="_blank"
+              rel="noreferrer"
+              className="flex items-center gap-2 rounded-md px-3 py-2.5 text-sm no-underline transition-opacity hover:opacity-80"
+              style={{
+                background: "var(--color-bg-elev-2)",
+                border: "1px solid var(--color-border)",
+                color: "var(--color-text-dim)",
+              }}
+            >
+              <span style={{ color: "#9146FF", fontSize: "14px" }}>⬛</span>
+              <span>/{twitchChannel}</span>
+              <span className="ml-auto text-xs" style={{ color: "var(--color-text-faint)" }}>
+                Offline
+              </span>
+            </a>
+          )}
         </div>
       )}
     </nav>
