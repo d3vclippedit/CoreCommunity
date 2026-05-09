@@ -87,10 +87,27 @@ export async function loader({ params, request, context }: LoaderFunctionArgs) {
       .limit(50),
   ]);
 
+  const ROLE_RANK: Record<string, number> = {
+    streamer: 5,
+    admin: 4,
+    senior_mod: 3,
+    mod: 2,
+    member: 1,
+  };
+
+  // Keep only the highest role per community in case of duplicate membership rows
+  const communityMap = new Map<string, (typeof joinedCommunities)[number]>();
+  for (const c of joinedCommunities) {
+    const existing = communityMap.get(c.slug);
+    if (!existing || (ROLE_RANK[c.role] ?? 0) > (ROLE_RANK[existing.role] ?? 0)) {
+      communityMap.set(c.slug, c);
+    }
+  }
+
   return {
     user,
     recentPosts,
-    joinedCommunities,
+    joinedCommunities: Array.from(communityMap.values()),
     viewerId: viewer?.id ?? null,
     viewerIsFollowing,
     wallPostRows,
