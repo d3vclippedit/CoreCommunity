@@ -5,7 +5,13 @@ import { InlineMedia, detectEmbed } from "~/components/PostExpand";
 import { getCurrentUser } from "~/lib/auth/user.server";
 import { getBulkPostBadgeSummary } from "~/lib/badges.server";
 import { createDb } from "~/lib/db/index";
-import { communities, posts, users } from "../../db/schema";
+import {
+  communities,
+  communityMemberships,
+  communitySubscriptions,
+  posts,
+  users,
+} from "../../db/schema";
 
 export const meta: MetaFunction<typeof loader> = ({ data }) => {
   if (!data) return [{ title: "Cormunities" }];
@@ -36,6 +42,36 @@ export async function loader({ params, request, context }: LoaderFunctionArgs) {
 
   const user = await getCurrentUser(request, env);
 
+  // Check if viewer is a subscriber or staff so we can reveal members-only posts
+  let canSeeMembersOnly = false;
+  if (user) {
+    const membership = await db.query.communityMemberships.findFirst({
+      where: and(
+        eq(communityMemberships.userId, user.id),
+        eq(communityMemberships.communityId, community.id),
+      ),
+      columns: { role: true },
+    });
+    const isStaff =
+      membership?.role === "mod" ||
+      membership?.role === "senior_mod" ||
+      membership?.role === "admin" ||
+      membership?.role === "streamer";
+    if (isStaff) {
+      canSeeMembersOnly = true;
+    } else {
+      const sub = await db.query.communitySubscriptions.findFirst({
+        where: and(
+          eq(communitySubscriptions.userId, user.id),
+          eq(communitySubscriptions.communityId, community.id),
+          eq(communitySubscriptions.status, "active"),
+        ),
+        columns: { id: true },
+      });
+      if (sub) canSeeMembersOnly = true;
+    }
+  }
+
   const baseWhere = and(eq(posts.communityId, community.id), isNull(posts.removedAt));
   const orderBy =
     sort === "new" ? desc(posts.createdAt) : sort === "top" ? desc(posts.score) : desc(posts.score); // hot: use score until hotScore column is added
@@ -50,6 +86,7 @@ export async function loader({ params, request, context }: LoaderFunctionArgs) {
       body: posts.body,
       embedKind: posts.embedKind,
       embedRef: posts.embedRef,
+      visibility: posts.visibility,
       score: posts.score,
       commentCount: posts.commentCount,
       isPinned: posts.isPinned,
@@ -93,7 +130,11 @@ export async function loader({ params, request, context }: LoaderFunctionArgs) {
     enriched.sort((a, b) => b.score + b.badgeCoinsCC / 11 - (a.score + a.badgeCoinsCC / 11));
   }
 
-  return { community, posts: enriched.slice(0, 50), sort, user };
+  const visible = canSeeMembersOnly
+    ? enriched
+    : enriched.filter((p) => p.visibility !== "members_only");
+
+  return { community, posts: visible.slice(0, 50), sort, user, canSeeMembersOnly };
 }
 
 export default function CommunityFeed() {
@@ -204,6 +245,7 @@ type PostCardPost = {
   body: string | null;
   embedKind: string | null;
   embedRef: string | null;
+  visibility: string;
   score: number;
   commentCount: number;
   isPinned: boolean;
@@ -263,6 +305,9 @@ function PostCard({
                 >
                   {post.type}
                 </span>
+              )}
+              {post.visibility === "members_only" && (
+                <span className="members-only-badge flex-shrink-0 mt-0.5">Members</span>
               )}
             </div>
 

@@ -112,6 +112,11 @@ export const communities = sqliteTable("communities", {
   isVerified: integer("is_verified", { mode: "boolean" }).notNull().default(false),
   isPublic: integer("is_public", { mode: "boolean" }).notNull().default(true),
   memberCount: integer("member_count").notNull().default(0), // denormalized
+  // Paid membership programme
+  membershipEnabled: integer("membership_enabled", { mode: "boolean" }).notNull().default(false),
+  membershipPriceCoins: integer("membership_price_coins").notNull().default(500),
+  membershipBadgeIcon: text("membership_badge_icon").notNull().default("⭐"),
+  membershipBorderColor: text("membership_border_color").notNull().default("#F59E0B"),
   createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
   updatedAt: integer("updated_at", { mode: "timestamp" }).notNull(),
   deletedAt: integer("deleted_at", { mode: "timestamp" }),
@@ -222,6 +227,7 @@ export const posts = sqliteTable("posts", {
   commentCount: integer("comment_count").notNull().default(0),
   isPinned: integer("is_pinned", { mode: "boolean" }).notNull().default(false),
   isFeatured: integer("is_featured", { mode: "boolean" }).notNull().default(false),
+  visibility: text("visibility").$type<"public" | "members_only">().notNull().default("public"),
   removedAt: integer("removed_at", { mode: "timestamp" }),
   removedByUserId: text("removed_by_user_id"),
   removedReason: text("removed_reason"),
@@ -728,6 +734,39 @@ export const banAppeals = sqliteTable("ban_appeals", {
   status: text("status").$type<AppealStatus>().notNull().default("pending"),
   reviewedByUserId: text("reviewed_by_user_id"),
   reviewNote: text("review_note"),
+  createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
+  updatedAt: integer("updated_at", { mode: "timestamp" }).notNull(),
+});
+
+// ─── Community Subscriptions (paid membership) ────────────────────────────────
+
+export const communitySubscriptions = sqliteTable("community_subscriptions", {
+  id: text("id").primaryKey(),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  communityId: text("community_id")
+    .notNull()
+    .references(() => communities.id, { onDelete: "cascade" }),
+  status: text("status").$type<"active" | "cancelled">().notNull().default("active"),
+  coinsPerWeek: integer("coins_per_week").notNull(),
+  nextChargeAt: integer("next_charge_at", { mode: "timestamp" }).notNull(),
+  cancelledAt: integer("cancelled_at", { mode: "timestamp" }),
+  createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
+  updatedAt: integer("updated_at", { mode: "timestamp" }).notNull(),
+});
+
+// ─── Wall Posts (personal profile feed) ──────────────────────────────────────
+
+export const wallPosts = sqliteTable("wall_posts", {
+  id: text("id").primaryKey(),
+  authorId: text("author_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  body: text("body"),
+  imageUrl: text("image_url"),
+  score: integer("score").notNull().default(0),
+  commentCount: integer("comment_count").notNull().default(0),
   createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
   updatedAt: integer("updated_at", { mode: "timestamp" }).notNull(),
 });

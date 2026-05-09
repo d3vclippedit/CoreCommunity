@@ -130,6 +130,23 @@ export async function action({ params, request, context }: ActionFunctionArgs) {
   const mediaUrl = (form.get("mediaUrl") as string | null)?.trim() ?? "";
   const type = (form.get("type") as string | null) ?? "text";
 
+  // Only staff (mod+) can mark a post members-only
+  const rawVisibility = form.get("visibility") as string | null;
+  const membership0 = await db.query.communityMemberships.findFirst({
+    where: and(
+      eq(communityMemberships.userId, user.id),
+      eq(communityMemberships.communityId, community.id),
+    ),
+    columns: { role: true },
+  });
+  const isStaff =
+    membership0?.role === "mod" ||
+    membership0?.role === "senior_mod" ||
+    membership0?.role === "admin" ||
+    membership0?.role === "streamer";
+  const visibility: "public" | "members_only" =
+    isStaff && rawVisibility === "members_only" ? "members_only" : "public";
+
   if (!title || title.length < 3) return { error: "Title must be at least 3 characters." };
   if (title.length > 300) return { error: "Title must be under 300 characters." };
 
@@ -218,6 +235,7 @@ export async function action({ params, request, context }: ActionFunctionArgs) {
       url: null,
       embedKind: null,
       embedRef: null,
+      visibility,
       score: 0,
       upvotes: 0,
       downvotes: 0,
@@ -289,6 +307,7 @@ export async function action({ params, request, context }: ActionFunctionArgs) {
       url: null,
       embedKind: null,
       embedRef: null,
+      visibility,
       score: 0,
       upvotes: 0,
       downvotes: 0,
@@ -333,6 +352,7 @@ export async function action({ params, request, context }: ActionFunctionArgs) {
     url: postUrl,
     embedKind: embed?.kind ?? null,
     embedRef: embed?.ref ?? null,
+    visibility,
     score: 0,
     upvotes: 0,
     downvotes: 0,
@@ -507,6 +527,7 @@ export default function Submit() {
   const [tab, setTab] = useState<Tab>("text");
   const [bodyHtml, setBodyHtml] = useState("");
   const [mediaUrl, setMediaUrl] = useState("");
+  const [membersOnly, setMembersOnly] = useState(false);
   const [pollOpts, setPollOpts] = useState(["", ""]);
   const [EditorComp, setEditorComp] = useState<TiptapEditorType | null>(null);
   const titleRef = useRef<HTMLInputElement>(null);
@@ -861,6 +882,51 @@ export default function Submit() {
                   placeholder="0 = none"
                   min="0"
                 />
+              </div>
+            )}
+
+            <input
+              type="hidden"
+              name="visibility"
+              value={membersOnly ? "members_only" : "public"}
+            />
+
+            {isMod && (
+              <div className="flex items-center gap-2 pt-1">
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={membersOnly}
+                  onClick={() => setMembersOnly((v) => !v)}
+                  className="relative inline-flex h-5 w-9 shrink-0 rounded-full transition-colors"
+                  style={{
+                    background: membersOnly ? "#F59E0B" : "var(--color-border)",
+                    cursor: "pointer",
+                  }}
+                >
+                  <span
+                    className="pointer-events-none inline-block h-4 w-4 rounded-full transition-transform"
+                    style={{
+                      background: "var(--color-text)",
+                      transform: membersOnly ? "translateX(18px)" : "translateX(2px)",
+                      marginTop: "2px",
+                    }}
+                  />
+                </button>
+                <span
+                  className="text-sm"
+                  style={{ color: membersOnly ? "#F59E0B" : "var(--color-text-dim)" }}
+                >
+                  Members only
+                </span>
+                {membersOnly && (
+                  <span
+                    className="text-xs px-1.5 py-0.5 rounded"
+                    style={{ background: "rgba(245,158,11,0.15)", color: "#F59E0B" }}
+                  >
+                    Only subscribed members will see this post
+                  </span>
+                )}
               </div>
             )}
 

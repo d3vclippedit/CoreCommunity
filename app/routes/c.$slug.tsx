@@ -436,21 +436,83 @@ export default function CommunityHub() {
     </div>
   );
 
+  const [immersive, setImmersive] = useState(false);
+
   return (
     <div
       className="h-screen flex flex-col overflow-hidden"
       style={
         {
-          background: community.backgroundCss ?? "var(--color-bg)",
+          background: immersive
+            ? "var(--color-bg)"
+            : (community.backgroundCss ?? "var(--color-bg)"),
           ...(community.accentColor ? { "--color-accent": community.accentColor } : {}),
         } as React.CSSProperties
       }
     >
       <Header user={rootUser} />
-      <AppShell leftNav={leftNav} rightRail={rightRail} transparent className="flex-1 min-h-0">
+      <AppShell
+        leftNav={leftNav}
+        rightRail={immersive ? undefined : <>{rightRail}</>}
+        transparent={!immersive}
+        className="flex-1 min-h-0"
+      >
         <Outlet />
       </AppShell>
-      <Footer />
+      {!immersive && <Footer />}
+      {/* Immersive toggle — fixed bottom-right */}
+      <button
+        type="button"
+        onClick={() => setImmersive((v) => !v)}
+        title={immersive ? "Exit immersive mode" : "Immersive mode"}
+        style={{
+          position: "fixed",
+          bottom: 18,
+          right: 18,
+          zIndex: 50,
+          width: 34,
+          height: 34,
+          borderRadius: 8,
+          background: "var(--color-bg-elev-2)",
+          border: "1px solid var(--color-border)",
+          color: "var(--color-text-faint)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          cursor: "pointer",
+          transition: "color 0.15s, border-color 0.15s",
+        }}
+      >
+        {immersive ? (
+          /* compress / exit */
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 14 14"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            aria-hidden="true"
+          >
+            <path d="M9 1h4v4M5 13H1V9M1 5V1h4M13 9v4H9" />
+          </svg>
+        ) : (
+          /* expand */
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 14 14"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            aria-hidden="true"
+          >
+            <path d="M9 1h4v4M5 13H1V9M14 0L9 5M0 14l5-5" />
+          </svg>
+        )}
+      </button>
     </div>
   );
 }

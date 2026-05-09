@@ -1,5 +1,12 @@
-import type { LoaderFunctionArgs, MetaFunction } from "@remix-run/cloudflare";
-import { Link, useFetcher, useLoaderData, useRouteLoaderData } from "@remix-run/react";
+import type { ActionFunctionArgs, LoaderFunctionArgs, MetaFunction } from "@remix-run/cloudflare";
+import {
+  Form,
+  Link,
+  useFetcher,
+  useLoaderData,
+  useNavigation,
+  useRouteLoaderData,
+} from "@remix-run/react";
 import { and, desc, eq, isNull } from "drizzle-orm";
 import { AppShell } from "~/components/layout/AppShell";
 import { Footer } from "~/components/layout/Footer";
@@ -7,8 +14,9 @@ import { Avatar, Header } from "~/components/layout/Header";
 import { getCurrentUser } from "~/lib/auth/user.server";
 import { createDb } from "~/lib/db/index";
 import { isFollowing } from "~/lib/follows.server";
+import { generateId } from "~/lib/utils";
 import type { loader as rootLoader } from "~/root";
-import { communities, communityMemberships, posts, users } from "../../db/schema";
+import { communities, communityMemberships, posts, users, wallPosts } from "../../db/schema";
 
 export const meta: MetaFunction<typeof loader> = ({ data }) => {
   if (!data) return [{ title: "Cormunities" }];
@@ -45,7 +53,7 @@ export async function loader({ params, request, context }: LoaderFunctionArgs) {
 
   if (!user) throw new Response("User not found", { status: 404 });
 
-  const [recentPosts, joinedCommunities, viewerIsFollowing] = await Promise.all([
+  const [recentPosts, joinedCommunities, viewerIsFollowing, wallPostRows] = await Promise.all([
     db
       .select({
         id: posts.id,
@@ -71,17 +79,66 @@ export async function loader({ params, request, context }: LoaderFunctionArgs) {
       .where(eq(communityMemberships.userId, user.id))
       .limit(10),
     viewer && viewer.id !== user.id ? isFollowing(db, viewer.id, user.id) : Promise.resolve(false),
+    db
+      .select()
+      .from(wallPosts)
+      .where(eq(wallPosts.authorId, user.id))
+      .orderBy(desc(wallPosts.createdAt))
+      .limit(50),
   ]);
 
-  return { user, recentPosts, joinedCommunities, viewerId: viewer?.id ?? null, viewerIsFollowing };
+  return {
+    user,
+    recentPosts,
+    joinedCommunities,
+    viewerId: viewer?.id ?? null,
+    viewerIsFollowing,
+    wallPostRows,
+  };
+}
+
+export async function action({ params, request, context }: ActionFunctionArgs) {
+  const { env } = context.cloudflare;
+  const viewer = await getCurrentUser(request, env);
+  if (!viewer) return Response.json({ error: "Not signed in." }, { status: 401 });
+
+  const db = createDb(env.DB);
+  const profileUser = await db.query.users.findFirst({
+    where: and(eq(users.handle, params.handle ?? ""), isNull(users.deletedAt)),
+    columns: { id: true },
+  });
+  if (!profileUser) throw new Response("User not found", { status: 404 });
+  if (viewer.id !== profileUser.id)
+    return Response.json({ error: "You can only post to your own wall." }, { status: 403 });
+
+  const form = await request.formData();
+  const body = (form.get("body") as string | null)?.trim() ?? "";
+  if (!body || body.length < 1)
+    return Response.json({ error: "Post cannot be empty." }, { status: 400 });
+  if (body.length > 2000)
+    return Response.json({ error: "Post too long (max 2000 characters)." }, { status: 400 });
+
+  const now = new Date();
+  await db.insert(wallPosts).values({
+    id: generateId(),
+    authorId: viewer.id,
+    body,
+    score: 0,
+    commentCount: 0,
+    createdAt: now,
+    updatedAt: now,
+  });
+
+  return Response.json({ success: true });
 }
 
 export default function UserProfile() {
-  const { user, recentPosts, joinedCommunities, viewerId, viewerIsFollowing } =
+  const { user, recentPosts, joinedCommunities, viewerId, viewerIsFollowing, wallPostRows } =
     useLoaderData<typeof loader>();
   const root = useRouteLoaderData<typeof rootLoader>("root");
   const rootUser = root?.user ?? null;
   const followFetcher = useFetcher<{ following?: boolean; error?: string }>();
+  const nav = useNavigation();
 
   const isOwnProfile = viewerId === user.id;
   const optimisticFollowing =
@@ -222,6 +279,83 @@ export default function UserProfile() {
                 })}
               </p>
             </div>
+          </div>
+
+          {/* Wall */}
+          <div className="mb-6">
+            <h2 className="text-sm font-semibold mb-3" style={{ color: "var(--color-text)" }}>
+              Wall
+            </h2>
+
+            {isOwnProfile && (
+              <Form method="post" className="mb-4">
+                <div
+                  className="rounded-lg overflow-hidden"
+                  style={{
+                    background: "var(--color-bg-elev-1)",
+                    border: "1px solid var(--color-border)",
+                  }}
+                >
+                  <textarea
+                    name="body"
+                    placeholder="Share something with your followers…"
+                    rows={3}
+                    required
+                    className="w-full px-4 py-3 text-sm resize-none"
+                    style={{
+                      background: "transparent",
+                      border: "none",
+                      color: "var(--color-text)",
+                      outline: "none",
+                    }}
+                  />
+                  <div
+                    className="px-4 py-2 flex justify-end"
+                    style={{ borderTop: "1px solid var(--color-border)" }}
+                  >
+                    <button
+                      type="submit"
+                      disabled={nav.state === "submitting"}
+                      className="px-4 py-1.5 text-sm font-medium rounded-md transition-opacity hover:opacity-80 disabled:opacity-50"
+                      style={{ background: "var(--color-text)", color: "var(--color-bg)" }}
+                    >
+                      {nav.state === "submitting" ? "Posting…" : "Post"}
+                    </button>
+                  </div>
+                </div>
+              </Form>
+            )}
+
+            {wallPostRows.length === 0 ? (
+              <p className="text-sm" style={{ color: "var(--color-text-faint)" }}>
+                {isOwnProfile
+                  ? "Nothing posted yet. Use the box above to share something."
+                  : "No wall posts yet."}
+              </p>
+            ) : (
+              <div className="flex flex-col gap-2">
+                {wallPostRows.map((wp) => (
+                  <div
+                    key={wp.id}
+                    className="rounded-lg p-4"
+                    style={{
+                      background: "var(--color-bg-elev-1)",
+                      border: "1px solid var(--color-border)",
+                    }}
+                  >
+                    <p
+                      className="text-sm leading-relaxed whitespace-pre-wrap"
+                      style={{ color: "var(--color-text)" }}
+                    >
+                      {wp.body}
+                    </p>
+                    <p className="text-xs mt-2" style={{ color: "var(--color-text-faint)" }}>
+                      {relativeTime(String(wp.createdAt))}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Recent posts */}
