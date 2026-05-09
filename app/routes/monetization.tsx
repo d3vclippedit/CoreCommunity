@@ -385,7 +385,7 @@ export default function MonetisationPage() {
 
           {/* ── Buy Coins tab ── */}
           {activeTab === "buy" && (
-            <div className="flex flex-col lg:flex-row gap-6 items-start">
+            <div className="flex flex-col lg:flex-row gap-6 items-stretch">
               {/* Left — info */}
               <div className="flex-1 min-w-0 flex flex-col gap-5">
                 {data.user && (
@@ -487,32 +487,34 @@ export default function MonetisationPage() {
                 </div>
 
                 <div
-                  className="rounded-xl p-5"
+                  className="rounded-xl px-4 py-3"
                   style={{
                     background: "var(--color-bg-elev-1)",
                     border: "1px solid var(--color-border)",
                   }}
                 >
-                  <h2 className="text-sm font-semibold mb-4" style={{ color: "var(--color-text)" }}>
+                  <h2 className="text-sm font-semibold mb-2" style={{ color: "var(--color-text)" }}>
                     Badge types
                   </h2>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  <div className="grid grid-cols-4 gap-1.5">
                     {BADGE_DISPLAY.map((b) => (
                       <div
                         key={b.name}
-                        className="flex flex-col items-center gap-1.5 rounded-lg p-3"
+                        className="flex items-center gap-1.5 rounded-md px-2 py-1.5"
                         style={{ background: "var(--color-bg-elev-2)" }}
                       >
-                        <span className="text-2xl">{b.icon}</span>
-                        <span
-                          className="text-xs font-semibold"
-                          style={{ color: "var(--color-text)" }}
-                        >
-                          {b.name}
-                        </span>
-                        <span className="text-xs" style={{ color: "var(--color-text-faint)" }}>
-                          {b.coins} cc
-                        </span>
+                        <span className="text-sm flex-shrink-0">{b.icon}</span>
+                        <div className="min-w-0">
+                          <p
+                            className="text-xs font-medium truncate"
+                            style={{ color: "var(--color-text)" }}
+                          >
+                            {b.name}
+                          </p>
+                          <p className="text-xs" style={{ color: "var(--color-text-faint)" }}>
+                            {b.coins} cc
+                          </p>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -610,7 +612,7 @@ function MembershipSection({
 
   return (
     <div
-      className="rounded-xl p-5"
+      className="rounded-xl p-5 flex flex-col flex-1"
       style={{ background: "var(--color-bg-elev-1)", border: "1px solid var(--color-border)" }}
     >
       <h2 className="text-sm font-semibold mb-1" style={{ color: "var(--color-text)" }}>
