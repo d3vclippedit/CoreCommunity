@@ -1,5 +1,5 @@
 import type { LoaderFunctionArgs, MetaFunction } from "@remix-run/cloudflare";
-import { Link, useLoaderData, useSearchParams } from "@remix-run/react";
+import { Link, useLoaderData, useNavigate, useSearchParams } from "@remix-run/react";
 import { and, desc, eq, inArray, isNull } from "drizzle-orm";
 import { InlineMedia, detectEmbed } from "~/components/PostExpand";
 import { getCurrentUser } from "~/lib/auth/user.server";
@@ -247,6 +247,8 @@ function PostCard({
   post: PostCardPost;
   communitySlug: string;
 }) {
+  const navigate = useNavigate();
+  const postUrl = `/c/${communitySlug}/p/${post.id}`;
   const caption = post.body ? post.body.replace(/<[^>]*>/g, "").trim() : null;
 
   const hasMedia =
@@ -257,6 +259,11 @@ function PostCard({
   const cardInner = (
     <div
       className="post-card rounded-lg p-4"
+      tabIndex={0}
+      onClick={() => navigate(postUrl)}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") navigate(postUrl);
+      }}
       style={{
         background: "var(--color-bg-elev-1)",
         border: "1px solid var(--color-border)",
@@ -337,6 +344,8 @@ function PostCard({
           {hasMedia && (
             <div
               className="flex-shrink-0 rounded-lg overflow-hidden"
+              onClick={(e) => e.stopPropagation()}
+              onKeyDown={(e) => e.stopPropagation()}
               style={{
                 width: "min(550px, 55%)",
                 background: "var(--color-bg-elev-2)",

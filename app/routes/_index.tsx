@@ -1,5 +1,5 @@
 import type { LoaderFunctionArgs, MetaFunction } from "@remix-run/cloudflare";
-import { Link, useLoaderData, useSearchParams } from "@remix-run/react";
+import { Link, useLoaderData, useNavigate, useSearchParams } from "@remix-run/react";
 import { and, desc, eq, inArray, isNull, or } from "drizzle-orm";
 import { useEffect, useRef } from "react";
 import { CoreLogo } from "~/components/CoreLogo";
@@ -439,6 +439,8 @@ function formatFeedCC(n: number): string {
 }
 
 function FeedPostCard({ post }: { post: FeedPost }) {
+  const navigate = useNavigate();
+  const postUrl = `/c/${post.communitySlug}/p/${post.id}`;
   const tier = getFeedMilestoneTier(post.badgeCoinsCC);
   const caption = post.body ? post.body.replace(/<[^>]*>/g, "").trim() : null;
 
@@ -450,6 +452,11 @@ function FeedPostCard({ post }: { post: FeedPost }) {
   return (
     <div
       className="post-card rounded-lg p-4"
+      tabIndex={0}
+      onClick={() => navigate(postUrl)}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") navigate(postUrl);
+      }}
       style={{
         background: "var(--color-bg-elev-1)",
         border: "1px solid var(--color-border)",
@@ -458,7 +465,11 @@ function FeedPostCard({ post }: { post: FeedPost }) {
       <div className="flex flex-col gap-2">
         <div className="flex gap-4 items-start">
           {/* Community icon */}
-          <Link to={`/c/${post.communitySlug}`} className="flex-shrink-0 self-start mt-0.5">
+          <Link
+            to={`/c/${post.communitySlug}`}
+            className="flex-shrink-0 self-start mt-0.5"
+            onClick={(e) => e.stopPropagation()}
+          >
             <CommunityAvatar
               name={post.communityName ?? ""}
               iconUrl={post.communityIconUrl}
@@ -469,7 +480,11 @@ function FeedPostCard({ post }: { post: FeedPost }) {
           {/* Text content */}
           <div className="flex-1 min-w-0">
             <div className="mb-1">
-              <Link to={`/c/${post.communitySlug}`} className="no-underline group">
+              <Link
+                to={`/c/${post.communitySlug}`}
+                className="no-underline group"
+                onClick={(e) => e.stopPropagation()}
+              >
                 <span
                   className="text-xs font-medium group-hover:underline"
                   style={{ color: "var(--color-text-dim)" }}
@@ -569,6 +584,8 @@ function FeedPostCard({ post }: { post: FeedPost }) {
           {hasMedia && (
             <div
               className="flex-shrink-0 rounded-lg overflow-hidden self-center"
+              onClick={(e) => e.stopPropagation()}
+              onKeyDown={(e) => e.stopPropagation()}
               style={{
                 width: "min(550px, 55%)",
                 background: "var(--color-bg-elev-2)",

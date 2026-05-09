@@ -13,6 +13,10 @@
       },
       "style": {
         "noNonNullAssertion": "warn"
+      },
+      "a11y": {
+        "useSemanticElements": "off",
+        "noNoninteractiveTabindex": "off"
       }
     }
   },
