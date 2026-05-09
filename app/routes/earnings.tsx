@@ -285,20 +285,17 @@ function PioneerTab({
         <p className="text-base font-semibold mb-2" style={{ color: "var(--color-text)" }}>
           Cormunities Pioneer
         </p>
-        <p className="text-sm mb-1" style={{ color: "var(--color-text-dim)" }}>
-          This is an invite-only program for contracted advertising partners.
+        <p className="text-sm mb-4" style={{ color: "var(--color-text-dim)" }}>
+          Pioneers are the founding creators of CORE — early access, a verified badge, and a share
+          of platform ad revenue. Apply and we'll review your application personally.
         </p>
-        <p className="text-xs" style={{ color: "var(--color-text-faint)" }}>
-          If you are interested, reach out via{" "}
-          <Link
-            to="/feedback"
-            className="no-underline hover:underline"
-            style={{ color: "var(--color-text-dim)" }}
-          >
-            feedback
-          </Link>
-          .
-        </p>
+        <Link
+          to="/pioneer/apply"
+          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-md text-sm font-semibold no-underline transition-opacity hover:opacity-80"
+          style={{ background: "var(--color-text)", color: "var(--color-bg)" }}
+        >
+          Apply now →
+        </Link>
       </div>
     );
   }

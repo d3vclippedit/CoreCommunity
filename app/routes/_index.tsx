@@ -788,17 +788,6 @@ function LandingPage() {
                 >
                   Create account
                 </Link>
-                <Link
-                  to="/pioneer/apply"
-                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-md text-sm font-medium no-underline transition-colors"
-                  style={{
-                    background: "var(--color-bg-elev-1)",
-                    color: "var(--color-success)",
-                    border: "1px solid var(--color-success)",
-                  }}
-                >
-                  Become a Pioneer →
-                </Link>
               </div>
             </div>
 
