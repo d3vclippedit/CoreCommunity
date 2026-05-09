@@ -452,9 +452,9 @@ export default function CommunityHub() {
     >
       <Header user={rootUser} />
       <AppShell
-        leftNav={immersive ? undefined : leftNav}
-        rightRail={immersive ? undefined : <>{rightRail}</>}
-        transparent={!immersive}
+        leftNav={leftNav}
+        rightRail={<>{rightRail}</>}
+        transparent={true}
         className="flex-1 min-h-0"
       >
         <Outlet />
