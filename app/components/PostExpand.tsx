@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { type EmbedKind, getEmbedSrc } from "~/lib/embeds";
 
 export function detectEmbed(url: string) {
@@ -178,6 +179,72 @@ export function ExpandedPostContent({
   return null;
 }
 
+function PlayFacade({
+  thumbnailUrl,
+  label,
+  onPlay,
+}: {
+  thumbnailUrl: string | null;
+  label: string;
+  onPlay: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onPlay}
+      style={{
+        position: "relative",
+        width: "100%",
+        aspectRatio: "16/9",
+        display: "block",
+        background: "var(--color-bg-elev-2)",
+        border: "none",
+        padding: 0,
+        cursor: "pointer",
+        overflow: "hidden",
+      }}
+      aria-label={`Play ${label}`}
+    >
+      {thumbnailUrl && (
+        <img
+          src={thumbnailUrl}
+          alt=""
+          loading="lazy"
+          style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+        />
+      )}
+      {/* dark overlay */}
+      <span
+        style={{
+          position: "absolute",
+          inset: 0,
+          background: thumbnailUrl ? "rgba(0,0,0,0.35)" : "rgba(0,0,0,0.6)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        {/* play circle */}
+        <span
+          style={{
+            width: 52,
+            height: 52,
+            borderRadius: "50%",
+            background: "rgba(255,255,255,0.92)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+            <path d="M6 4l12 6-12 6V4z" fill="#111" />
+          </svg>
+        </span>
+      </span>
+    </button>
+  );
+}
+
 export function InlineMedia({
   type,
   url,
@@ -191,6 +258,8 @@ export function InlineMedia({
   embedKind?: string | null;
   embedRef?: string | null;
 }) {
+  const [active, setActive] = useState(false);
+
   if (type === "image" && imageUrl) {
     return (
       <img
@@ -203,15 +272,26 @@ export function InlineMedia({
   }
 
   if ((type === "video" || type === "link") && embedKind && embedRef) {
-    const parent = window.location.hostname;
-    const src = getEmbedSrc(embedKind as Exclude<EmbedKind, null>, embedRef, parent);
+    if (active) {
+      const parent = window.location.hostname;
+      const src = getEmbedSrc(embedKind as Exclude<EmbedKind, null>, embedRef, parent, true);
+      return (
+        <iframe
+          src={src}
+          title="Embedded content"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+          allowFullScreen
+          style={{ width: "100%", aspectRatio: "16/9", border: "none", display: "block" }}
+        />
+      );
+    }
+    const thumbnailUrl =
+      embedKind === "youtube" ? `https://img.youtube.com/vi/${embedRef}/mqdefault.jpg` : null;
     return (
-      <iframe
-        src={src}
-        title="Embedded content"
-        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-        allowFullScreen
-        style={{ width: "100%", aspectRatio: "16/9", border: "none", display: "block" }}
+      <PlayFacade
+        thumbnailUrl={thumbnailUrl}
+        label={embedKind === "youtube" ? "YouTube video" : "Twitch clip"}
+        onPlay={() => setActive(true)}
       />
     );
   }
@@ -233,27 +313,43 @@ export function InlineMedia({
       embed?.kind === "twitch-vod" ||
       embed?.kind === "twitch-clip"
     ) {
-      const parent = window.location.hostname;
-      let src = "";
-      if (embed.kind === "youtube") src = `https://www.youtube.com/embed/${embed.id}?rel=0`;
-      if (embed.kind === "twitch-vod")
-        src = `https://player.twitch.tv/?video=${embed.id}&parent=${parent}&autoplay=false`;
-      if (embed.kind === "twitch-clip")
-        src = `https://clips.twitch.tv/embed?clip=${embed.id}&parent=${parent}&autoplay=false`;
+      if (active) {
+        const parent = window.location.hostname;
+        let src = "";
+        if (embed.kind === "youtube") src = `https://www.youtube.com/embed/${embed.id}?autoplay=1`;
+        if (embed.kind === "twitch-vod")
+          src = `https://player.twitch.tv/?video=${embed.id}&parent=${parent}&autoplay=true`;
+        if (embed.kind === "twitch-clip")
+          src = `https://clips.twitch.tv/embed?clip=${embed.id}&parent=${parent}&autoplay=true`;
+        return (
+          <iframe
+            src={src}
+            title="Embedded content"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowFullScreen
+            style={{ width: "100%", aspectRatio: "16/9", border: "none", display: "block" }}
+          />
+        );
+      }
+      const thumbnailUrl =
+        embed.kind === "youtube" ? `https://img.youtube.com/vi/${embed.id}/mqdefault.jpg` : null;
       return (
-        <iframe
-          src={src}
-          title="Embedded content"
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-          allowFullScreen
-          style={{ width: "100%", aspectRatio: "16/9", border: "none", display: "block" }}
+        <PlayFacade
+          thumbnailUrl={thumbnailUrl}
+          label={embed.kind === "youtube" ? "YouTube video" : "Twitch clip"}
+          onPlay={() => setActive(true)}
         />
       );
     }
     if (embed?.kind === "direct-video") {
       return (
         // biome-ignore lint/a11y/useMediaCaption: user-uploaded video, no captions available
-        <video src={url} controls style={{ width: "100%", maxHeight: 200, display: "block" }} />
+        <video
+          src={url}
+          controls
+          preload="none"
+          style={{ width: "100%", maxHeight: 200, display: "block" }}
+        />
       );
     }
   }

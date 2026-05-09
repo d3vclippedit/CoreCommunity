@@ -34,9 +34,15 @@ export function parseEmbed(url: string): EmbedInfo | null {
   }
 }
 
-export function getEmbedSrc(kind: Exclude<EmbedKind, null>, ref: string, host: string): string {
-  if (kind === "youtube") return `https://www.youtube.com/embed/${ref}`;
+export function getEmbedSrc(
+  kind: Exclude<EmbedKind, null>,
+  ref: string,
+  host: string,
+  autoplay = false,
+): string {
+  if (kind === "youtube")
+    return `https://www.youtube.com/embed/${ref}${autoplay ? "?autoplay=1" : ""}`;
   if (kind === "twitch_vod")
-    return `https://player.twitch.tv/?video=${ref}&parent=${host}&autoplay=false`;
-  return `https://clips.twitch.tv/embed?clip=${ref}&parent=${host}`;
+    return `https://player.twitch.tv/?video=${ref}&parent=${host}&autoplay=${autoplay}`;
+  return `https://clips.twitch.tv/embed?clip=${ref}&parent=${host}&autoplay=${autoplay}`;
 }

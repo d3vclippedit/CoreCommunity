@@ -24,6 +24,11 @@ export const links: LinksFunction = () => [
     rel: "stylesheet",
     href: "https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=JetBrains+Mono:wght@400;500&display=swap",
   },
+  { rel: "preconnect", href: "https://www.youtube.com" },
+  { rel: "preconnect", href: "https://i.ytimg.com", crossOrigin: "anonymous" as const },
+  { rel: "dns-prefetch", href: "https://player.twitch.tv" },
+  { rel: "dns-prefetch", href: "https://clips.twitch.tv" },
+  { rel: "dns-prefetch", href: "https://static-cdn.jtvnw.net" },
   { rel: "stylesheet", href: tailwindStyles },
   { rel: "icon", href: "/favicon.ico" },
 ];
