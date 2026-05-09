@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { type EmbedKind, getEmbedSrc } from "~/lib/embeds";
+import { renderMentions } from "~/lib/mentions";
 
 export function detectEmbed(url: string) {
   const ytMatch = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
@@ -171,7 +172,7 @@ export function ExpandedPostContent({
       <div
         className="prose-body"
         // biome-ignore lint/security/noDangerouslySetInnerHtml: content authored via Tiptap controlled editor
-        dangerouslySetInnerHTML={{ __html: body }}
+        dangerouslySetInnerHTML={{ __html: renderMentions(body) }}
       />
     );
   }

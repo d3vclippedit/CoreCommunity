@@ -9,6 +9,7 @@ import { getActiveBadgeDefinitions, getPostBadgeSummary } from "~/lib/badges.ser
 import { getBalance } from "~/lib/coins.server";
 import { createDb } from "~/lib/db/index";
 import { getEmbedSrc } from "~/lib/embeds";
+import { renderMentions } from "~/lib/mentions";
 import { type OgPreview, getOgPreview } from "~/lib/og.server";
 import { canFeaturePost, canPinPost } from "~/lib/permissions";
 import { checkRateLimit } from "~/lib/ratelimit";
@@ -442,7 +443,7 @@ export default function PostPermalink() {
                   <div
                     className="prose-body mb-3"
                     // biome-ignore lint/security/noDangerouslySetInnerHtml: sanitized server-side
-                    dangerouslySetInnerHTML={{ __html: sanitizeHtml(post.body) }}
+                    dangerouslySetInnerHTML={{ __html: renderMentions(sanitizeHtml(post.body)) }}
                   />
                 )}
                 {pollData && <PollWidget pollData={pollData} userId={rootUser?.id ?? null} />}
@@ -769,9 +770,16 @@ function CommentThread({
               <p
                 className="text-sm leading-relaxed whitespace-pre-wrap"
                 style={{ color: "var(--color-text)" }}
-              >
-                {comment.body}
-              </p>
+                // biome-ignore lint/security/noDangerouslySetInnerHtml: text is entity-escaped before mention links are injected
+                dangerouslySetInnerHTML={{
+                  __html: renderMentions(
+                    (comment.body ?? "")
+                      .replace(/&/g, "&amp;")
+                      .replace(/</g, "&lt;")
+                      .replace(/>/g, "&gt;"),
+                  ),
+                }}
+              />
             </>
           )}
         </div>
