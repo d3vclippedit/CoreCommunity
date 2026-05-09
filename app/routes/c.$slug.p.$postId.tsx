@@ -1,7 +1,7 @@
 import type { ActionFunctionArgs, LoaderFunctionArgs, MetaFunction } from "@remix-run/cloudflare";
 import { Form, Link, useFetcher, useLoaderData, useRouteLoaderData } from "@remix-run/react";
 import { and, desc, eq, gt, isNull, or, sql } from "drizzle-orm";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { AppShell } from "~/components/layout/AppShell";
 import { Footer } from "~/components/layout/Footer";
 import { getCurrentUser } from "~/lib/auth/user.server";
@@ -755,6 +755,20 @@ function CommentThread({
   user: { id: string } | null;
   depth: number;
 }) {
+  const [showReply, setShowReply] = useState(false);
+  const replyFetcher = useFetcher<typeof action>();
+
+  useEffect(() => {
+    if (
+      replyFetcher.state === "idle" &&
+      replyFetcher.data &&
+      "ok" in replyFetcher.data &&
+      replyFetcher.data.ok
+    ) {
+      setShowReply(false);
+    }
+  }, [replyFetcher.state, replyFetcher.data]);
+
   return (
     <div
       className={depth > 0 ? "pl-4 border-l" : ""}
@@ -795,21 +809,88 @@ function CommentThread({
                   ),
                 }}
               />
+              {user && (
+                <button
+                  type="button"
+                  onClick={() => setShowReply((v) => !v)}
+                  className="text-xs mt-1.5 hover:underline"
+                  style={{
+                    color: "var(--color-text-faint)",
+                    background: "none",
+                    border: "none",
+                    cursor: "pointer",
+                    padding: 0,
+                  }}
+                >
+                  {showReply ? "Cancel" : "Reply"}
+                </button>
+              )}
             </>
+          )}
+
+          {showReply && (
+            <div className="mt-2">
+              <replyFetcher.Form method="post" className="flex flex-col gap-2">
+                <input type="hidden" name="parentCommentId" value={comment.id} />
+                <textarea
+                  name="body"
+                  placeholder={`Reply to @${comment.authorHandle}…`}
+                  rows={2}
+                  required
+                  autoFocus
+                  className="w-full rounded-md px-3 py-2 text-sm resize-y"
+                  style={{
+                    background: "var(--color-bg-elev-2)",
+                    border: "1px solid var(--color-border)",
+                    color: "var(--color-text)",
+                    outline: "none",
+                    minHeight: "64px",
+                  }}
+                />
+                <div className="flex items-center gap-2 flex-wrap">
+                  <button
+                    type="submit"
+                    disabled={replyFetcher.state !== "idle"}
+                    className="px-3 py-1 text-xs font-medium rounded-md disabled:opacity-60"
+                    style={{ background: "var(--color-text)", color: "var(--color-bg)" }}
+                  >
+                    {replyFetcher.state !== "idle" ? "Posting…" : "Reply"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowReply(false)}
+                    className="text-xs px-2 py-1 rounded-md"
+                    style={{
+                      color: "var(--color-text-faint)",
+                      background: "none",
+                      border: "1px solid var(--color-border)",
+                      cursor: "pointer",
+                    }}
+                  >
+                    Cancel
+                  </button>
+                  {replyFetcher.data && "error" in replyFetcher.data && replyFetcher.data.error && (
+                    <p className="text-xs" style={{ color: "var(--color-danger)" }}>
+                      {replyFetcher.data.error}
+                    </p>
+                  )}
+                </div>
+              </replyFetcher.Form>
+            </div>
           )}
         </div>
       </div>
-      {depth < 3 &&
-        replies.map((r) => (
-          <CommentThread
-            key={r.id}
-            comment={r}
-            replies={nestedReplies[r.id] ?? []}
-            nestedReplies={nestedReplies}
-            user={user}
-            depth={depth + 1}
-          />
-        ))}
+
+      {replies.map((r) => (
+        <CommentThread
+          key={r.id}
+          comment={r}
+          replies={nestedReplies[r.id] ?? []}
+          nestedReplies={nestedReplies}
+          user={user}
+          depth={depth + 1}
+        />
+      ))}
     </div>
   );
 }

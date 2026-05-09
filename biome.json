@@ -16,7 +16,8 @@
       },
       "a11y": {
         "useSemanticElements": "off",
-        "noNoninteractiveTabindex": "off"
+        "noNoninteractiveTabindex": "off",
+        "noAutofocus": "off"
       }
     }
   },
