@@ -453,7 +453,7 @@ export default function CommunityHub() {
       <Header user={rootUser} />
       <AppShell
         leftNav={leftNav}
-        rightRail={<>{rightRail}</>}
+        rightRail={rightRail}
         transparent={true}
         className="flex-1 min-h-0"
       >
