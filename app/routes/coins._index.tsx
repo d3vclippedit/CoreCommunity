@@ -241,6 +241,13 @@ export default function CoinsPage() {
                 </div>
               </div>
 
+              {/* Member Subscription */}
+              <MembershipSection
+                communities={membershipCommunities}
+                subscribedIds={subscribedIds}
+                user={user}
+              />
+
               {/* Badge types */}
               <div
                 className="rounded-xl p-5"
@@ -322,13 +329,6 @@ export default function CoinsPage() {
                   </div>
                 )}
               </div>
-
-              {/* Member Subscription */}
-              <MembershipSection
-                communities={membershipCommunities}
-                subscribedIds={subscribedIds}
-                user={user}
-              />
             </div>
           </div>
         </div>
