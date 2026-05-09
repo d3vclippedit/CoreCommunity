@@ -449,10 +449,10 @@ function FeedPostCard({ post }: { post: FeedPost }) {
 
   return (
     <div
-      className={`post-card rounded-lg p-4${tier ? ` ${tier.className}` : ""}`}
+      className="post-card rounded-lg p-4"
       style={{
         background: "var(--color-bg-elev-1)",
-        border: `1px solid ${tier ? tier.borderColor : "var(--color-border)"}`,
+        border: "1px solid var(--color-border)",
       }}
     >
       <div className="flex flex-col gap-2">
