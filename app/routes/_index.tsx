@@ -339,7 +339,7 @@ export default function Index() {
                 key={t}
                 type="button"
                 onClick={() => setTab(t)}
-                className="flex-1 py-1.5 text-sm font-medium rounded-md transition-colors"
+                className={`flex-1 py-1.5 text-sm font-medium rounded-md transition-colors${tab !== t ? " tab-btn" : ""}`}
                 style={
                   tab === t
                     ? { background: "var(--color-bg-elev-2)", color: "var(--color-text)" }
@@ -359,7 +359,7 @@ export default function Index() {
                   key={s}
                   type="button"
                   onClick={() => setSort(s)}
-                  className="px-3 py-1 text-xs font-medium rounded-md capitalize transition-colors"
+                  className={`px-3 py-1 text-xs font-medium rounded-md capitalize transition-colors${sort !== s ? " tab-btn" : ""}`}
                   style={
                     sort === s
                       ? { background: "var(--color-bg-elev-2)", color: "var(--color-text)" }

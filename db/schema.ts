@@ -756,6 +756,34 @@ export const communitySubscriptions = sqliteTable("community_subscriptions", {
   updatedAt: integer("updated_at", { mode: "timestamp" }).notNull(),
 });
 
+// ─── Notifications ────────────────────────────────────────────────────────────
+
+export type NotificationType = "community_post" | "mention" | "badge_received";
+
+export const notifications = sqliteTable("notifications", {
+  id: text("id").primaryKey(),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  type: text("type").$type<NotificationType>().notNull(),
+  actorId: text("actor_id").references(() => users.id, { onDelete: "set null" }),
+  communityId: text("community_id").references(() => communities.id, { onDelete: "cascade" }),
+  postId: text("post_id").references(() => posts.id, { onDelete: "cascade" }),
+  commentId: text("comment_id"),
+  readAt: integer("read_at", { mode: "timestamp" }),
+  createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
+});
+
+export const communityNotificationPrefs = sqliteTable("community_notification_prefs", {
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  communityId: text("community_id")
+    .notNull()
+    .references(() => communities.id, { onDelete: "cascade" }),
+  notifyNewPosts: integer("notify_new_posts", { mode: "boolean" }).notNull().default(false),
+});
+
 // ─── Wall Posts (personal profile feed) ──────────────────────────────────────
 
 export const wallPosts = sqliteTable("wall_posts", {

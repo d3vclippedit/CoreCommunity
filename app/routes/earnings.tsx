@@ -135,7 +135,7 @@ export default function EarningsPage() {
                 key={t.id}
                 type="button"
                 onClick={() => setTab(t.id)}
-                className="flex-1 py-1.5 text-sm font-medium rounded-md transition-colors"
+                className={`flex-1 py-1.5 text-sm font-medium rounded-md transition-colors${tab !== t.id ? " tab-btn" : ""}`}
                 style={
                   tab === t.id
                     ? { background: "var(--color-bg-elev-2)", color: "var(--color-text)" }

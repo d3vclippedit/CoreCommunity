@@ -1,5 +1,5 @@
 import { Form, Link, useLocation, useRouteLoaderData } from "@remix-run/react";
-import { Coins } from "lucide-react";
+import { Bell, Coins } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import coreMiniUrl from "~/assets/logotop.png";
 import { cn } from "~/lib/cn";
@@ -18,6 +18,8 @@ export function Header({ user }: HeaderProps) {
   const _location = useLocation();
   const root = useRouteLoaderData<typeof rootLoader>("root");
   const coinBalance = root?.coinBalance ?? 0;
+  const unreadNotifCount =
+    ((root as Record<string, unknown> | null)?.unreadNotifCount as number) ?? 0;
 
   return (
     <header
@@ -111,6 +113,24 @@ export function Header({ user }: HeaderProps) {
             </div>
           )}
 
+          {user && (
+            <Link
+              to="/notifications"
+              className="relative flex items-center justify-center rounded-md transition-colors no-underline"
+              style={{ width: 32, height: 32, color: "var(--color-text-dim)" }}
+              aria-label="Notifications"
+            >
+              <Bell size={17} />
+              {unreadNotifCount > 0 && (
+                <span
+                  className="absolute top-0 right-0 min-w-[15px] h-[15px] px-[3px] rounded-full text-[9px] font-bold flex items-center justify-center"
+                  style={{ background: "var(--color-danger)", color: "#fff", lineHeight: 1 }}
+                >
+                  {unreadNotifCount > 99 ? "99+" : unreadNotifCount}
+                </span>
+              )}
+            </Link>
+          )}
           {user ? (
             <UserMenu user={user} />
           ) : (
@@ -173,7 +193,7 @@ function NavLink({
       to={to}
       className={cn(
         "px-3 py-1.5 text-sm rounded-md transition-colors no-underline",
-        active ? "font-medium" : "",
+        active ? "font-medium" : "tab-btn",
       )}
       style={{
         color: active ? "var(--color-text)" : "var(--color-text-dim)",

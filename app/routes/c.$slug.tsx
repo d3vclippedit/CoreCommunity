@@ -17,7 +17,13 @@ import { getCurrentUser } from "~/lib/auth/user.server";
 import { createDb } from "~/lib/db/index";
 
 import type { loader as rootLoader } from "~/root";
-import { communities, communityMemberships, streamSnapshots, users } from "../../db/schema";
+import {
+  communities,
+  communityMemberships,
+  communityNotificationPrefs,
+  streamSnapshots,
+  users,
+} from "../../db/schema";
 import { CommunityAvatar } from "./communities._index";
 
 // Default role colors used when community hasn't customised them
@@ -40,6 +46,7 @@ export async function loader({ params, request, context }: LoaderFunctionArgs) {
   if (!community) throw new Response("Community not found", { status: 404 });
 
   let membership = null;
+  let notifyNewPosts = false;
   if (user) {
     membership = await db.query.communityMemberships.findFirst({
       where: and(
@@ -48,6 +55,18 @@ export async function loader({ params, request, context }: LoaderFunctionArgs) {
       ),
       columns: { role: true },
     });
+    try {
+      const pref = await db.query.communityNotificationPrefs.findFirst({
+        where: and(
+          eq(communityNotificationPrefs.userId, user.id),
+          eq(communityNotificationPrefs.communityId, community.id),
+        ),
+        columns: { notifyNewPosts: true },
+      });
+      if (pref) notifyNewPosts = pref.notifyNewPosts;
+    } catch {
+      // notifications table not yet migrated
+    }
   }
 
   const staffRows = await db
@@ -87,6 +106,7 @@ export async function loader({ params, request, context }: LoaderFunctionArgs) {
   return {
     community,
     membership: membership ?? null,
+    notifyNewPosts,
     staffRows,
     ownerUser: ownerUser ?? null,
     host,
@@ -105,6 +125,7 @@ export default function CommunityHub() {
   const {
     community,
     membership,
+    notifyNewPosts,
     staffRows,
     ownerUser,
     host,
@@ -157,13 +178,14 @@ export default function CommunityHub() {
         </>
       )}
 
-      <div className="mt-4">
+      <div className="mt-4 flex flex-col gap-2">
         <JoinButton
           communityId={community.id}
           slug={community.slug}
           membership={membership}
           user={rootUser}
         />
+        {rootUser && <NotifyToggle communityId={community.id} notifyNewPosts={notifyNewPosts} />}
       </div>
 
       {twitchChannel && (
@@ -619,6 +641,49 @@ function MemberRow({
         {displayName}
       </span>
     </Link>
+  );
+}
+
+function NotifyToggle({
+  communityId,
+  notifyNewPosts,
+}: {
+  communityId: string;
+  notifyNewPosts: boolean;
+}) {
+  const fetcher = useFetcher<{ success?: boolean; enabled?: boolean }>();
+  const optimisticEnabled =
+    fetcher.formData != null ? fetcher.formData.get("enabled") === "1" : notifyNewPosts;
+
+  return (
+    <fetcher.Form method="post" action="/api/community/notify">
+      <input type="hidden" name="communityId" value={communityId} />
+      <input type="hidden" name="enabled" value={optimisticEnabled ? "0" : "1"} />
+      <button
+        type="submit"
+        className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-colors"
+        style={{
+          background: optimisticEnabled ? "rgba(61,214,140,0.1)" : "var(--color-bg-elev-2)",
+          color: optimisticEnabled ? "var(--color-success)" : "var(--color-text-faint)",
+          border: `1px solid ${optimisticEnabled ? "rgba(61,214,140,0.3)" : "var(--color-border)"}`,
+          cursor: "pointer",
+        }}
+      >
+        <svg
+          width="12"
+          height="12"
+          viewBox="0 0 24 24"
+          fill={optimisticEnabled ? "currentColor" : "none"}
+          stroke="currentColor"
+          strokeWidth="2"
+          aria-hidden="true"
+        >
+          <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+          <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+        </svg>
+        {optimisticEnabled ? "Notifications on" : "Notify me"}
+      </button>
+    </fetcher.Form>
   );
 }
 

@@ -8,10 +8,13 @@ import {
   isRouteErrorResponse,
   useRouteError,
 } from "@remix-run/react";
+import { and, isNull } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { getCurrentUser } from "~/lib/auth/user.server";
 import { getBalance } from "~/lib/coins.server";
 import { createDb } from "~/lib/db/index";
 import tailwindStyles from "~/styles/tailwind.css?url";
+import { notifications } from "../db/schema";
 
 export const links: LinksFunction = () => [
   { rel: "preconnect", href: "https://fonts.googleapis.com" },
@@ -36,15 +39,27 @@ export const links: LinksFunction = () => [
 export async function loader({ request, context }: LoaderFunctionArgs) {
   const { env } = context.cloudflare;
   const user = await getCurrentUser(request, env);
+  const db = createDb(env.DB);
   let coinBalance = 0;
+  let unreadNotifCount = 0;
   if (user) {
     try {
-      coinBalance = await getBalance(createDb(env.DB), user.id);
+      coinBalance = await getBalance(db, user.id);
     } catch {
       // coins table not yet migrated
     }
+    try {
+      const unread = await db
+        .select({ id: notifications.id })
+        .from(notifications)
+        .where(and(eq(notifications.userId, user.id), isNull(notifications.readAt)))
+        .limit(100);
+      unreadNotifCount = unread.length;
+    } catch {
+      // notifications table not yet migrated
+    }
   }
-  return { user, coinBalance };
+  return { user, coinBalance, unreadNotifCount };
 }
 
 export function Layout({ children }: { children: React.ReactNode }) {

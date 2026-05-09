@@ -23,8 +23,10 @@ import {
   communities,
   communityCustomRoles,
   communityMemberships,
+  communityNotificationPrefs,
   communitySections,
   giveaways,
+  notifications,
   pollOptions,
   polls,
   posts,
@@ -362,6 +364,35 @@ export async function action({ params, request, context }: ActionFunctionArgs) {
     createdAt: now,
     updatedAt: now,
   });
+
+  // Notify users who opted in for this community's posts
+  try {
+    const notifRecipients = await db
+      .select({ userId: communityNotificationPrefs.userId })
+      .from(communityNotificationPrefs)
+      .where(
+        and(
+          eq(communityNotificationPrefs.communityId, community.id),
+          eq(communityNotificationPrefs.notifyNewPosts, true),
+        ),
+      );
+    const toNotify = notifRecipients.filter((r) => r.userId !== user.id);
+    if (toNotify.length > 0) {
+      await db.insert(notifications).values(
+        toNotify.map((r) => ({
+          id: generateId(),
+          userId: r.userId,
+          type: "community_post" as const,
+          actorId: user.id,
+          communityId: community.id,
+          postId,
+          createdAt: now,
+        })),
+      );
+    }
+  } catch {
+    // notifications table not yet migrated — skip silently
+  }
 
   return redirect(`/c/${community.slug}/p/${postId}`);
 }

@@ -219,7 +219,7 @@ export default function MonetisationPage() {
                 key={id}
                 type="button"
                 onClick={() => switchTab(id)}
-                className="px-4 py-1.5 text-sm rounded-md font-medium transition-all"
+                className={`px-4 py-1.5 text-sm rounded-md font-medium transition-all${activeTab !== id ? " tab-btn" : ""}`}
                 style={{
                   background: activeTab === id ? "var(--color-bg-elev-2)" : "transparent",
                   color: activeTab === id ? "var(--color-text)" : "var(--color-text-faint)",

@@ -173,7 +173,7 @@ export default function CommunityFeed() {
             key={s}
             type="button"
             onClick={() => setSearchParams(s === "hot" ? {} : { sort: s })}
-            className="px-3 py-1 text-xs font-medium rounded-md capitalize transition-colors"
+            className={`px-3 py-1 text-xs font-medium rounded-md capitalize transition-colors${sort !== s ? " tab-btn" : ""}`}
             style={
               sort === s
                 ? { background: "var(--color-bg-elev-2)", color: "var(--color-text)" }

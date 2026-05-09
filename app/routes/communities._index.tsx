@@ -193,7 +193,7 @@ function CommunityCard({
 
   return (
     <div
-      className="flex flex-col overflow-hidden rounded-xl"
+      className="community-card flex flex-col overflow-hidden rounded-xl"
       style={{
         background: accent ? `${accent}12` : "var(--color-bg-elev-1)",
         border: `1px solid ${accent ? `${accent}40` : "var(--color-border)"}`,
