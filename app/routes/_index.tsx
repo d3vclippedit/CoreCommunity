@@ -407,7 +407,7 @@ function FeedPostCard({ post }: { post: FeedPost }) {
         border: `1px solid ${tier ? tier.borderColor : "var(--color-border)"}`,
       }}
     >
-      <div className="flex gap-4 items-center">
+      <div className="flex gap-4 items-start">
         {/* Community icon */}
         <Link to={`/c/${post.communitySlug}`} className="flex-shrink-0 self-start mt-0.5">
           <CommunityAvatar

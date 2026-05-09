@@ -236,7 +236,7 @@ function PostCard({
         border: `1px solid ${tier ? tier.borderColor : "var(--color-border)"}`,
       }}
     >
-      <div className="flex gap-3 items-center">
+      <div className="flex gap-3 items-start">
         {/* Text content */}
         <div className="flex-1 min-w-0">
           <div className="flex items-start gap-1.5 mb-1">
