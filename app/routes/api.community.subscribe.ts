@@ -37,10 +37,12 @@ export async function action({ request, context }: ActionFunctionArgs) {
   });
   if (existing) return Response.json({ error: "Already subscribed." }, { status: 400 });
 
+  const MEMBERSHIP_PRICE = 850;
+
   const balance = await getBalance(db, user.id);
-  if (balance < community.membershipPriceCoins)
+  if (balance < MEMBERSHIP_PRICE)
     return Response.json(
-      { error: `Not enough Core Coins. You need ${community.membershipPriceCoins} cc.` },
+      { error: `Not enough Core Coins. You need ${MEMBERSHIP_PRICE} cc.` },
       { status: 400 },
     );
 
@@ -50,7 +52,7 @@ export async function action({ request, context }: ActionFunctionArgs) {
   await debitCoins(
     db,
     user.id,
-    community.membershipPriceCoins,
+    MEMBERSHIP_PRICE,
     "spend",
     "community_membership",
     communityId,
@@ -62,7 +64,7 @@ export async function action({ request, context }: ActionFunctionArgs) {
     userId: user.id,
     communityId,
     status: "active",
-    coinsPerWeek: community.membershipPriceCoins,
+    coinsPerWeek: MEMBERSHIP_PRICE,
     nextChargeAt,
     createdAt: now,
     updatedAt: now,

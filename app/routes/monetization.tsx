@@ -617,7 +617,7 @@ function MembershipSection({
         Community membership
       </h2>
       <p className="text-xs mb-4" style={{ color: "var(--color-text-faint)" }}>
-        Subscribe to a community with Core Coins and get a member badge on your posts.
+        850 cc/week · subscribe to a pioneer community and get a member badge on your posts.
       </p>
 
       {comms.length === 0 ? (
@@ -653,7 +653,7 @@ function MembershipSection({
             >
               {comms.map((c) => (
                 <option key={c.id} value={c.id}>
-                  c/{c.slug} — {c.membershipPriceCoins} cc/week
+                  c/{c.slug}
                 </option>
               ))}
             </select>
@@ -673,7 +673,7 @@ function MembershipSection({
                   c/{selectedComm.slug} member
                 </p>
                 <p className="text-xs" style={{ color: "var(--color-text-faint)" }}>
-                  {selectedComm.membershipPriceCoins} cc/week · badge + post border
+                  850 cc/week · badge + post border
                 </p>
               </div>
               {isSubscribed && (
@@ -730,9 +730,7 @@ function MembershipSection({
                 className="w-full py-2 text-sm font-medium rounded-md transition-opacity hover:opacity-90 disabled:opacity-50"
                 style={{ background: "var(--color-text)", color: "var(--color-bg)" }}
               >
-                {isSubmitting
-                  ? "Subscribing…"
-                  : `Subscribe — ${selectedComm?.membershipPriceCoins ?? 0} cc/week`}
+                {isSubmitting ? "Subscribing…" : "Subscribe — 850 cc/week"}
               </button>
             </fetcher.Form>
           )}
