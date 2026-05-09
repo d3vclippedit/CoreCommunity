@@ -665,6 +665,34 @@ export const pioneerEnrollments = sqliteTable("pioneer_enrollments", {
   isActive: integer("is_active", { mode: "boolean" }).notNull().default(true),
 });
 
+// ─── Pioneer Applications ─────────────────────────────────────────────────────
+
+export type PioneerAppStatus = "pending" | "approved" | "rejected";
+
+export const pioneerApplications = sqliteTable("pioneer_applications", {
+  id: text("id").primaryKey(),
+  userId: text("user_id").references(() => users.id, { onDelete: "set null" }),
+  name: text("name").notNull(),
+  email: text("email").notNull(),
+  coreHandle: text("core_handle"),
+  twitchHandle: text("twitch_handle"),
+  youtubeHandle: text("youtube_handle"),
+  kickHandle: text("kick_handle"),
+  twitchFollowers: integer("twitch_followers"),
+  youtubeSubscribers: integer("youtube_subscribers"),
+  kickFollowers: integer("kick_followers"),
+  avgViewers: integer("avg_viewers"),
+  communityName: text("community_name"),
+  contentNiche: text("content_niche"),
+  whyPioneer: text("why_pioneer").notNull(),
+  sampleLinks: text("sample_links"),
+  status: text("status").$type<PioneerAppStatus>().notNull().default("pending"),
+  adminNote: text("admin_note"),
+  reviewedByAdminId: text("reviewed_by_admin_id").references(() => users.id),
+  createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
+  updatedAt: integer("updated_at", { mode: "timestamp" }).notNull(),
+});
+
 // ─── Feedback & Ban Appeals ────────────────────────────────────────────────────
 
 export type FeedbackCategory = "bug" | "feature" | "support" | "other";

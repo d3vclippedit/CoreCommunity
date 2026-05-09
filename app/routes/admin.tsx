@@ -25,6 +25,7 @@ import {
   coinBundles,
   communities,
   feedback,
+  pioneerApplications,
   pioneerEnrollments,
   postBadgeDefinitions,
   users,
@@ -55,67 +56,94 @@ export async function loader({ request, context }: LoaderFunctionArgs) {
   const tab = (url.searchParams.get("tab") as Tab | null) ?? "users";
   const db = createDb(env.DB);
 
-  const [bundles, badgeDefs, feedbackItems, pendingAppeals, pioneerList] = await Promise.all([
-    tab === "config" ? db.select().from(coinBundles).orderBy(coinBundles.usdPriceCents) : [],
-    tab === "config"
-      ? db.select().from(postBadgeDefinitions).orderBy(postBadgeDefinitions.displayOrder)
-      : [],
-    tab === "feedback"
-      ? db
-          .select({
-            id: feedback.id,
-            category: feedback.category,
-            message: feedback.message,
-            status: feedback.status,
-            adminNote: feedback.adminNote,
-            createdAt: feedback.createdAt,
-            userHandle: users.handle,
-          })
-          .from(feedback)
-          .leftJoin(users, eq(feedback.userId, users.id))
-          .orderBy(desc(feedback.createdAt))
-          .limit(50)
-      : [],
-    tab === "appeals"
-      ? db
-          .select({
-            id: banAppeals.id,
-            banId: banAppeals.banId,
-            message: banAppeals.message,
-            status: banAppeals.status,
-            createdAt: banAppeals.createdAt,
-            userHandle: users.handle,
-            communitySlug: communities.slug,
-            communityName: communities.name,
-          })
-          .from(banAppeals)
-          .innerJoin(users, eq(banAppeals.userId, users.id))
-          .innerJoin(communities, eq(banAppeals.communityId, communities.id))
-          .where(eq(banAppeals.status, "pending"))
-          .orderBy(desc(banAppeals.createdAt))
-          .limit(50)
-      : [],
-    tab === "pioneer"
-      ? db
-          .select({
-            id: pioneerEnrollments.id,
-            contractRef: pioneerEnrollments.contractRef,
-            enrolledAt: pioneerEnrollments.enrolledAt,
-            expiresAt: pioneerEnrollments.expiresAt,
-            isActive: pioneerEnrollments.isActive,
-            userHandle: users.handle,
-            communitySlug: communities.slug,
-            communityName: communities.name,
-          })
-          .from(pioneerEnrollments)
-          .innerJoin(users, eq(pioneerEnrollments.userId, users.id))
-          .innerJoin(communities, eq(pioneerEnrollments.communityId, communities.id))
-          .orderBy(desc(pioneerEnrollments.enrolledAt))
-          .limit(100)
-      : [],
-  ]);
+  const [bundles, badgeDefs, feedbackItems, pendingAppeals, pioneerList, pioneerApps] =
+    await Promise.all([
+      tab === "config" ? db.select().from(coinBundles).orderBy(coinBundles.usdPriceCents) : [],
+      tab === "config"
+        ? db.select().from(postBadgeDefinitions).orderBy(postBadgeDefinitions.displayOrder)
+        : [],
+      tab === "feedback"
+        ? db
+            .select({
+              id: feedback.id,
+              category: feedback.category,
+              message: feedback.message,
+              status: feedback.status,
+              adminNote: feedback.adminNote,
+              createdAt: feedback.createdAt,
+              userHandle: users.handle,
+            })
+            .from(feedback)
+            .leftJoin(users, eq(feedback.userId, users.id))
+            .orderBy(desc(feedback.createdAt))
+            .limit(50)
+        : [],
+      tab === "appeals"
+        ? db
+            .select({
+              id: banAppeals.id,
+              banId: banAppeals.banId,
+              message: banAppeals.message,
+              status: banAppeals.status,
+              createdAt: banAppeals.createdAt,
+              userHandle: users.handle,
+              communitySlug: communities.slug,
+              communityName: communities.name,
+            })
+            .from(banAppeals)
+            .innerJoin(users, eq(banAppeals.userId, users.id))
+            .innerJoin(communities, eq(banAppeals.communityId, communities.id))
+            .where(eq(banAppeals.status, "pending"))
+            .orderBy(desc(banAppeals.createdAt))
+            .limit(50)
+        : [],
+      tab === "pioneer"
+        ? db
+            .select({
+              id: pioneerEnrollments.id,
+              contractRef: pioneerEnrollments.contractRef,
+              enrolledAt: pioneerEnrollments.enrolledAt,
+              expiresAt: pioneerEnrollments.expiresAt,
+              isActive: pioneerEnrollments.isActive,
+              userHandle: users.handle,
+              communitySlug: communities.slug,
+              communityName: communities.name,
+            })
+            .from(pioneerEnrollments)
+            .innerJoin(users, eq(pioneerEnrollments.userId, users.id))
+            .innerJoin(communities, eq(pioneerEnrollments.communityId, communities.id))
+            .orderBy(desc(pioneerEnrollments.enrolledAt))
+            .limit(100)
+        : [],
+      tab === "pioneer"
+        ? db
+            .select({
+              id: pioneerApplications.id,
+              name: pioneerApplications.name,
+              email: pioneerApplications.email,
+              coreHandle: pioneerApplications.coreHandle,
+              twitchHandle: pioneerApplications.twitchHandle,
+              youtubeHandle: pioneerApplications.youtubeHandle,
+              kickHandle: pioneerApplications.kickHandle,
+              twitchFollowers: pioneerApplications.twitchFollowers,
+              youtubeSubscribers: pioneerApplications.youtubeSubscribers,
+              kickFollowers: pioneerApplications.kickFollowers,
+              avgViewers: pioneerApplications.avgViewers,
+              communityName: pioneerApplications.communityName,
+              contentNiche: pioneerApplications.contentNiche,
+              whyPioneer: pioneerApplications.whyPioneer,
+              sampleLinks: pioneerApplications.sampleLinks,
+              status: pioneerApplications.status,
+              adminNote: pioneerApplications.adminNote,
+              createdAt: pioneerApplications.createdAt,
+            })
+            .from(pioneerApplications)
+            .orderBy(desc(pioneerApplications.createdAt))
+            .limit(100)
+        : [],
+    ]);
 
-  return { user, tab, bundles, badgeDefs, feedbackItems, pendingAppeals, pioneerList };
+  return { user, tab, bundles, badgeDefs, feedbackItems, pendingAppeals, pioneerList, pioneerApps };
 }
 
 export async function action({ request, context }: ActionFunctionArgs) {
@@ -263,6 +291,32 @@ export async function action({ request, context }: ActionFunctionArgs) {
       await db.delete(bans).where(eq(bans.id, appeal.banId));
     }
     return { ok: true, msg: `Appeal ${approving ? "approved — ban lifted" : "denied"}.` };
+  }
+
+  if (
+    intent === "pioneer_app_approve" ||
+    intent === "pioneer_app_reject" ||
+    intent === "pioneer_app_reset"
+  ) {
+    const appId = form.get("appId") as string | null;
+    const adminNote = (form.get("adminNote") as string | null)?.trim() || null;
+    if (!appId) return { error: "Missing application ID." };
+    const status =
+      intent === "pioneer_app_approve"
+        ? "approved"
+        : intent === "pioneer_app_reject"
+          ? "rejected"
+          : "pending";
+    await db
+      .update(pioneerApplications)
+      .set({
+        status: status as "pending" | "approved" | "rejected",
+        adminNote,
+        reviewedByAdminId: status === "pending" ? null : currentUser.id,
+        updatedAt: new Date(),
+      })
+      .where(eq(pioneerApplications.id, appId));
+    return { ok: true, msg: `Application ${status}.` };
   }
 
   if (intent === "pioneer_enroll") {
@@ -666,8 +720,247 @@ function AppealsTab({ data, submitting }: { data: LoaderData; submitting: boolea
 function PioneerTab({ data, submitting }: { data: LoaderData; submitting: boolean }) {
   const ad = useActionData<typeof action>();
   const list = data.pioneerList;
+  const apps = data.pioneerApps;
+  const pending = apps.filter((a) => a?.status === "pending");
+  const reviewed = apps.filter((a) => a?.status !== "pending");
   return (
     <>
+      <Card title={`Applications — Pending (${pending.length})`}>
+        <StatusMsg data={ad as Parameters<typeof StatusMsg>[0]["data"]} />
+        {pending.length === 0 && (
+          <p className="text-sm" style={{ color: "var(--color-text-faint)" }}>
+            No pending applications.
+          </p>
+        )}
+        <div className="flex flex-col gap-5">
+          {pending.map((a) => {
+            if (!a) return null;
+            return (
+              <div
+                key={a.id}
+                className="rounded-md p-4"
+                style={{
+                  background: "var(--color-bg-elev-2)",
+                  border: "1px solid var(--color-border)",
+                }}
+              >
+                {/* Header row */}
+                <div className="flex items-start justify-between gap-3 mb-3">
+                  <div>
+                    <span className="text-sm font-semibold" style={{ color: "var(--color-text)" }}>
+                      {a.name}
+                    </span>
+                    <span className="text-xs ml-2" style={{ color: "var(--color-text-faint)" }}>
+                      {a.email}
+                    </span>
+                    {a.coreHandle && (
+                      <span className="text-xs ml-2" style={{ color: "var(--color-text-dim)" }}>
+                        @{a.coreHandle}
+                      </span>
+                    )}
+                  </div>
+                  <span className="text-xs" style={{ color: "var(--color-text-faint)" }}>
+                    {new Date(a.createdAt).toLocaleDateString()}
+                  </span>
+                </div>
+
+                {/* Platform metrics */}
+                <div className="flex flex-wrap gap-3 mb-3">
+                  {a.twitchHandle && (
+                    <div
+                      className="rounded px-2.5 py-1.5 text-xs"
+                      style={{
+                        background: "var(--color-bg-elev-1)",
+                        border: "1px solid var(--color-border)",
+                      }}
+                    >
+                      <span style={{ color: "var(--color-text-faint)" }}>Twitch: </span>
+                      <a
+                        href={`https://twitch.tv/${a.twitchHandle}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="hover:underline"
+                        style={{ color: "var(--color-text)" }}
+                      >
+                        {a.twitchHandle}
+                      </a>
+                      {a.twitchFollowers != null && (
+                        <span style={{ color: "var(--color-text-dim)" }}>
+                          {" "}
+                          · {a.twitchFollowers.toLocaleString()} followers
+                        </span>
+                      )}
+                    </div>
+                  )}
+                  {a.youtubeHandle && (
+                    <div
+                      className="rounded px-2.5 py-1.5 text-xs"
+                      style={{
+                        background: "var(--color-bg-elev-1)",
+                        border: "1px solid var(--color-border)",
+                      }}
+                    >
+                      <span style={{ color: "var(--color-text-faint)" }}>YouTube: </span>
+                      <span style={{ color: "var(--color-text)" }}>{a.youtubeHandle}</span>
+                      {a.youtubeSubscribers != null && (
+                        <span style={{ color: "var(--color-text-dim)" }}>
+                          {" "}
+                          · {a.youtubeSubscribers.toLocaleString()} subs
+                        </span>
+                      )}
+                    </div>
+                  )}
+                  {a.kickHandle && (
+                    <div
+                      className="rounded px-2.5 py-1.5 text-xs"
+                      style={{
+                        background: "var(--color-bg-elev-1)",
+                        border: "1px solid var(--color-border)",
+                      }}
+                    >
+                      <span style={{ color: "var(--color-text-faint)" }}>Kick: </span>
+                      <a
+                        href={`https://kick.com/${a.kickHandle}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="hover:underline"
+                        style={{ color: "var(--color-text)" }}
+                      >
+                        {a.kickHandle}
+                      </a>
+                      {a.kickFollowers != null && (
+                        <span style={{ color: "var(--color-text-dim)" }}>
+                          {" "}
+                          · {a.kickFollowers.toLocaleString()} followers
+                        </span>
+                      )}
+                    </div>
+                  )}
+                  {a.avgViewers != null && (
+                    <div
+                      className="rounded px-2.5 py-1.5 text-xs"
+                      style={{
+                        background: "var(--color-bg-elev-1)",
+                        border: "1px solid var(--color-border)",
+                      }}
+                    >
+                      <span style={{ color: "var(--color-text-faint)" }}>Avg viewers: </span>
+                      <span style={{ color: "var(--color-text)" }}>
+                        {a.avgViewers.toLocaleString()}
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Community intent */}
+                {(a.communityName || a.contentNiche) && (
+                  <p className="text-xs mb-2" style={{ color: "var(--color-text-dim)" }}>
+                    Community: <strong>{a.communityName ?? "—"}</strong>
+                    {a.contentNiche && <span> · {a.contentNiche}</span>}
+                  </p>
+                )}
+
+                {/* Pitch */}
+                <p
+                  className="text-sm mb-3 leading-relaxed"
+                  style={{ color: "var(--color-text-dim)" }}
+                >
+                  {a.whyPioneer}
+                </p>
+
+                {/* Sample links */}
+                {a.sampleLinks && (
+                  <div className="mb-3">
+                    {a.sampleLinks
+                      .split("\n")
+                      .filter(Boolean)
+                      .map((link) => (
+                        <a
+                          key={link}
+                          href={link}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="block text-xs hover:underline truncate"
+                          style={{ color: "var(--color-text-faint)" }}
+                        >
+                          {link}
+                        </a>
+                      ))}
+                  </div>
+                )}
+
+                {/* Review form */}
+                <Form method="post" className="flex gap-2 items-center flex-wrap">
+                  <input type="hidden" name="appId" value={a.id} />
+                  <input
+                    name="adminNote"
+                    type="text"
+                    placeholder="Admin note (optional)"
+                    defaultValue={a.adminNote ?? ""}
+                    className="rounded-md px-2 py-1 text-xs"
+                    style={{ ...inputStyle, width: "200px" }}
+                  />
+                  <Btn value="pioneer_app_approve" color="green" disabled={submitting} />
+                  <Btn value="pioneer_app_reject" color="red" disabled={submitting} />
+                </Form>
+              </div>
+            );
+          })}
+        </div>
+      </Card>
+
+      {reviewed.length > 0 && (
+        <Card title={`Reviewed (${reviewed.length})`}>
+          <div className="flex flex-col gap-2">
+            {reviewed.map((a) => {
+              if (!a) return null;
+              return (
+                <div
+                  key={a.id}
+                  className="flex items-center justify-between rounded-md px-3 py-2"
+                  style={{
+                    background: "var(--color-bg-elev-2)",
+                    border: "1px solid var(--color-border)",
+                  }}
+                >
+                  <div className="min-w-0">
+                    <span className="text-sm font-medium" style={{ color: "var(--color-text)" }}>
+                      {a.name}
+                    </span>
+                    <span className="text-xs ml-2" style={{ color: "var(--color-text-faint)" }}>
+                      {a.email}
+                    </span>
+                    {a.twitchHandle && (
+                      <span className="text-xs ml-2" style={{ color: "var(--color-text-faint)" }}>
+                        twitch/{a.twitchHandle}
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <span
+                      className="text-xs px-1.5 py-0.5 rounded"
+                      style={{
+                        background:
+                          a.status === "approved"
+                            ? "var(--color-success)"
+                            : "var(--color-bg-elev-1)",
+                        color: a.status === "approved" ? "#000" : "var(--color-text-faint)",
+                      }}
+                    >
+                      {a.status}
+                    </span>
+                    <Form method="post">
+                      <input type="hidden" name="appId" value={a.id} />
+                      <Btn value="pioneer_app_reset" color="dim" disabled={submitting} />
+                    </Form>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </Card>
+      )}
+
       <Card title="Enroll Pioneer">
         <StatusMsg data={ad as Parameters<typeof StatusMsg>[0]["data"]} />
         <Form method="post" className="flex flex-col gap-3">
