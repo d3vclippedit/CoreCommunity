@@ -236,95 +236,81 @@ function PostCard({
         border: `1px solid ${tier ? tier.borderColor : "var(--color-border)"}`,
       }}
     >
-      <div className="flex gap-3 items-start">
-        {/* Text content */}
-        <div className="flex-1 min-w-0">
-          <div className="flex items-start gap-1.5 mb-1">
-            {post.isPinned && (
-              <span
-                className="text-xs font-medium flex-shrink-0 mt-0.5"
-                style={{ color: "var(--color-success)" }}
-              >
-                📌
-              </span>
-            )}
-            <Link
-              to={`/c/${communitySlug}/p/${post.id}`}
-              className="text-sm font-medium no-underline hover:underline leading-snug"
-              style={{ color: "var(--color-text)" }}
-            >
-              {post.title}
-            </Link>
-            {(post.type === "image" || post.type === "video" || post.type === "link") && (
-              <span
-                className="flex-shrink-0 text-xs px-1.5 py-0.5 rounded mt-0.5"
-                style={{ background: "var(--color-bg-elev-2)", color: "var(--color-text-faint)" }}
-              >
-                {post.type}
-              </span>
-            )}
-          </div>
-
-          {caption && (
-            <p
-              className="text-xs mb-1.5 leading-relaxed"
-              style={{
-                color: "var(--color-text-dim)",
-                display: "-webkit-box",
-                WebkitLineClamp: 2,
-                WebkitBoxOrient: "vertical",
-                overflow: "hidden",
-              }}
-            >
-              {caption}
-            </p>
-          )}
-
-          {post.badges.length > 0 && (
-            <div className="flex items-center gap-2 mb-1.5">
-              <div className="flex items-center gap-0.5">
-                {post.badges.slice(0, 4).map((b) => (
-                  <span
-                    key={b.name}
-                    className="text-sm leading-none"
-                    title={`${b.name} ×${b.count}`}
-                  >
-                    {b.icon}
-                  </span>
-                ))}
-              </div>
-              <span
-                className="text-xs font-semibold tabular-nums"
-                style={{ color: tier ? tier.color : "var(--color-text-faint)" }}
-              >
-                {formatCC(post.badgeCoinsCC)} cc
-              </span>
-              {tier && (
+      <div className="flex flex-col gap-2">
+        <div className="flex gap-3 items-start">
+          {/* Text content */}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-start gap-1.5 mb-1">
+              {post.isPinned && (
                 <span
-                  className="text-xs px-1.5 py-0.5 rounded-full font-medium"
-                  style={{ background: tier.bg, color: tier.color }}
+                  className="text-xs font-medium flex-shrink-0 mt-0.5"
+                  style={{ color: "var(--color-success)" }}
                 >
-                  {tier.label}
+                  📌
+                </span>
+              )}
+              <Link
+                to={`/c/${communitySlug}/p/${post.id}`}
+                className="text-sm font-medium no-underline hover:underline leading-snug"
+                style={{ color: "var(--color-text)" }}
+              >
+                {post.title}
+              </Link>
+              {(post.type === "image" || post.type === "video" || post.type === "link") && (
+                <span
+                  className="flex-shrink-0 text-xs px-1.5 py-0.5 rounded mt-0.5"
+                  style={{ background: "var(--color-bg-elev-2)", color: "var(--color-text-faint)" }}
+                >
+                  {post.type}
                 </span>
               )}
             </div>
-          )}
 
-          <div
-            className="flex items-center gap-3 text-xs"
-            style={{ color: "var(--color-text-faint)" }}
-          >
-            <span>by {post.authorHandle}</span>
-            <span>{relativeTime(post.createdAt)}</span>
-            <Link
-              to={`/c/${communitySlug}/p/${post.id}`}
-              className="no-underline hover:underline"
-              style={{ color: "var(--color-text-faint)" }}
-            >
-              {post.commentCount} comment{post.commentCount !== 1 ? "s" : ""}
-            </Link>
+            {caption && (
+              <p
+                className="text-xs mb-1.5 leading-relaxed"
+                style={{
+                  color: "var(--color-text-dim)",
+                  display: "-webkit-box",
+                  WebkitLineClamp: 2,
+                  WebkitBoxOrient: "vertical",
+                  overflow: "hidden",
+                }}
+              >
+                {caption}
+              </p>
+            )}
+
+            {post.badges.length > 0 && (
+              <div className="flex items-center gap-2">
+                <div className="flex items-center gap-0.5">
+                  {post.badges.slice(0, 4).map((b) => (
+                    <span
+                      key={b.name}
+                      className="text-sm leading-none"
+                      title={`${b.name} ×${b.count}`}
+                    >
+                      {b.icon}
+                    </span>
+                  ))}
+                </div>
+                <span
+                  className="text-xs font-semibold tabular-nums"
+                  style={{ color: tier ? tier.color : "var(--color-text-faint)" }}
+                >
+                  {formatCC(post.badgeCoinsCC)} cc
+                </span>
+                {tier && (
+                  <span
+                    className="text-xs px-1.5 py-0.5 rounded-full font-medium"
+                    style={{ background: tier.bg, color: tier.color }}
+                  >
+                    {tier.label}
+                  </span>
+                )}
+              </div>
+            )}
           </div>
-        </div>
 
         {/* Inline media — always visible, right side */}
         {hasMedia && (
@@ -346,11 +332,28 @@ function PostCard({
           </div>
         )}
 
-        {/* Score — right of media */}
-        <div className="flex-shrink-0 text-center" style={{ minWidth: 48 }}>
-          <span className="text-sm font-semibold" style={{ color: "var(--color-text)" }}>
-            {post.score}
-          </span>
+          {/* Score — right of media */}
+          <div className="flex-shrink-0 text-center" style={{ minWidth: 48 }}>
+            <span className="text-sm font-semibold" style={{ color: "var(--color-text)" }}>
+              {post.score}
+            </span>
+          </div>
+        </div>
+
+        {/* Meta row — bottom of card */}
+        <div
+          className="flex items-center gap-3 text-xs"
+          style={{ color: "var(--color-text-faint)" }}
+        >
+          <span>by {post.authorHandle}</span>
+          <span>{relativeTime(post.createdAt)}</span>
+          <Link
+            to={`/c/${communitySlug}/p/${post.id}`}
+            className="no-underline hover:underline"
+            style={{ color: "var(--color-text-faint)" }}
+          >
+            {post.commentCount} comment{post.commentCount !== 1 ? "s" : ""}
+          </Link>
         </div>
       </div>
     </div>
