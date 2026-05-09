@@ -57,6 +57,7 @@ export async function action({ request, context }: ActionFunctionArgs) {
         email: true,
         handle: true,
         passwordHash: true,
+        emailVerifiedAt: true,
         deletedAt: true,
         isBanned: true,
         totpEnabled: true,
@@ -94,6 +95,13 @@ export async function action({ request, context }: ActionFunctionArgs) {
 
     if (!valid || !emailRl.allowed) {
       return { error: "Incorrect email/handle or password." };
+    }
+
+    if (!user.emailVerifiedAt) {
+      return {
+        error:
+          "Please verify your email before logging in. Check your inbox for the verification link.",
+      };
     }
 
     // If 2FA is enabled, issue a pending token and redirect to TOTP page

@@ -312,25 +312,25 @@ function PostCard({
             )}
           </div>
 
-        {/* Inline media — always visible, right side */}
-        {hasMedia && (
-          <div
-            className="flex-shrink-0 rounded-lg overflow-hidden"
-            style={{
-              width: 550,
-              background: "var(--color-bg-elev-2)",
-              border: "1px solid var(--color-border)",
-            }}
-          >
-            <InlineMedia
-              type={post.type}
-              url={post.url}
-              imageUrl={post.imageUrl}
-              embedKind={post.embedKind}
-              embedRef={post.embedRef}
-            />
-          </div>
-        )}
+          {/* Inline media — always visible, right side */}
+          {hasMedia && (
+            <div
+              className="flex-shrink-0 rounded-lg overflow-hidden"
+              style={{
+                width: 550,
+                background: "var(--color-bg-elev-2)",
+                border: "1px solid var(--color-border)",
+              }}
+            >
+              <InlineMedia
+                type={post.type}
+                url={post.url}
+                imageUrl={post.imageUrl}
+                embedKind={post.embedKind}
+                embedRef={post.embedRef}
+              />
+            </div>
+          )}
 
           {/* Score — right of media */}
           <div className="flex-shrink-0 text-center" style={{ minWidth: 48 }}>
