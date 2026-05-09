@@ -183,19 +183,11 @@ function PlayFacade({
   thumbnailUrl,
   label,
   onPlay,
-  brand,
 }: {
-  thumbnailUrl: string | null;
+  thumbnailUrl: string;
   label: string;
   onPlay: () => void;
-  brand?: "twitch" | "youtube" | null;
 }) {
-  const bgStyle = thumbnailUrl
-    ? "var(--color-bg-elev-2)"
-    : brand === "twitch"
-      ? "linear-gradient(135deg, #1a0a2e 0%, #18181C 60%)"
-      : "var(--color-bg-elev-2)";
-
   return (
     <button
       type="button"
@@ -205,7 +197,7 @@ function PlayFacade({
         width: "100%",
         aspectRatio: "16/9",
         display: "block",
-        background: bgStyle,
+        background: "var(--color-bg-elev-2)",
         border: "none",
         padding: 0,
         cursor: "pointer",
@@ -213,70 +205,51 @@ function PlayFacade({
       }}
       aria-label={`Play ${label}`}
     >
-      {thumbnailUrl && (
-        <img
-          src={thumbnailUrl}
-          alt=""
-          loading="lazy"
-          style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
-        />
-      )}
-      {/* brand label when no thumbnail */}
-      {!thumbnailUrl && brand === "twitch" && (
-        <span
-          style={{
-            position: "absolute",
-            top: 12,
-            left: 12,
-            fontSize: 11,
-            fontWeight: 600,
-            letterSpacing: "0.04em",
-            color: "#a970ff",
-            textTransform: "uppercase",
-          }}
-        >
-          Twitch Clip
-        </span>
-      )}
-      {/* overlay */}
+      <img
+        src={thumbnailUrl}
+        alt=""
+        loading="lazy"
+        style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+      />
       <span
         style={{
           position: "absolute",
           inset: 0,
-          background: thumbnailUrl ? "rgba(0,0,0,0.35)" : "transparent",
+          background: "rgba(0,0,0,0.35)",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
         }}
       >
-        {/* play circle */}
         <span
           style={{
             width: 52,
             height: 52,
             borderRadius: "50%",
-            background:
-              brand === "twitch" && !thumbnailUrl
-                ? "rgba(169,112,255,0.2)"
-                : "rgba(255,255,255,0.92)",
-            border:
-              brand === "twitch" && !thumbnailUrl ? "2px solid rgba(169,112,255,0.7)" : "none",
+            background: "rgba(255,255,255,0.92)",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
           }}
         >
           <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-            <path
-              d="M6 4l12 6-12 6V4z"
-              fill={brand === "twitch" && !thumbnailUrl ? "#a970ff" : "#111"}
-            />
+            <path d="M6 4l12 6-12 6V4z" fill="#111" />
           </svg>
         </span>
       </span>
     </button>
   );
 }
+
+const IFRAME_STYLE: React.CSSProperties = {
+  width: "100%",
+  aspectRatio: "16/9",
+  border: "none",
+  display: "block",
+};
+
+const IFRAME_ALLOW =
+  "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture";
 
 export function InlineMedia({
   type,
@@ -305,34 +278,44 @@ export function InlineMedia({
   }
 
   if ((type === "video" || type === "link") && embedKind && embedRef) {
-    if (active) {
-      const parent = window.location.hostname;
-      const src = getEmbedSrc(embedKind as Exclude<EmbedKind, null>, embedRef, parent, true);
+    const parent = window.location.hostname;
+
+    if (embedKind === "youtube") {
+      if (active) {
+        return (
+          <iframe
+            src={getEmbedSrc("youtube", embedRef, parent, true)}
+            title="YouTube video"
+            allow={IFRAME_ALLOW}
+            allowFullScreen
+            style={IFRAME_STYLE}
+          />
+        );
+      }
       return (
-        <iframe
-          src={src}
-          title="Embedded content"
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-          allowFullScreen
-          style={{ width: "100%", aspectRatio: "16/9", border: "none", display: "block" }}
+        <PlayFacade
+          thumbnailUrl={`https://img.youtube.com/vi/${embedRef}/mqdefault.jpg`}
+          label="YouTube video"
+          onPlay={() => setActive(true)}
         />
       );
     }
-    const thumbnailUrl =
-      embedKind === "youtube" ? `https://img.youtube.com/vi/${embedRef}/mqdefault.jpg` : null;
-    const brand = embedKind === "youtube" ? "youtube" : "twitch";
+
+    // Twitch clips/VODs: load immediately paused so the real first frame is visible
     return (
-      <PlayFacade
-        thumbnailUrl={thumbnailUrl}
-        label={embedKind === "youtube" ? "YouTube video" : "Twitch clip"}
-        onPlay={() => setActive(true)}
-        brand={brand}
+      <iframe
+        src={getEmbedSrc(embedKind as Exclude<EmbedKind, null>, embedRef, parent, false)}
+        title="Embedded content"
+        allow={IFRAME_ALLOW}
+        allowFullScreen
+        style={IFRAME_STYLE}
       />
     );
   }
 
   if ((type === "video" || type === "link") && url) {
     const embed = detectEmbed(url);
+
     if (embed?.kind === "giphy") {
       return (
         <img
@@ -343,41 +326,54 @@ export function InlineMedia({
         />
       );
     }
-    if (
-      embed?.kind === "youtube" ||
-      embed?.kind === "twitch-vod" ||
-      embed?.kind === "twitch-clip"
-    ) {
+
+    if (embed?.kind === "youtube") {
       if (active) {
-        const parent = window.location.hostname;
-        let src = "";
-        if (embed.kind === "youtube") src = `https://www.youtube.com/embed/${embed.id}?autoplay=1`;
-        if (embed.kind === "twitch-vod")
-          src = `https://player.twitch.tv/?video=${embed.id}&parent=${parent}&autoplay=true`;
-        if (embed.kind === "twitch-clip")
-          src = `https://clips.twitch.tv/embed?clip=${embed.id}&parent=${parent}&autoplay=true`;
         return (
           <iframe
-            src={src}
-            title="Embedded content"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            src={`https://www.youtube.com/embed/${embed.id}?autoplay=1`}
+            title="YouTube video"
+            allow={IFRAME_ALLOW}
             allowFullScreen
-            style={{ width: "100%", aspectRatio: "16/9", border: "none", display: "block" }}
+            style={IFRAME_STYLE}
           />
         );
       }
-      const thumbnailUrl =
-        embed.kind === "youtube" ? `https://img.youtube.com/vi/${embed.id}/mqdefault.jpg` : null;
-      const brand = embed.kind === "youtube" ? "youtube" : "twitch";
       return (
         <PlayFacade
-          thumbnailUrl={thumbnailUrl}
-          label={embed.kind === "youtube" ? "YouTube video" : "Twitch clip"}
+          thumbnailUrl={`https://img.youtube.com/vi/${embed.id}/mqdefault.jpg`}
+          label="YouTube video"
           onPlay={() => setActive(true)}
-          brand={brand}
         />
       );
     }
+
+    if (embed?.kind === "twitch-vod") {
+      const parent = window.location.hostname;
+      return (
+        <iframe
+          src={`https://player.twitch.tv/?video=${embed.id}&parent=${parent}&autoplay=false`}
+          title="Twitch VOD"
+          allow={IFRAME_ALLOW}
+          allowFullScreen
+          style={IFRAME_STYLE}
+        />
+      );
+    }
+
+    if (embed?.kind === "twitch-clip") {
+      const parent = window.location.hostname;
+      return (
+        <iframe
+          src={`https://clips.twitch.tv/embed?clip=${embed.id}&parent=${parent}&autoplay=false`}
+          title="Twitch clip"
+          allow={IFRAME_ALLOW}
+          allowFullScreen
+          style={IFRAME_STYLE}
+        />
+      );
+    }
+
     if (embed?.kind === "direct-video") {
       return (
         // biome-ignore lint/a11y/useMediaCaption: user-uploaded video, no captions available
