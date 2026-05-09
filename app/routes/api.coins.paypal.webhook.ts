@@ -3,7 +3,7 @@
 
 import type { ActionFunctionArgs } from "@remix-run/cloudflare";
 import { eq } from "drizzle-orm";
-import { creditCoins } from "~/lib/coins.server";
+import { checkAndGrantGifAvatar, creditCoins } from "~/lib/coins.server";
 import { createDb } from "~/lib/db/index";
 import type { PayPalEnv } from "~/lib/payments/paypal.server";
 import { verifyWebhookSignature } from "~/lib/payments/paypal.server";
@@ -95,6 +95,7 @@ export async function action({ request, context }: ActionFunctionArgs) {
           order.id,
           `PayPal webhook: ${order.coinAmount} coins`,
         );
+        await checkAndGrantGifAvatar(db, order.userId);
         await db.insert(adminMoneyLogs).values({
           id: crypto.randomUUID(),
           adminUserId: order.userId,

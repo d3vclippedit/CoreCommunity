@@ -12,6 +12,7 @@ export interface SessionUser {
   emailVerifiedAt: Date | null;
   isPlatformAdmin: boolean;
   isVerifiedStreamer: boolean;
+  gifAvatarUnlocked: boolean;
 }
 
 export async function getCurrentUser(request: Request, env: Env): Promise<SessionUser | null> {
@@ -32,6 +33,7 @@ export async function getCurrentUser(request: Request, env: Env): Promise<Sessio
       emailVerifiedAt: true,
       isPlatformAdmin: true,
       isVerifiedStreamer: true,
+      gifAvatarUnlocked: true,
       deletedAt: true,
     },
   });

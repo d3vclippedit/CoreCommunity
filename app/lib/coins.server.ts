@@ -1,9 +1,16 @@
 // Core Coin wallet — all balance changes go through here, always atomic + audited.
 // NEVER modify coin_wallets directly from routes; always call these helpers.
 
-import { and, desc, eq, sql } from "drizzle-orm";
+import { and, desc, eq, sql, sum } from "drizzle-orm";
 import type { createDb } from "~/lib/db/index";
-import { type CoinTxType, coinBundles, coinTransactions, coinWallets } from "../../db/schema";
+import {
+  type CoinTxType,
+  coinBundles,
+  coinTransactions,
+  coinWallets,
+  paymentOrders,
+  users,
+} from "../../db/schema";
 
 type Db = ReturnType<typeof createDb>;
 
@@ -146,4 +153,33 @@ export async function getActiveBundles(db: Db) {
     .from(coinBundles)
     .where(eq(coinBundles.isActive, true))
     .orderBy(coinBundles.displayOrder);
+}
+
+const GIF_AVATAR_THRESHOLD_CENTS = 5000; // $50.00
+
+// Call after every completed purchase. Idempotent — only writes when not already unlocked.
+export async function checkAndGrantGifAvatar(db: Db, userId: string): Promise<boolean> {
+  const existing = await db
+    .select({ gifAvatarUnlocked: users.gifAvatarUnlocked })
+    .from(users)
+    .where(eq(users.id, userId))
+    .get();
+
+  if (existing?.gifAvatarUnlocked) return false; // already unlocked
+
+  const result = await db
+    .select({ total: sum(paymentOrders.usdAmountCents) })
+    .from(paymentOrders)
+    .where(and(eq(paymentOrders.userId, userId), eq(paymentOrders.status, "completed")))
+    .get();
+
+  const totalCents = Number(result?.total ?? 0);
+  if (totalCents < GIF_AVATAR_THRESHOLD_CENTS) return false;
+
+  await db
+    .update(users)
+    .set({ gifAvatarUnlocked: true, updatedAt: new Date() })
+    .where(eq(users.id, userId));
+
+  return true;
 }

@@ -43,6 +43,8 @@ export const users = sqliteTable("users", {
   twitchUsername: text("twitch_username"),
   twitchLinkedAt: integer("twitch_linked_at", { mode: "timestamp" }),
   twitchUrl: text("twitch_url"),
+  // Unlocked by spending $50+ on Core Coins
+  gifAvatarUnlocked: integer("gif_avatar_unlocked", { mode: "boolean" }).notNull().default(false),
 });
 
 // Sessions stored in KV, not D1.

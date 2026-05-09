@@ -47,6 +47,7 @@ export async function loader({ request, context }: LoaderFunctionArgs) {
       twitchUsername: true,
       twitchLinkedAt: true,
       twitchUrl: true,
+      gifAvatarUnlocked: true,
     },
   });
   if (!full) throw new Response("Not found", { status: 404 });
@@ -271,7 +272,11 @@ export default function SettingsPage() {
               </h2>
               <Form method="post" className="flex flex-col gap-4">
                 <input type="hidden" name="_intent" value="profile" />
-                <AvatarUpload currentUrl={user.avatarUrl} displayName={user.displayName} />
+                <AvatarUpload
+                  currentUrl={user.avatarUrl}
+                  displayName={user.displayName}
+                  gifAvatarUnlocked={user.gifAvatarUnlocked}
+                />
                 <div className="flex flex-col gap-1.5">
                   <p className="text-sm font-medium" style={{ color: "var(--color-text-dim)" }}>
                     Handle
@@ -710,7 +715,12 @@ function TotpSection({ user }: { user: LoaderData["user"] }) {
 function AvatarUpload({
   currentUrl,
   displayName,
-}: { currentUrl?: string | null; displayName: string }) {
+  gifAvatarUnlocked,
+}: {
+  currentUrl?: string | null;
+  displayName: string;
+  gifAvatarUnlocked: boolean;
+}) {
   const [url, setUrl] = useState(currentUrl ?? "");
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -722,6 +732,10 @@ function AvatarUpload({
     .map((w) => w[0])
     .join("")
     .toUpperCase();
+
+  const accept = gifAvatarUnlocked
+    ? "image/png,image/jpeg,image/webp,image/gif"
+    : "image/png,image/jpeg,image/webp";
 
   async function handleFile(file: File) {
     setError(null);
@@ -751,7 +765,7 @@ function AvatarUpload({
       <input
         ref={fileRef}
         type="file"
-        accept="image/png,image/jpeg,image/webp"
+        accept={accept}
         className="hidden"
         onChange={(e) => {
           const f = e.target.files?.[0];
@@ -796,9 +810,25 @@ function AvatarUpload({
           >
             {uploading ? "Uploading…" : url ? "Change picture" : "Upload picture"}
           </button>
-          <p className="text-xs" style={{ color: "var(--color-text-faint)" }}>
-            PNG, JPG or WebP · Max 2 MB
-          </p>
+          {gifAvatarUnlocked ? (
+            <div className="flex flex-col gap-0.5">
+              <span className="text-xs font-medium" style={{ color: "var(--color-success)" }}>
+                Animated GIF avatars unlocked
+              </span>
+              <p className="text-xs" style={{ color: "var(--color-text-faint)" }}>
+                PNG, JPG, WebP or GIF · Max 5 MB for GIFs, 2 MB for others
+              </p>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-0.5">
+              <p className="text-xs" style={{ color: "var(--color-text-faint)" }}>
+                PNG, JPG or WebP · Max 2 MB
+              </p>
+              <p className="text-xs" style={{ color: "var(--color-text-faint)" }}>
+                Spend $50 on Core Coins to unlock animated GIF avatars
+              </p>
+            </div>
+          )}
         </div>
       </div>
       {error && (
