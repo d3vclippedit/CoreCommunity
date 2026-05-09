@@ -25,7 +25,7 @@ export const meta: MetaFunction = () => [
   { name: "description", content: "Track your creator earnings and manage payouts." },
 ];
 
-type Tab = "creator" | "partner" | "pioneer" | "watch2earn";
+type Tab = "creator" | "partner" | "pioneer";
 
 export async function loader({ request, context }: LoaderFunctionArgs) {
   const { env } = context.cloudflare;
@@ -93,7 +93,6 @@ export default function EarningsPage() {
     { id: "creator", label: "Creator" },
     { id: "partner", label: "Partner" },
     { id: "pioneer", label: "Pioneer" },
-    { id: "watch2earn", label: "Watch 2 Earn" },
   ];
 
   return (
@@ -157,7 +156,6 @@ export default function EarningsPage() {
           {tab === "pioneer" && (
             <PioneerTab enrollment={pioneerEnrollment} metrics={pioneerMetrics} />
           )}
-          {tab === "watch2earn" && <Watch2EarnTab />}
         </div>
       </AppShell>
       <Footer />
@@ -385,32 +383,6 @@ function MetricCell({ label, value }: { label: string; value: string }) {
       </p>
       <p className="text-lg font-semibold tabular-nums" style={{ color: "var(--color-text)" }}>
         {value}
-      </p>
-    </div>
-  );
-}
-
-// ── Watch 2 Earn Tab ──────────────────────────────────────────────────────────
-
-function Watch2EarnTab() {
-  return (
-    <div
-      className="rounded-xl p-10 text-center"
-      style={{
-        background: "var(--color-bg-elev-1)",
-        border: "1px solid var(--color-border)",
-      }}
-    >
-      <p className="text-4xl mb-4">📺</p>
-      <p className="text-base font-semibold mb-2" style={{ color: "var(--color-text)" }}>
-        Watch 2 Earn — Coming Soon
-      </p>
-      <p
-        className="text-sm leading-relaxed"
-        style={{ color: "var(--color-text-dim)", maxWidth: "400px", margin: "0 auto" }}
-      >
-        Join a creator's community, watch their stream, and earn Core Coins over time. We're
-        building it — stay tuned.
       </p>
     </div>
   );
