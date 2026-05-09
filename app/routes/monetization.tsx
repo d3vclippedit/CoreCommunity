@@ -500,10 +500,10 @@ export default function MonetisationPage() {
                     {BADGE_DISPLAY.map((b) => (
                       <div
                         key={b.name}
-                        className="flex items-center gap-1.5 rounded-md px-2 py-1.5"
+                        className="flex items-center gap-1.5 rounded-md px-2 py-2"
                         style={{ background: "var(--color-bg-elev-2)" }}
                       >
-                        <span className="text-sm flex-shrink-0">{b.icon}</span>
+                        <span className="text-base flex-shrink-0">{b.icon}</span>
                         <div className="min-w-0">
                           <p
                             className="text-xs font-medium truncate"
@@ -615,16 +615,19 @@ function MembershipSection({
       className="rounded-xl p-5 flex flex-col flex-1"
       style={{ background: "var(--color-bg-elev-1)", border: "1px solid var(--color-border)" }}
     >
-      <h2 className="text-sm font-semibold mb-1" style={{ color: "var(--color-text)" }}>
-        Community membership
-      </h2>
-      <p className="text-xs mb-4" style={{ color: "var(--color-text-faint)" }}>
-        850 cc/week · subscribe to a pioneer community and get a member badge on your posts.
-      </p>
+      {/* Header */}
+      <div className="mb-5">
+        <h2 className="text-sm font-semibold mb-1" style={{ color: "var(--color-text)" }}>
+          Community membership
+        </h2>
+        <p className="text-xs" style={{ color: "var(--color-text-faint)" }}>
+          Subscribe to a pioneer community with Core Coins and get a member badge on your posts.
+        </p>
+      </div>
 
       {comms.length === 0 ? (
         <div
-          className="rounded-lg px-4 py-5 text-center"
+          className="flex-1 flex items-center justify-center rounded-lg text-center p-6"
           style={{ background: "var(--color-bg-elev-2)", border: "1px solid var(--color-border)" }}
         >
           <p className="text-sm" style={{ color: "var(--color-text-dim)" }}>
@@ -632,8 +635,9 @@ function MembershipSection({
           </p>
         </div>
       ) : (
-        <div className="flex flex-col gap-3">
-          <div className="flex flex-col gap-1.5">
+        <>
+          {/* Community picker */}
+          <div className="flex flex-col gap-1.5 mb-4">
             <label
               htmlFor="membership-community"
               className="text-xs font-medium"
@@ -645,7 +649,7 @@ function MembershipSection({
               id="membership-community"
               value={selected}
               onChange={(e) => setSelected(e.target.value)}
-              className="w-full rounded-md px-3 py-2 text-sm"
+              className="w-full rounded-md px-3 py-2.5 text-sm"
               style={{
                 background: "var(--color-bg-elev-2)",
                 border: "1px solid var(--color-border)",
@@ -661,82 +665,104 @@ function MembershipSection({
             </select>
           </div>
 
+          {/* Membership preview */}
           {selectedComm && (
             <div
-              className="rounded-lg p-3 flex items-center gap-3"
+              className="rounded-lg p-4 mb-4"
               style={{
                 background: "var(--color-bg-elev-2)",
                 borderLeft: `3px solid ${selectedComm.membershipBorderColor}`,
               }}
             >
-              <span>{selectedComm.membershipBadgeIcon}</span>
-              <div className="flex-1 min-w-0">
-                <p className="text-xs font-medium" style={{ color: "var(--color-text)" }}>
-                  c/{selectedComm.slug} member
-                </p>
-                <p className="text-xs" style={{ color: "var(--color-text-faint)" }}>
-                  850 cc/week · badge + post border
-                </p>
+              <div className="flex items-center gap-3 mb-3">
+                <span className="text-xl">{selectedComm.membershipBadgeIcon}</span>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold" style={{ color: "var(--color-text)" }}>
+                    c/{selectedComm.slug} Member
+                  </p>
+                  <p className="text-xs mt-0.5" style={{ color: "var(--color-text-faint)" }}>
+                    850 cc/week
+                  </p>
+                </div>
+                {isSubscribed && (
+                  <span
+                    className="text-xs px-2 py-0.5 rounded-full font-medium flex-shrink-0"
+                    style={{
+                      background: "rgba(61,214,140,0.15)",
+                      color: "var(--color-success)",
+                    }}
+                  >
+                    Active
+                  </span>
+                )}
               </div>
-              {isSubscribed && (
-                <span
-                  className="text-xs px-2 py-0.5 rounded-full font-medium"
-                  style={{ background: "rgba(61,214,140,0.15)", color: "var(--color-success)" }}
-                >
-                  Active
-                </span>
-              )}
+              <div
+                className="grid grid-cols-2 gap-2 text-xs pt-3"
+                style={{
+                  borderTop: "1px solid var(--color-border)",
+                  color: "var(--color-text-faint)",
+                }}
+              >
+                <span>Member badge on posts</span>
+                <span>Custom post border</span>
+                <span>Pioneer community access</span>
+                <span>Weekly renewal</span>
+              </div>
             </div>
           )}
 
+          {/* Feedback messages */}
           {fetcher.data?.error && (
-            <p className="text-xs" style={{ color: "var(--color-danger)" }}>
+            <p className="text-xs mb-3" style={{ color: "var(--color-danger)" }}>
               {fetcher.data.error}
             </p>
           )}
           {fetcher.data?.success && (
-            <p className="text-xs" style={{ color: "var(--color-success)" }}>
+            <p className="text-xs mb-3" style={{ color: "var(--color-success)" }}>
               Subscribed! Your membership badge is now active.
             </p>
           )}
 
-          {!user ? (
-            <p className="text-xs" style={{ color: "var(--color-text-faint)" }}>
-              <a href="/auth/login" style={{ color: "var(--color-text)" }}>
-                Sign in
-              </a>{" "}
-              to subscribe.
-            </p>
-          ) : isSubscribed ? (
-            <fetcher.Form method="post" action="/api/community/cancel-subscription">
-              <input type="hidden" name="communityId" value={selected} />
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className="text-xs px-3 py-1.5 rounded-md transition-opacity hover:opacity-80 disabled:opacity-50"
-                style={{
-                  background: "var(--color-bg-elev-2)",
-                  border: "1px solid var(--color-border)",
-                  color: "var(--color-text-dim)",
-                }}
-              >
-                {isSubmitting ? "…" : "Cancel membership"}
-              </button>
-            </fetcher.Form>
-          ) : (
-            <fetcher.Form method="post" action="/api/community/subscribe">
-              <input type="hidden" name="communityId" value={selected} />
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className="w-full py-2 text-sm font-medium rounded-md transition-opacity hover:opacity-90 disabled:opacity-50"
-                style={{ background: "var(--color-text)", color: "var(--color-bg)" }}
-              >
-                {isSubmitting ? "Subscribing…" : "Subscribe — 850 cc/week"}
-              </button>
-            </fetcher.Form>
-          )}
-        </div>
+          {/* Action — pinned to bottom */}
+          <div className="mt-auto pt-2">
+            {!user ? (
+              <p className="text-xs text-center" style={{ color: "var(--color-text-faint)" }}>
+                <a href="/auth/login" style={{ color: "var(--color-text)" }}>
+                  Sign in
+                </a>{" "}
+                to subscribe.
+              </p>
+            ) : isSubscribed ? (
+              <fetcher.Form method="post" action="/api/community/cancel-subscription">
+                <input type="hidden" name="communityId" value={selected} />
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="text-xs px-3 py-1.5 rounded-md transition-opacity hover:opacity-80 disabled:opacity-50"
+                  style={{
+                    background: "var(--color-bg-elev-2)",
+                    border: "1px solid var(--color-border)",
+                    color: "var(--color-text-dim)",
+                  }}
+                >
+                  {isSubmitting ? "…" : "Cancel membership"}
+                </button>
+              </fetcher.Form>
+            ) : (
+              <fetcher.Form method="post" action="/api/community/subscribe">
+                <input type="hidden" name="communityId" value={selected} />
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="w-full py-2.5 text-sm font-medium rounded-md transition-opacity hover:opacity-90 disabled:opacity-50"
+                  style={{ background: "var(--color-text)", color: "var(--color-bg)" }}
+                >
+                  {isSubmitting ? "Subscribing…" : "Subscribe — 850 cc/week"}
+                </button>
+              </fetcher.Form>
+            )}
+          </div>
+        </>
       )}
     </div>
   );
