@@ -1,4 +1,4 @@
-import { Form, Link, useLocation, useRouteLoaderData } from "@remix-run/react";
+import { Form, Link, useFetcher, useLocation, useRouteLoaderData } from "@remix-run/react";
 import { Bell, Coins } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import coreMiniUrl from "~/assets/logotop.png";
@@ -18,8 +18,8 @@ export function Header({ user }: HeaderProps) {
   const _location = useLocation();
   const root = useRouteLoaderData<typeof rootLoader>("root");
   const coinBalance = root?.coinBalance ?? 0;
-  const unreadNotifCount =
-    ((root as Record<string, unknown> | null)?.unreadNotifCount as number) ?? 0;
+  const unreadNotifCount = root?.unreadNotifCount ?? 0;
+  const recentNotifs = root?.recentNotifs ?? [];
 
   return (
     <header
@@ -113,24 +113,7 @@ export function Header({ user }: HeaderProps) {
             </div>
           )}
 
-          {user && (
-            <Link
-              to="/notifications"
-              className="relative flex items-center justify-center rounded-md transition-colors no-underline"
-              style={{ width: 32, height: 32, color: "var(--color-text-dim)" }}
-              aria-label="Notifications"
-            >
-              <Bell size={17} />
-              {unreadNotifCount > 0 && (
-                <span
-                  className="absolute top-0 right-0 min-w-[15px] h-[15px] px-[3px] rounded-full text-[9px] font-bold flex items-center justify-center"
-                  style={{ background: "var(--color-danger)", color: "#fff", lineHeight: 1 }}
-                >
-                  {unreadNotifCount > 99 ? "99+" : unreadNotifCount}
-                </span>
-              )}
-            </Link>
-          )}
+          {user && <NotificationBell unreadCount={unreadNotifCount} notifs={recentNotifs} />}
           {user ? (
             <UserMenu user={user} />
           ) : (
@@ -202,6 +185,203 @@ function NavLink({
     >
       {label}
     </Link>
+  );
+}
+
+type RecentNotif = {
+  id: string;
+  type: string;
+  readAt: string | null;
+  createdAt: string;
+  actorHandle: string | null;
+  actorDisplayName: string | null;
+  communitySlug: string | null;
+  communityName: string | null;
+  postId: string | null;
+  postTitle: string | null;
+};
+
+function notifLabel(n: RecentNotif): string {
+  if (n.type === "community_post") {
+    return `${n.communityName ?? "A community"} posted${n.postTitle ? `: ${n.postTitle}` : ""}`;
+  }
+  if (n.type === "mention") {
+    return `${n.actorDisplayName ?? "Someone"} mentioned you${n.postTitle ? ` in "${n.postTitle}"` : ""}`;
+  }
+  if (n.type === "badge_received") {
+    return `${n.actorDisplayName ?? "Someone"} gave your post a badge`;
+  }
+  return "New notification";
+}
+
+function notifHref(n: RecentNotif): string {
+  if (n.postId && n.communitySlug) return `/c/${n.communitySlug}/p/${n.postId}`;
+  if (n.communitySlug) return `/c/${n.communitySlug}`;
+  return "/notifications";
+}
+
+function relTime(date: Date | string): string {
+  const diff = Date.now() - new Date(date).getTime();
+  const m = Math.floor(diff / 60000);
+  if (m < 1) return "now";
+  if (m < 60) return `${m}m`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h`;
+  return `${Math.floor(h / 24)}d`;
+}
+
+function NotificationBell({
+  unreadCount,
+  notifs,
+}: {
+  unreadCount: number;
+  notifs: RecentNotif[];
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  const fetcher = useFetcher();
+
+  useEffect(() => {
+    if (!open) return;
+    function handle(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener("mousedown", handle);
+    return () => document.removeEventListener("mousedown", handle);
+  }, [open]);
+
+  const hasUnread = unreadCount > 0;
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className="relative flex items-center justify-center rounded-md transition-colors"
+        style={{
+          width: 32,
+          height: 32,
+          color: "var(--color-text-dim)",
+          background: "none",
+          border: "none",
+          cursor: "pointer",
+        }}
+        aria-label="Notifications"
+      >
+        <Bell size={17} />
+        {hasUnread && (
+          <span
+            className="absolute top-0 right-0 min-w-[15px] h-[15px] px-[3px] rounded-full text-[9px] font-bold flex items-center justify-center"
+            style={{ background: "var(--color-danger)", color: "#fff", lineHeight: 1 }}
+          >
+            {unreadCount > 99 ? "99+" : unreadCount}
+          </span>
+        )}
+      </button>
+
+      {open && (
+        <div
+          className="absolute right-0 mt-1 z-50 rounded-lg overflow-hidden"
+          style={{
+            width: 320,
+            background: "var(--color-bg-elev-1)",
+            border: "1px solid var(--color-border)",
+            boxShadow: "0 8px 32px rgba(0,0,0,0.5)",
+          }}
+        >
+          {/* Header row */}
+          <div
+            className="flex items-center justify-between px-3 py-2.5"
+            style={{ borderBottom: "1px solid var(--color-border)" }}
+          >
+            <span className="text-xs font-semibold" style={{ color: "var(--color-text)" }}>
+              Notifications
+            </span>
+            {hasUnread && (
+              <fetcher.Form method="post" action="/notifications">
+                <button
+                  type="submit"
+                  className="text-[11px] tab-btn px-2 py-0.5 rounded transition-colors"
+                  style={{ color: "var(--color-text-faint)" }}
+                >
+                  Mark all read
+                </button>
+              </fetcher.Form>
+            )}
+          </div>
+
+          {/* Notification list — max 7, scrollable */}
+          <div style={{ maxHeight: 368, overflowY: "auto" }}>
+            {notifs.length === 0 ? (
+              <p className="text-xs text-center py-6" style={{ color: "var(--color-text-faint)" }}>
+                No notifications yet
+              </p>
+            ) : (
+              notifs.map((n) => {
+                const isUnread = !n.readAt;
+                return (
+                  <Link
+                    key={n.id}
+                    to={notifHref(n)}
+                    onClick={() => setOpen(false)}
+                    className="flex items-start gap-2.5 px-3 py-2.5 no-underline transition-colors"
+                    style={{
+                      background: isUnread ? "rgba(255,255,255,0.04)" : "transparent",
+                      borderBottom: "1px solid var(--color-border)",
+                      display: "flex",
+                    }}
+                  >
+                    {isUnread && (
+                      <div
+                        className="flex-shrink-0 mt-1.5 rounded-full"
+                        style={{
+                          width: 6,
+                          height: 6,
+                          minWidth: 6,
+                          background: "var(--color-danger)",
+                        }}
+                      />
+                    )}
+                    <div className={isUnread ? "" : "ml-[22px]"} style={{ flex: 1, minWidth: 0 }}>
+                      <p
+                        className="text-xs leading-snug"
+                        style={{
+                          color: "var(--color-text-dim)",
+                          overflow: "hidden",
+                          display: "-webkit-box",
+                          WebkitLineClamp: 2,
+                          WebkitBoxOrient: "vertical",
+                        }}
+                      >
+                        {notifLabel(n)}
+                      </p>
+                      <p
+                        className="text-[11px] mt-0.5"
+                        style={{ color: "var(--color-text-faint)" }}
+                      >
+                        {relTime(n.createdAt)}
+                      </p>
+                    </div>
+                  </Link>
+                );
+              })
+            )}
+          </div>
+
+          {/* Footer */}
+          <div style={{ borderTop: "1px solid var(--color-border)" }}>
+            <Link
+              to="/notifications"
+              onClick={() => setOpen(false)}
+              className="flex items-center justify-center py-2 text-xs no-underline transition-colors tab-btn w-full"
+              style={{ color: "var(--color-text-faint)" }}
+            >
+              View all notifications
+            </Link>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 

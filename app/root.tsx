@@ -8,13 +8,13 @@ import {
   isRouteErrorResponse,
   useRouteError,
 } from "@remix-run/react";
-import { and, isNull } from "drizzle-orm";
+import { desc } from "drizzle-orm";
 import { eq } from "drizzle-orm";
 import { getCurrentUser } from "~/lib/auth/user.server";
 import { getBalance } from "~/lib/coins.server";
 import { createDb } from "~/lib/db/index";
 import tailwindStyles from "~/styles/tailwind.css?url";
-import { notifications } from "../db/schema";
+import { communities, notifications, posts, users } from "../db/schema";
 
 export const links: LinksFunction = () => [
   { rel: "preconnect", href: "https://fonts.googleapis.com" },
@@ -42,6 +42,18 @@ export async function loader({ request, context }: LoaderFunctionArgs) {
   const db = createDb(env.DB);
   let coinBalance = 0;
   let unreadNotifCount = 0;
+  let recentNotifs: {
+    id: string;
+    type: string;
+    readAt: Date | null;
+    createdAt: Date;
+    actorHandle: string | null;
+    actorDisplayName: string | null;
+    communitySlug: string | null;
+    communityName: string | null;
+    postId: string | null;
+    postTitle: string | null;
+  }[] = [];
   if (user) {
     try {
       coinBalance = await getBalance(db, user.id);
@@ -49,17 +61,33 @@ export async function loader({ request, context }: LoaderFunctionArgs) {
       // coins table not yet migrated
     }
     try {
-      const unread = await db
-        .select({ id: notifications.id })
+      const rows = await db
+        .select({
+          id: notifications.id,
+          type: notifications.type,
+          readAt: notifications.readAt,
+          createdAt: notifications.createdAt,
+          actorHandle: users.handle,
+          actorDisplayName: users.displayName,
+          communitySlug: communities.slug,
+          communityName: communities.name,
+          postId: notifications.postId,
+          postTitle: posts.title,
+        })
         .from(notifications)
-        .where(and(eq(notifications.userId, user.id), isNull(notifications.readAt)))
-        .limit(100);
-      unreadNotifCount = unread.length;
+        .leftJoin(users, eq(notifications.actorId, users.id))
+        .leftJoin(communities, eq(notifications.communityId, communities.id))
+        .leftJoin(posts, eq(notifications.postId, posts.id))
+        .where(eq(notifications.userId, user.id))
+        .orderBy(desc(notifications.createdAt))
+        .limit(7);
+      unreadNotifCount = rows.filter((r) => !r.readAt).length;
+      recentNotifs = rows;
     } catch {
       // notifications table not yet migrated
     }
   }
-  return { user, coinBalance, unreadNotifCount };
+  return { user, coinBalance, unreadNotifCount, recentNotifs };
 }
 
 export function Layout({ children }: { children: React.ReactNode }) {
