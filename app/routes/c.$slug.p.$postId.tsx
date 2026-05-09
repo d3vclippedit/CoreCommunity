@@ -10,6 +10,7 @@ import { getBalance } from "~/lib/coins.server";
 import { createDb } from "~/lib/db/index";
 import { getEmbedSrc } from "~/lib/embeds";
 import { renderMentions } from "~/lib/mentions";
+import { createMentionNotifications } from "~/lib/notifications.server";
 import { type OgPreview, getOgPreview } from "~/lib/og.server";
 import { canFeaturePost, canPinPost } from "~/lib/permissions";
 import { checkRateLimit } from "~/lib/ratelimit";
@@ -293,8 +294,9 @@ export async function action({ params, request, context }: ActionFunctionArgs) {
   }
 
   const now = new Date();
+  const commentId = generateId();
   await db.insert(comments).values({
-    id: generateId(),
+    id: commentId,
     postId: post.id,
     parentCommentId,
     authorId: user.id,
@@ -310,6 +312,19 @@ export async function action({ params, request, context }: ActionFunctionArgs) {
     .update(posts)
     .set({ commentCount: sql`${posts.commentCount} + 1`, updatedAt: now })
     .where(eq(posts.id, post.id));
+
+  // Notify @mentioned users in comment body
+  try {
+    await createMentionNotifications(db, {
+      body,
+      actorId: user.id,
+      communityId: post.communityId,
+      postId: post.id,
+      commentId,
+    });
+  } catch {
+    // skip silently
+  }
 
   return { ok: true };
 }

@@ -16,6 +16,7 @@ import { Input } from "~/components/ui/Input";
 import { getCurrentUser } from "~/lib/auth/user.server";
 import { createDb } from "~/lib/db/index";
 import { parseEmbed } from "~/lib/embeds";
+import { createMentionNotifications } from "~/lib/notifications.server";
 import { resolvePostPerms } from "~/lib/permissions";
 import { checkRateLimit } from "~/lib/ratelimit";
 import { generateId } from "~/lib/utils";
@@ -392,6 +393,19 @@ export async function action({ params, request, context }: ActionFunctionArgs) {
     }
   } catch {
     // notifications table not yet migrated — skip silently
+  }
+
+  // Notify @mentioned users in post title + body
+  try {
+    const mentionText = `${title} ${body ?? ""}`;
+    await createMentionNotifications(db, {
+      body: mentionText,
+      actorId: user.id,
+      communityId: community.id,
+      postId,
+    });
+  } catch {
+    // skip silently
   }
 
   return redirect(`/c/${community.slug}/p/${postId}`);
