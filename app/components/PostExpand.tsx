@@ -183,11 +183,19 @@ function PlayFacade({
   thumbnailUrl,
   label,
   onPlay,
+  brand,
 }: {
   thumbnailUrl: string | null;
   label: string;
   onPlay: () => void;
+  brand?: "twitch" | "youtube" | null;
 }) {
+  const bgStyle = thumbnailUrl
+    ? "var(--color-bg-elev-2)"
+    : brand === "twitch"
+      ? "linear-gradient(135deg, #1a0a2e 0%, #18181C 60%)"
+      : "var(--color-bg-elev-2)";
+
   return (
     <button
       type="button"
@@ -197,7 +205,7 @@ function PlayFacade({
         width: "100%",
         aspectRatio: "16/9",
         display: "block",
-        background: "var(--color-bg-elev-2)",
+        background: bgStyle,
         border: "none",
         padding: 0,
         cursor: "pointer",
@@ -213,12 +221,29 @@ function PlayFacade({
           style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
         />
       )}
-      {/* dark overlay */}
+      {/* brand label when no thumbnail */}
+      {!thumbnailUrl && brand === "twitch" && (
+        <span
+          style={{
+            position: "absolute",
+            top: 12,
+            left: 12,
+            fontSize: 11,
+            fontWeight: 600,
+            letterSpacing: "0.04em",
+            color: "#a970ff",
+            textTransform: "uppercase",
+          }}
+        >
+          Twitch Clip
+        </span>
+      )}
+      {/* overlay */}
       <span
         style={{
           position: "absolute",
           inset: 0,
-          background: thumbnailUrl ? "rgba(0,0,0,0.35)" : "rgba(0,0,0,0.6)",
+          background: thumbnailUrl ? "rgba(0,0,0,0.35)" : "transparent",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
@@ -230,14 +255,22 @@ function PlayFacade({
             width: 52,
             height: 52,
             borderRadius: "50%",
-            background: "rgba(255,255,255,0.92)",
+            background:
+              brand === "twitch" && !thumbnailUrl
+                ? "rgba(169,112,255,0.2)"
+                : "rgba(255,255,255,0.92)",
+            border:
+              brand === "twitch" && !thumbnailUrl ? "2px solid rgba(169,112,255,0.7)" : "none",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
           }}
         >
           <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-            <path d="M6 4l12 6-12 6V4z" fill="#111" />
+            <path
+              d="M6 4l12 6-12 6V4z"
+              fill={brand === "twitch" && !thumbnailUrl ? "#a970ff" : "#111"}
+            />
           </svg>
         </span>
       </span>
@@ -287,11 +320,13 @@ export function InlineMedia({
     }
     const thumbnailUrl =
       embedKind === "youtube" ? `https://img.youtube.com/vi/${embedRef}/mqdefault.jpg` : null;
+    const brand = embedKind === "youtube" ? "youtube" : "twitch";
     return (
       <PlayFacade
         thumbnailUrl={thumbnailUrl}
         label={embedKind === "youtube" ? "YouTube video" : "Twitch clip"}
         onPlay={() => setActive(true)}
+        brand={brand}
       />
     );
   }
@@ -333,11 +368,13 @@ export function InlineMedia({
       }
       const thumbnailUrl =
         embed.kind === "youtube" ? `https://img.youtube.com/vi/${embed.id}/mqdefault.jpg` : null;
+      const brand = embed.kind === "youtube" ? "youtube" : "twitch";
       return (
         <PlayFacade
           thumbnailUrl={thumbnailUrl}
           label={embed.kind === "youtube" ? "YouTube video" : "Twitch clip"}
           onPlay={() => setActive(true)}
+          brand={brand}
         />
       );
     }

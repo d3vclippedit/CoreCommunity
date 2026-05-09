@@ -317,7 +317,7 @@ function PostCard({
             <div
               className="flex-shrink-0 rounded-lg overflow-hidden"
               style={{
-                width: 550,
+                width: "min(550px, 55%)",
                 background: "var(--color-bg-elev-2)",
                 border: "1px solid var(--color-border)",
               }}
