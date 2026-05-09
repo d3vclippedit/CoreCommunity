@@ -6,7 +6,8 @@ import {
   useRouteLoaderData,
   useSearchParams,
 } from "@remix-run/react";
-import { type FormEvent, useEffect } from "react";
+import { and, eq, isNull } from "drizzle-orm";
+import { type FormEvent, useEffect, useState } from "react";
 import { AppShell } from "~/components/layout/AppShell";
 import { Footer } from "~/components/layout/Footer";
 import { Header } from "~/components/layout/Header";
@@ -15,6 +16,7 @@ import { formatCoins } from "~/lib/coins";
 import { getActiveBundles, getBalance, getTransactionHistory } from "~/lib/coins.server";
 import { createDb } from "~/lib/db/index";
 import type { loader as rootLoader } from "~/root";
+import { communities, communitySubscriptions } from "../../db/schema";
 
 export const meta: MetaFunction = () => [
   { title: "Core Coins — Cormunities" },
@@ -40,6 +42,18 @@ export async function loader({ request, context }: LoaderFunctionArgs) {
   try {
     const bundles = await getActiveBundles(db);
 
+    const membershipCommunities = await db
+      .select({
+        id: communities.id,
+        slug: communities.slug,
+        name: communities.name,
+        membershipPriceCoins: communities.membershipPriceCoins,
+        membershipBadgeIcon: communities.membershipBadgeIcon,
+        membershipBorderColor: communities.membershipBorderColor,
+      })
+      .from(communities)
+      .where(and(eq(communities.membershipEnabled, true), isNull(communities.deletedAt)));
+
     if (!user) {
       return {
         user: null,
@@ -47,13 +61,24 @@ export async function loader({ request, context }: LoaderFunctionArgs) {
         bundles,
         balance: 0,
         transactions: [],
+        membershipCommunities,
+        subscribedIds: [] as string[],
         dbReady: true,
       };
     }
 
-    const [balance, transactions] = await Promise.all([
+    const [balance, transactions, activeSubscriptions] = await Promise.all([
       getBalance(db, user.id),
       getTransactionHistory(db, user.id, 50),
+      db
+        .select({ communityId: communitySubscriptions.communityId })
+        .from(communitySubscriptions)
+        .where(
+          and(
+            eq(communitySubscriptions.userId, user.id),
+            eq(communitySubscriptions.status, "active"),
+          ),
+        ),
     ]);
 
     return {
@@ -62,6 +87,8 @@ export async function loader({ request, context }: LoaderFunctionArgs) {
       bundles,
       balance,
       transactions,
+      membershipCommunities,
+      subscribedIds: activeSubscriptions.map((s) => s.communityId),
       dbReady: true,
     };
   } catch {
@@ -71,6 +98,8 @@ export async function loader({ request, context }: LoaderFunctionArgs) {
       bundles: [],
       balance: 0,
       transactions: [],
+      membershipCommunities: [],
+      subscribedIds: [] as string[],
       dbReady: false,
     };
   }
@@ -457,6 +486,14 @@ export default function MonetisationPage() {
                   </div>
                 </div>
 
+                <MembershipSection
+                  communities={(data.membershipCommunities as MembershipCommunity[]).filter(
+                    (c) => c !== null,
+                  )}
+                  subscribedIds={data.subscribedIds}
+                  user={data.user}
+                />
+
                 <div
                   className="rounded-xl p-5"
                   style={{
@@ -543,6 +580,181 @@ export default function MonetisationPage() {
         </div>
       </AppShell>
       <Footer />
+    </div>
+  );
+}
+
+type MembershipCommunity = {
+  id: string;
+  slug: string;
+  name: string;
+  membershipPriceCoins: number;
+  membershipBadgeIcon: string;
+  membershipBorderColor: string;
+};
+
+function MembershipSection({
+  communities: comms,
+  subscribedIds,
+  user,
+}: {
+  communities: MembershipCommunity[];
+  subscribedIds: string[];
+  user: { id: string } | null;
+}) {
+  const [selected, setSelected] = useState(comms[0]?.id ?? "");
+  const fetcher = useFetcher<{ error?: string; success?: boolean }>({ key: "community-subscribe" });
+  const selectedComm = comms.find((c) => c.id === selected);
+  const isSubscribed = subscribedIds.includes(selected);
+  const isSubmitting = fetcher.state !== "idle";
+
+  return (
+    <div
+      className="rounded-xl overflow-hidden"
+      style={{ border: "2px solid #F59E0B", minHeight: 260 }}
+    >
+      {/* Amber header strip */}
+      <div
+        className="px-5 py-3 flex items-center gap-2"
+        style={{ background: "rgba(245,158,11,0.15)" }}
+      >
+        <span className="text-lg">⭐</span>
+        <div>
+          <h2 className="text-sm font-bold" style={{ color: "#F59E0B" }}>
+            Member Subscription
+          </h2>
+          <p className="text-xs" style={{ color: "var(--color-text-dim)" }}>
+            Support a community with Core Coins — get a badge &amp; exclusive post border
+          </p>
+        </div>
+      </div>
+
+      {/* Body */}
+      <div className="p-5" style={{ background: "var(--color-bg-elev-1)" }}>
+        {comms.length === 0 ? (
+          <div className="flex flex-col items-center gap-3 py-8 text-center">
+            <span className="text-4xl">🔐</span>
+            <p className="text-sm font-medium" style={{ color: "var(--color-text)" }}>
+              No memberships available yet
+            </p>
+            <p
+              className="text-xs max-w-xs leading-relaxed"
+              style={{ color: "var(--color-text-faint)" }}
+            >
+              Streamers can enable memberships in their community settings. Check back once your
+              favourite community activates it.
+            </p>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-4">
+            <div className="flex flex-col gap-1.5">
+              <label
+                htmlFor="membership-community"
+                className="text-xs font-medium"
+                style={{ color: "var(--color-text-dim)" }}
+              >
+                Choose community
+              </label>
+              <select
+                id="membership-community"
+                value={selected}
+                onChange={(e) => setSelected(e.target.value)}
+                className="w-full rounded-md px-3 py-2 text-sm"
+                style={{
+                  background: "var(--color-bg-elev-2)",
+                  border: "1px solid var(--color-border)",
+                  color: "var(--color-text)",
+                  outline: "none",
+                }}
+              >
+                {comms.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    c/{c.slug} — {c.membershipPriceCoins} cc/week
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {selectedComm && (
+              <div
+                className="rounded-lg p-4 flex items-center gap-3"
+                style={{
+                  background: "var(--color-bg-elev-2)",
+                  borderLeft: `4px solid ${selectedComm.membershipBorderColor}`,
+                }}
+              >
+                <span className="text-2xl">{selectedComm.membershipBadgeIcon}</span>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold" style={{ color: "var(--color-text)" }}>
+                    c/{selectedComm.slug} Member
+                  </p>
+                  <p className="text-xs mt-0.5" style={{ color: "var(--color-text-faint)" }}>
+                    {selectedComm.membershipPriceCoins} cc/week · custom badge + post border
+                  </p>
+                </div>
+                {isSubscribed && (
+                  <span
+                    className="text-xs px-2 py-1 rounded-full font-semibold"
+                    style={{ background: "rgba(61,214,140,0.15)", color: "var(--color-success)" }}
+                  >
+                    Active
+                  </span>
+                )}
+              </div>
+            )}
+
+            {fetcher.data?.error && (
+              <p className="text-xs" style={{ color: "var(--color-danger)" }}>
+                {fetcher.data.error}
+              </p>
+            )}
+            {fetcher.data?.success && (
+              <p className="text-xs font-medium" style={{ color: "var(--color-success)" }}>
+                Subscribed! Your membership badge is now active.
+              </p>
+            )}
+
+            {!user ? (
+              <p className="text-sm text-center py-2" style={{ color: "var(--color-text-faint)" }}>
+                <a href="/auth/login" style={{ color: "#F59E0B" }}>
+                  Sign in
+                </a>{" "}
+                to subscribe.
+              </p>
+            ) : isSubscribed ? (
+              <fetcher.Form method="post" action="/api/community/cancel-subscription">
+                <input type="hidden" name="communityId" value={selected} />
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="text-xs px-3 py-1.5 rounded-md transition-opacity hover:opacity-80 disabled:opacity-50"
+                  style={{
+                    background: "var(--color-bg-elev-2)",
+                    border: "1px solid var(--color-border)",
+                    color: "var(--color-text-dim)",
+                  }}
+                >
+                  {isSubmitting ? "…" : "Cancel membership"}
+                </button>
+              </fetcher.Form>
+            ) : (
+              <fetcher.Form method="post" action="/api/community/subscribe">
+                <input type="hidden" name="communityId" value={selected} />
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="w-full py-2.5 text-sm font-bold rounded-md transition-opacity hover:opacity-90 disabled:opacity-50"
+                  style={{ background: "#F59E0B", color: "#000" }}
+                >
+                  {isSubmitting
+                    ? "Subscribing…"
+                    : `Subscribe — ${selectedComm?.membershipPriceCoins ?? 0} cc/week`}
+                </button>
+              </fetcher.Form>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
