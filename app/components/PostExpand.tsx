@@ -197,7 +197,7 @@ export function InlineMedia({
         src={imageUrl}
         alt=""
         loading="lazy"
-        style={{ width: "100%", maxHeight: 200, objectFit: "contain", display: "block" }}
+        style={{ width: "100%", maxHeight: 500, objectFit: "contain", display: "block" }}
       />
     );
   }
@@ -224,7 +224,7 @@ export function InlineMedia({
           src={`https://media.giphy.com/media/${embed.id}/giphy.gif`}
           alt="GIF"
           loading="lazy"
-          style={{ width: "100%", maxHeight: 200, objectFit: "contain", display: "block" }}
+          style={{ width: "100%", maxHeight: 500, objectFit: "contain", display: "block" }}
         />
       );
     }

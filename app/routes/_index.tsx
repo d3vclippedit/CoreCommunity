@@ -419,7 +419,7 @@ function FeedPostCard({ post }: { post: FeedPost }) {
 
         {/* Text content */}
         <div className="flex-1 min-w-0">
-          <div className="flex items-center justify-between mb-1">
+          <div className="mb-1">
             <Link to={`/c/${post.communitySlug}`} className="no-underline group">
               <span
                 className="text-xs font-medium group-hover:underline"
@@ -428,12 +428,6 @@ function FeedPostCard({ post }: { post: FeedPost }) {
                 c/{post.communitySlug}
               </span>
             </Link>
-            <span
-              className="text-xs font-semibold tabular-nums"
-              style={{ color: "var(--color-text-faint)" }}
-            >
-              {post.score} pts
-            </span>
           </div>
 
           <div className="flex items-start gap-2 mb-1">
@@ -542,7 +536,7 @@ function FeedPostCard({ post }: { post: FeedPost }) {
           <div
             className="flex-shrink-0 rounded-lg overflow-hidden self-center"
             style={{
-              width: 220,
+              width: 550,
               background: "var(--color-bg-elev-2)",
               border: "1px solid var(--color-border)",
             }}
@@ -556,6 +550,16 @@ function FeedPostCard({ post }: { post: FeedPost }) {
             />
           </div>
         )}
+
+        {/* Score — right of media */}
+        <div className="flex-shrink-0 text-right" style={{ minWidth: 54 }}>
+          <span
+            className="text-xs font-semibold tabular-nums"
+            style={{ color: "var(--color-text-faint)" }}
+          >
+            {post.score} pts
+          </span>
+        </div>
       </div>
     </div>
   );

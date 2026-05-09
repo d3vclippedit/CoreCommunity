@@ -237,13 +237,6 @@ function PostCard({
       }}
     >
       <div className="flex gap-3 items-center">
-        {/* Vote score */}
-        <div className="flex flex-col items-center gap-0.5 flex-shrink-0 w-8 text-center">
-          <span className="text-sm font-semibold" style={{ color: "var(--color-text)" }}>
-            {post.score}
-          </span>
-        </div>
-
         {/* Text content */}
         <div className="flex-1 min-w-0">
           <div className="flex items-start gap-1.5 mb-1">
@@ -338,7 +331,7 @@ function PostCard({
           <div
             className="flex-shrink-0 rounded-lg overflow-hidden"
             style={{
-              width: 220,
+              width: 550,
               background: "var(--color-bg-elev-2)",
               border: "1px solid var(--color-border)",
             }}
@@ -352,6 +345,13 @@ function PostCard({
             />
           </div>
         )}
+
+        {/* Score — right of media */}
+        <div className="flex-shrink-0 text-center" style={{ minWidth: 48 }}>
+          <span className="text-sm font-semibold" style={{ color: "var(--color-text)" }}>
+            {post.score}
+          </span>
+        </div>
       </div>
     </div>
   );
