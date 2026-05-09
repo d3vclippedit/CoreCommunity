@@ -302,6 +302,42 @@ export async function action({ params, request, context }: ActionFunctionArgs) {
     return { ok: true, intent };
   }
 
+  // ── Membership settings ───────────────────────────────────────────────────
+  if (intent === "settings_membership") {
+    const membershipEnabled = form.get("membershipEnabled") === "1";
+    const membershipPriceRaw = (form.get("membershipPriceCoins") as string | null)?.trim() ?? "";
+    const membershipPriceCoins = membershipPriceRaw === "" ? 100 : Number(membershipPriceRaw);
+    const membershipBadgeIcon = (form.get("membershipBadgeIcon") as string | null)?.trim() ?? "⭐";
+    const membershipBorderColor =
+      (form.get("membershipBorderColor") as string | null)?.trim() ?? "#F59E0B";
+
+    if (Number.isNaN(membershipPriceCoins) || membershipPriceCoins < 1)
+      return { error: "Price must be at least 1 coin.", intent };
+    if (membershipBorderColor && !/^#[0-9a-fA-F]{6}$/.test(membershipBorderColor))
+      return { error: "Border color must be a valid hex color.", intent };
+
+    await db
+      .update(communities)
+      .set({
+        membershipEnabled,
+        membershipPriceCoins,
+        membershipBadgeIcon: membershipBadgeIcon || "⭐",
+        membershipBorderColor: membershipBorderColor || "#F59E0B",
+        updatedAt: new Date(),
+      })
+      .where(eq(communities.id, community.id));
+
+    await db.insert(moderationActions).values({
+      id: generateId(),
+      communityId: community.id,
+      actorId: user.id,
+      action: "settings_change",
+      createdAt: new Date(),
+    });
+
+    return { ok: true, intent };
+  }
+
   // ── Add staff ─────────────────────────────────────────────────────────────
   if (intent === "add_staff") {
     if (!canManageStaff(membership?.role) && !user.isPlatformAdmin)
@@ -428,7 +464,8 @@ export default function ModSettings() {
     data.ok &&
     (data.intent === "settings_general" ||
       data.intent === "settings_appearance" ||
-      data.intent === "settings_permissions");
+      data.intent === "settings_permissions" ||
+      data.intent === "settings_membership");
   const roleOk =
     data &&
     "ok" in data &&
@@ -460,13 +497,14 @@ export default function ModSettings() {
     border: "1px solid var(--color-border)",
   };
 
-  type SettingsTab = "general" | "appearance" | "permissions" | "roles" | "staff";
+  type SettingsTab = "general" | "appearance" | "permissions" | "roles" | "membership" | "staff";
   const activeTab = (params.get("tab") ?? "general") as SettingsTab;
   const TABS: { id: SettingsTab; label: string }[] = [
     { id: "general", label: "General" },
     { id: "appearance", label: "Appearance" },
     { id: "permissions", label: "Permissions" },
     { id: "roles", label: "Roles" },
+    { id: "membership", label: "Membership" },
     { id: "staff", label: "Staff" },
   ];
 
@@ -1135,6 +1173,142 @@ export default function ModSettings() {
                   loading={submittingIntent === "create_role" && isSubmitting}
                 >
                   Create role
+                </Button>
+              </Form>
+            </div>
+          )}
+
+          {/* ── Membership tab ── */}
+          {activeTab === "membership" && (
+            <div className="rounded-lg p-6" style={cardStyle}>
+              <h2 className="text-sm font-semibold mb-1" style={{ color: "var(--color-text)" }}>
+                Community membership
+              </h2>
+              <p className="text-xs mb-4" style={{ color: "var(--color-text-faint)" }}>
+                Let members subscribe to your community with Core Coins. Subscribers get a custom
+                badge on their posts and a highlighted post border in the feed.
+              </p>
+              <Form method="post" className="flex flex-col gap-4">
+                <input type="hidden" name="_intent" value="settings_membership" />
+
+                <MembershipToggle defaultEnabled={community.membershipEnabled ?? false} />
+
+                <div className="flex flex-col gap-1.5">
+                  <label
+                    htmlFor="membershipPriceCoins"
+                    className="text-sm font-medium"
+                    style={{ color: "var(--color-text)" }}
+                  >
+                    Weekly price (cc)
+                  </label>
+                  <input
+                    id="membershipPriceCoins"
+                    name="membershipPriceCoins"
+                    type="number"
+                    min={1}
+                    step={1}
+                    defaultValue={community.membershipPriceCoins ?? 100}
+                    className="w-32 rounded-md px-3 py-2 text-sm"
+                    style={{
+                      background: "var(--color-bg-elev-2)",
+                      border: "1px solid var(--color-border)",
+                      color: "var(--color-text)",
+                      outline: "none",
+                    }}
+                  />
+                  <p className="text-xs" style={{ color: "var(--color-text-faint)" }}>
+                    Charged once per week. Minimum 1 cc.
+                  </p>
+                </div>
+
+                <div className="flex flex-col gap-1.5">
+                  <label
+                    htmlFor="membershipBadgeIcon"
+                    className="text-sm font-medium"
+                    style={{ color: "var(--color-text)" }}
+                  >
+                    Member badge icon
+                  </label>
+                  <input
+                    id="membershipBadgeIcon"
+                    name="membershipBadgeIcon"
+                    type="text"
+                    defaultValue={community.membershipBadgeIcon ?? "⭐"}
+                    maxLength={4}
+                    className="w-20 rounded-md px-3 py-2 text-xl text-center"
+                    style={{
+                      background: "var(--color-bg-elev-2)",
+                      border: "1px solid var(--color-border)",
+                      color: "var(--color-text)",
+                      outline: "none",
+                    }}
+                  />
+                  <p className="text-xs" style={{ color: "var(--color-text-faint)" }}>
+                    Emoji shown on member posts. One emoji.
+                  </p>
+                </div>
+
+                <div className="flex flex-col gap-1.5">
+                  <label
+                    htmlFor="membershipBorderColor"
+                    className="text-sm font-medium"
+                    style={{ color: "var(--color-text)" }}
+                  >
+                    Member post border color
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="color"
+                      id="membershipBorderColorPicker"
+                      defaultValue={community.membershipBorderColor ?? "#F59E0B"}
+                      onChange={(e) => {
+                        const input = document.getElementById(
+                          "membershipBorderColor",
+                        ) as HTMLInputElement;
+                        if (input) input.value = e.target.value;
+                      }}
+                      className="w-10 h-9 rounded cursor-pointer"
+                      style={{
+                        border: "1px solid var(--color-border)",
+                        padding: "2px",
+                        background: "var(--color-bg-elev-2)",
+                      }}
+                    />
+                    <input
+                      type="text"
+                      id="membershipBorderColor"
+                      name="membershipBorderColor"
+                      defaultValue={community.membershipBorderColor ?? "#F59E0B"}
+                      placeholder="#F59E0B"
+                      pattern="#[0-9a-fA-F]{6}"
+                      className="w-28 rounded-md px-3 py-2 text-sm font-mono"
+                      style={{
+                        background: "var(--color-bg-elev-2)",
+                        border: "1px solid var(--color-border)",
+                        color: "var(--color-text)",
+                        outline: "none",
+                      }}
+                      onChange={(e) => {
+                        if (/^#[0-9a-fA-F]{6}$/.test(e.target.value)) {
+                          const picker = document.getElementById(
+                            "membershipBorderColorPicker",
+                          ) as HTMLInputElement;
+                          if (picker) picker.value = e.target.value;
+                        }
+                      }}
+                    />
+                  </div>
+                  <p className="text-xs" style={{ color: "var(--color-text-faint)" }}>
+                    Gradient border shown on member posts in the feed.
+                  </p>
+                </div>
+
+                <Button
+                  type="submit"
+                  loading={submittingIntent === "settings_membership" && isSubmitting}
+                  className="w-full"
+                >
+                  Save membership settings
                 </Button>
               </Form>
             </div>
@@ -1884,6 +2058,55 @@ function RoleBorderPicker({
           );
         })}
       </div>
+    </div>
+  );
+}
+
+function MembershipToggle({ defaultEnabled }: { defaultEnabled: boolean }) {
+  const [enabled, setEnabled] = useState(defaultEnabled);
+  return (
+    <div className="flex flex-col gap-1.5">
+      <span className="text-sm font-medium" style={{ color: "var(--color-text)" }}>
+        Enable membership
+      </span>
+      <label className="flex items-center gap-3 cursor-pointer select-none">
+        <input type="hidden" name="membershipEnabled" value={enabled ? "1" : "0"} />
+        <button
+          type="button"
+          role="switch"
+          aria-checked={enabled}
+          onClick={() => setEnabled((v) => !v)}
+          className="relative flex-shrink-0"
+          style={{
+            width: 40,
+            height: 22,
+            borderRadius: 11,
+            background: enabled ? "#F59E0B" : "var(--color-bg-elev-2)",
+            border: "1px solid var(--color-border)",
+            transition: "background 0.2s",
+            cursor: "pointer",
+          }}
+        >
+          <span
+            style={{
+              position: "absolute",
+              top: 2,
+              width: 16,
+              height: 16,
+              borderRadius: "50%",
+              background: "#fff",
+              transition: "transform 0.2s",
+              transform: enabled ? "translateX(20px)" : "translateX(2px)",
+            }}
+          />
+        </button>
+        <span className="text-sm" style={{ color: enabled ? "#F59E0B" : "var(--color-text-dim)" }}>
+          {enabled ? "Membership subscriptions active" : "Membership disabled"}
+        </span>
+      </label>
+      <p className="text-xs" style={{ color: "var(--color-text-faint)" }}>
+        Members can subscribe from the Core Coins page when this is enabled.
+      </p>
     </div>
   );
 }

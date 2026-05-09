@@ -10,7 +10,14 @@ import { Header } from "~/components/layout/Header";
 import { getCurrentUser } from "~/lib/auth/user.server";
 import { getBulkPostBadgeSummary } from "~/lib/badges.server";
 import { createDb } from "~/lib/db/index";
-import { communities, communityMemberships, follows, posts, users } from "../../db/schema";
+import {
+  communities,
+  communityMemberships,
+  follows,
+  posts,
+  users,
+  wallPosts,
+} from "../../db/schema";
 import { CommunityAvatar } from "./communities._index";
 
 export const meta: MetaFunction = () => [
@@ -49,6 +56,15 @@ type FeedPost = {
   badges: { icon: string; name: string; count: number; totalCoins: number }[];
 };
 
+type WallFeedPost = {
+  id: string;
+  body: string | null;
+  imageUrl: string | null;
+  createdAt: string;
+  authorHandle: string;
+  authorDisplayName: string | null;
+};
+
 type DiscoverCommunity = {
   id: string;
   slug: string;
@@ -72,6 +88,7 @@ export async function loader({ request, context }: LoaderFunctionArgs) {
       tab: "all" as Tab,
       sort: "hot" as Sort,
       posts: [] as FeedPost[],
+      wallFeedPosts: [] as WallFeedPost[],
       discoverCommunities: [] as DiscoverCommunity[],
       joinedSlugs: [] as string[],
     };
@@ -115,6 +132,7 @@ export async function loader({ request, context }: LoaderFunctionArgs) {
       tab,
       sort,
       posts: [] as FeedPost[],
+      wallFeedPosts: [] as WallFeedPost[],
       discoverCommunities,
       joinedSlugs: [] as string[],
     };
@@ -141,6 +159,7 @@ export async function loader({ request, context }: LoaderFunctionArgs) {
         tab,
         sort,
         posts: [] as FeedPost[],
+        wallFeedPosts: [] as WallFeedPost[],
         discoverCommunities: [] as DiscoverCommunity[],
         joinedSlugs: [] as string[],
       };
@@ -186,6 +205,7 @@ export async function loader({ request, context }: LoaderFunctionArgs) {
         badgeCoinsCC: 0,
         badges: [] as { icon: string; name: string; count: number; totalCoins: number }[],
       })),
+      wallFeedPosts: [] as WallFeedPost[],
       discoverCommunities: [] as DiscoverCommunity[],
       joinedSlugs: [] as string[],
     };
@@ -194,34 +214,49 @@ export async function loader({ request, context }: LoaderFunctionArgs) {
   // All posts — engagement-ranked
   const whereClause = isNull(posts.removedAt);
 
-  const rawPosts = await db
-    .select({
-      id: posts.id,
-      title: posts.title,
-      type: posts.type,
-      url: posts.url,
-      imageUrl: posts.imageUrl,
-      body: posts.body,
-      embedKind: posts.embedKind,
-      embedRef: posts.embedRef,
-      score: posts.score,
-      commentCount: posts.commentCount,
-      isPinned: posts.isPinned,
-      createdAt: posts.createdAt,
-      authorHandle: users.handle,
-      communitySlug: communities.slug,
-      communityName: communities.name,
-      communityIconUrl: communities.iconUrl,
-    })
-    .from(posts)
-    .innerJoin(users, eq(posts.authorId, users.id))
-    .innerJoin(
-      communities,
-      and(eq(posts.communityId, communities.id), isNull(communities.deletedAt)),
-    )
-    .where(whereClause)
-    .orderBy(orderBy)
-    .limit(100);
+  const [rawPosts, rawWallPosts] = await Promise.all([
+    db
+      .select({
+        id: posts.id,
+        title: posts.title,
+        type: posts.type,
+        url: posts.url,
+        imageUrl: posts.imageUrl,
+        body: posts.body,
+        embedKind: posts.embedKind,
+        embedRef: posts.embedRef,
+        score: posts.score,
+        commentCount: posts.commentCount,
+        isPinned: posts.isPinned,
+        createdAt: posts.createdAt,
+        authorHandle: users.handle,
+        communitySlug: communities.slug,
+        communityName: communities.name,
+        communityIconUrl: communities.iconUrl,
+      })
+      .from(posts)
+      .innerJoin(users, eq(posts.authorId, users.id))
+      .innerJoin(
+        communities,
+        and(eq(posts.communityId, communities.id), isNull(communities.deletedAt)),
+      )
+      .where(whereClause)
+      .orderBy(orderBy)
+      .limit(100),
+    db
+      .select({
+        id: wallPosts.id,
+        body: wallPosts.body,
+        imageUrl: wallPosts.imageUrl,
+        createdAt: wallPosts.createdAt,
+        authorHandle: users.handle,
+        authorDisplayName: users.displayName,
+      })
+      .from(wallPosts)
+      .innerJoin(users, eq(wallPosts.authorId, users.id))
+      .orderBy(desc(wallPosts.createdAt))
+      .limit(30),
+  ]);
 
   const badgeRows = await getBulkPostBadgeSummary(
     db,
@@ -258,13 +293,24 @@ export async function loader({ request, context }: LoaderFunctionArgs) {
     tab,
     sort,
     posts: feedPosts.slice(0, 50),
+    wallFeedPosts: rawWallPosts.map((wp) => ({
+      ...wp,
+      createdAt: String(wp.createdAt),
+    })),
     discoverCommunities: [] as DiscoverCommunity[],
     joinedSlugs: [] as string[],
   };
 }
 
 export default function Index() {
-  const { user, tab, sort, posts: feedPosts, discoverCommunities } = useLoaderData<typeof loader>();
+  const {
+    user,
+    tab,
+    sort,
+    posts: feedPosts,
+    wallFeedPosts,
+    discoverCommunities,
+  } = useLoaderData<typeof loader>();
   const [, setSearchParams] = useSearchParams();
 
   if (!user) return <LandingPage />;
@@ -329,10 +375,12 @@ export default function Index() {
           {/* Feed content */}
           {tab === "discover" ? (
             <DiscoverGrid communities={discoverCommunities} />
-          ) : feedPosts.length === 0 ? (
+          ) : feedPosts.length === 0 && wallFeedPosts.length === 0 ? (
             <EmptyFeed tab={tab} />
           ) : (
             <div className="flex flex-col gap-2">
+              {tab === "all" &&
+                wallFeedPosts.map((wp) => <WallPostCard key={`wall-${wp.id}`} post={wp} />)}
               {feedPosts.map((post) => (
                 <FeedPostCard key={post.id} post={post} />
               ))}
@@ -562,6 +610,88 @@ function FeedPostCard({ post }: { post: FeedPost }) {
           >
             {post.commentCount} comment{post.commentCount !== 1 ? "s" : ""}
           </Link>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function WallPostCard({ post }: { post: WallFeedPost }) {
+  const plainBody = post.body ? post.body.replace(/<[^>]*>/g, "").trim() : null;
+  return (
+    <div
+      className="post-card rounded-lg p-4"
+      style={{
+        background: "var(--color-bg-elev-1)",
+        border: "1px solid var(--color-border)",
+      }}
+    >
+      <div className="flex flex-col gap-2">
+        <div className="flex gap-3 items-start">
+          <Link
+            to={`/u/${post.authorHandle}`}
+            className="flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold overflow-hidden self-start"
+            style={{ background: "var(--color-bg-elev-2)", color: "var(--color-text-dim)" }}
+          >
+            {post.authorDisplayName?.[0]?.toUpperCase() ?? post.authorHandle[0]?.toUpperCase()}
+          </Link>
+
+          <div className="flex-1 min-w-0">
+            <div className="mb-1 flex items-center gap-1.5 flex-wrap">
+              <Link
+                to={`/u/${post.authorHandle}`}
+                className="text-xs font-medium no-underline hover:underline"
+                style={{ color: "var(--color-text-dim)" }}
+              >
+                {post.authorDisplayName ?? post.authorHandle}
+              </Link>
+              <span className="text-xs" style={{ color: "var(--color-text-faint)" }}>
+                ·
+              </span>
+              <span className="text-xs" style={{ color: "var(--color-text-faint)" }}>
+                from @{post.authorHandle}'s wall
+              </span>
+            </div>
+
+            {plainBody && (
+              <p
+                className="text-sm leading-relaxed"
+                style={{
+                  color: "var(--color-text)",
+                  display: "-webkit-box",
+                  WebkitLineClamp: 3,
+                  WebkitBoxOrient: "vertical",
+                  overflow: "hidden",
+                }}
+              >
+                {plainBody}
+              </p>
+            )}
+
+            {post.imageUrl && (
+              <img
+                src={post.imageUrl}
+                alt=""
+                loading="lazy"
+                className="mt-2 rounded-md"
+                style={{ maxWidth: "100%", maxHeight: 200, objectFit: "cover", display: "block" }}
+              />
+            )}
+          </div>
+        </div>
+
+        <div
+          className="flex items-center gap-3 text-xs"
+          style={{ color: "var(--color-text-faint)" }}
+        >
+          <Link
+            to={`/u/${post.authorHandle}`}
+            className="no-underline hover:underline"
+            style={{ color: "var(--color-text-faint)" }}
+          >
+            View wall
+          </Link>
+          <span>{relativeTime(post.createdAt)}</span>
         </div>
       </div>
     </div>
