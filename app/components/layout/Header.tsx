@@ -235,6 +235,9 @@ function notifLabel(n: RecentNotif): string {
   if (n.type === "comment_reply") {
     return `${n.actorDisplayName ?? "Someone"} replied to your comment${n.postTitle ? ` on "${n.postTitle}"` : ""}`;
   }
+  if (n.type === "comment_like") {
+    return `${n.actorDisplayName ?? "Someone"} liked your comment${n.postTitle ? ` on "${n.postTitle}"` : ""}`;
+  }
   return "New notification";
 }
 
@@ -285,7 +288,12 @@ function NotificationBell({
         onClick={() => {
           const opening = !open;
           setOpen(opening);
-          if (opening) onOpen?.();
+          if (opening) {
+            onOpen?.();
+            if (unreadCount > 0) {
+              fetcher.submit({}, { method: "post", action: "/notifications" });
+            }
+          }
         }}
         className="relative flex items-center justify-center rounded-md transition-colors"
         style={{

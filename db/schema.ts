@@ -53,6 +53,9 @@ export const users = sqliteTable("users", {
   notifyOnCommentReply: integer("notify_on_comment_reply", { mode: "boolean" })
     .notNull()
     .default(true),
+  notifyOnCommentLike: integer("notify_on_comment_like", { mode: "boolean" })
+    .notNull()
+    .default(true),
 });
 
 // Sessions stored in KV, not D1.
@@ -772,7 +775,8 @@ export type NotificationType =
   | "badge_received"
   | "post_comment"
   | "post_upvote"
-  | "comment_reply";
+  | "comment_reply"
+  | "comment_like";
 
 export const notifications = sqliteTable("notifications", {
   id: text("id").primaryKey(),

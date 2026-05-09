@@ -3,7 +3,10 @@ import { redirect } from "@remix-run/cloudflare";
 import { and, eq, sql } from "drizzle-orm";
 import { getCurrentUser } from "~/lib/auth/user.server";
 import { createDb } from "~/lib/db/index";
-import { createPostUpvoteNotification } from "~/lib/notifications.server";
+import {
+  createCommentLikeNotification,
+  createPostUpvoteNotification,
+} from "~/lib/notifications.server";
 import { checkRateLimit } from "~/lib/ratelimit";
 import { comments, posts, votes } from "../../db/schema";
 
@@ -109,6 +112,15 @@ export async function action({ request, context }: ActionFunctionArgs) {
         updatedAt: now,
       })
       .where(eq(comments.id, targetId));
+
+    // Notify comment author on first like (not on un-like)
+    if (value === 1 && oldValue < 1) {
+      try {
+        await createCommentLikeNotification(db, { commentId: targetId, actorId: user.id });
+      } catch {
+        // skip silently — vote already recorded
+      }
+    }
   }
 
   return { ok: true, delta, newValue: value };

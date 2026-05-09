@@ -51,6 +51,7 @@ export async function loader({ request, context }: LoaderFunctionArgs) {
       notifyOnPostComment: true,
       notifyOnPostUpvote: true,
       notifyOnCommentReply: true,
+      notifyOnCommentLike: true,
     },
   });
   if (!full) throw new Response("Not found", { status: 404 });
@@ -180,9 +181,16 @@ export async function action({ request, context }: ActionFunctionArgs) {
     const notifyOnPostComment = form.get("notifyOnPostComment") === "on";
     const notifyOnPostUpvote = form.get("notifyOnPostUpvote") === "on";
     const notifyOnCommentReply = form.get("notifyOnCommentReply") === "on";
+    const notifyOnCommentLike = form.get("notifyOnCommentLike") === "on";
     await db
       .update(users)
-      .set({ notifyOnPostComment, notifyOnPostUpvote, notifyOnCommentReply, updatedAt: new Date() })
+      .set({
+        notifyOnPostComment,
+        notifyOnPostUpvote,
+        notifyOnCommentReply,
+        notifyOnCommentLike,
+        updatedAt: new Date(),
+      })
       .where(eq(users.id, user.id));
     return { ok: true, intent };
   }
@@ -452,6 +460,12 @@ export default function SettingsPage() {
                   label="Replies to my comments"
                   description="When someone replies directly to your comment"
                   defaultChecked={user.notifyOnCommentReply ?? true}
+                />
+                <NotifToggleRow
+                  name="notifyOnCommentLike"
+                  label="Likes on my comments"
+                  description="When someone likes a comment you made"
+                  defaultChecked={user.notifyOnCommentLike ?? true}
                 />
                 {notifOk && <Alert variant="success">Preferences saved.</Alert>}
                 <Button

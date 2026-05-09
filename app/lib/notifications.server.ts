@@ -1,7 +1,7 @@
 import { eq, inArray } from "drizzle-orm";
 import type { createDb } from "~/lib/db/index";
 import { generateId } from "~/lib/utils";
-import { comments, notifications, users } from "../../db/schema";
+import { comments, notifications, posts, users } from "../../db/schema";
 
 export async function createMentionNotifications(
   db: ReturnType<typeof createDb>,
@@ -121,6 +121,39 @@ export async function createCommentReplyNotification(
     actorId,
     communityId,
     postId,
+    commentId,
+    createdAt: new Date(),
+  });
+}
+
+export async function createCommentLikeNotification(
+  db: ReturnType<typeof createDb>,
+  { commentId, actorId }: { commentId: string; actorId: string },
+) {
+  const comment = await db.query.comments.findFirst({
+    where: eq(comments.id, commentId),
+    columns: { authorId: true, postId: true },
+  });
+  if (!comment || comment.authorId === actorId) return;
+
+  const pref = await db.query.users.findFirst({
+    where: eq(users.id, comment.authorId),
+    columns: { notifyOnCommentLike: true },
+  });
+  if (!pref?.notifyOnCommentLike) return;
+
+  const post = await db.query.posts.findFirst({
+    where: eq(posts.id, comment.postId),
+    columns: { communityId: true },
+  });
+
+  await db.insert(notifications).values({
+    id: generateId(),
+    userId: comment.authorId,
+    type: "comment_like" as const,
+    actorId,
+    communityId: post?.communityId ?? null,
+    postId: comment.postId,
     commentId,
     createdAt: new Date(),
   });

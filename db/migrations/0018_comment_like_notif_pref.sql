@@ -1,0 +1,1 @@
+ALTER TABLE users ADD COLUMN notify_on_comment_like INTEGER NOT NULL DEFAULT 1;

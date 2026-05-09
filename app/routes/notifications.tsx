@@ -37,6 +37,12 @@ export async function loader({ request, context }: LoaderFunctionArgs) {
     .orderBy(desc(notifications.createdAt))
     .limit(50);
 
+  // Auto-mark all as read when the page is viewed
+  await db
+    .update(notifications)
+    .set({ readAt: new Date() })
+    .where(and(eq(notifications.userId, user.id), isNull(notifications.readAt)));
+
   return { user, notifications: rows };
 }
 
@@ -153,6 +159,24 @@ function notifMessage(n: {
           {n.actorDisplayName ?? "Someone"}
         </span>{" "}
         replied to your comment
+        {n.postTitle ? (
+          <>
+            {" on "}
+            <span className="font-medium" style={{ color: "var(--color-text)" }}>
+              {n.postTitle}
+            </span>
+          </>
+        ) : null}
+      </>
+    );
+  }
+  if (n.type === "comment_like") {
+    return (
+      <>
+        <span className="font-medium" style={{ color: "var(--color-text)" }}>
+          {n.actorDisplayName ?? "Someone"}
+        </span>{" "}
+        liked your comment
         {n.postTitle ? (
           <>
             {" on "}
