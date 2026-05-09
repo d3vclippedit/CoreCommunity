@@ -3,7 +3,7 @@ import { Form, Link, redirect, useActionData, useNavigation } from "@remix-run/r
 import { eq, inArray } from "drizzle-orm";
 import { Alert } from "~/components/ui/Alert";
 import { Button } from "~/components/ui/Button";
-import { Input } from "~/components/ui/Input";
+import { Input, PasswordInput } from "~/components/ui/Input";
 import { sendEmail, verificationEmailHtml } from "~/lib/auth/email";
 import { HANDLE_ERROR_MESSAGES, validateHandle } from "~/lib/auth/handle";
 import { PASSWORD_ERROR_MESSAGES, hashPassword, validatePassword } from "~/lib/auth/password";
@@ -41,6 +41,7 @@ export async function action({ request, context }: ActionFunctionArgs) {
   const handle = (form.get("handle") as string | null)?.trim().toLowerCase() ?? "";
   const displayName = (form.get("displayName") as string | null)?.trim() ?? "";
   const password = (form.get("password") as string | null) ?? "";
+  const confirmPassword = (form.get("confirmPassword") as string | null) ?? "";
 
   const errors: Record<string, string> = {};
 
@@ -54,6 +55,8 @@ export async function action({ request, context }: ActionFunctionArgs) {
 
   const passwordError = validatePassword(password);
   if (passwordError) errors.password = PASSWORD_ERROR_MESSAGES[passwordError];
+  else if (confirmPassword && password !== confirmPassword)
+    errors.confirmPassword = "Passwords do not match.";
 
   if (Object.keys(errors).length > 0) return { errors, suggestions: [] as string[] };
 
@@ -220,16 +223,24 @@ export default function Signup() {
               required
               error={errors.displayName}
             />
-            <Input
+            <PasswordInput
               id="password"
               name="password"
-              type="password"
               label="Password"
               placeholder="Min 8 characters"
               autoComplete="new-password"
               hint="At least 8 characters with 3 of: lowercase, uppercase, numbers, symbols."
               required
               error={errors.password}
+            />
+            <PasswordInput
+              id="confirmPassword"
+              name="confirmPassword"
+              label="Confirm password"
+              placeholder="Re-enter your password"
+              autoComplete="new-password"
+              required
+              error={errors.confirmPassword}
             />
 
             <Button type="submit" loading={loading} className="w-full mt-2">

@@ -10,7 +10,7 @@ import {
 import { and, eq, gt, isNull } from "drizzle-orm";
 import { Alert } from "~/components/ui/Alert";
 import { Button } from "~/components/ui/Button";
-import { Input } from "~/components/ui/Input";
+import { PasswordInput } from "~/components/ui/Input";
 import { PASSWORD_ERROR_MESSAGES, hashPassword, validatePassword } from "~/lib/auth/password";
 import { createDb } from "~/lib/db/index";
 import { passwordResets, users } from "../../db/schema";
@@ -114,10 +114,9 @@ export default function ResetPassword() {
             </Alert>
           )}
           <Form method="post" className="flex flex-col gap-4">
-            <Input
+            <PasswordInput
               id="password"
               name="password"
-              type="password"
               label="New password"
               placeholder="Min 10 characters"
               autoComplete="new-password"

@@ -3,7 +3,7 @@ import { Form, Link, redirect, useActionData, useNavigation } from "@remix-run/r
 import { eq } from "drizzle-orm";
 import { Alert } from "~/components/ui/Alert";
 import { Button } from "~/components/ui/Button";
-import { Input } from "~/components/ui/Input";
+import { Input, PasswordInput } from "~/components/ui/Input";
 import {
   PASSWORD_ERROR_MESSAGES,
   hashPassword,
@@ -181,10 +181,9 @@ export default function Login() {
                   Forgot password?
                 </Link>
               </div>
-              <Input
+              <PasswordInput
                 id="password"
                 name="password"
-                type="password"
                 placeholder="Your password"
                 autoComplete="current-password"
                 required
