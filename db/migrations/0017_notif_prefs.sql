@@ -1,0 +1,3 @@
+ALTER TABLE users ADD COLUMN notify_on_post_comment INTEGER NOT NULL DEFAULT 1;
+ALTER TABLE users ADD COLUMN notify_on_post_upvote INTEGER NOT NULL DEFAULT 1;
+ALTER TABLE users ADD COLUMN notify_on_comment_reply INTEGER NOT NULL DEFAULT 1;

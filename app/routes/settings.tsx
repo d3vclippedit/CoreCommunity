@@ -48,6 +48,9 @@ export async function loader({ request, context }: LoaderFunctionArgs) {
       twitchLinkedAt: true,
       twitchUrl: true,
       gifAvatarUnlocked: true,
+      notifyOnPostComment: true,
+      notifyOnPostUpvote: true,
+      notifyOnCommentReply: true,
     },
   });
   if (!full) throw new Response("Not found", { status: 404 });
@@ -173,6 +176,17 @@ export async function action({ request, context }: ActionFunctionArgs) {
     return { ok: true, intent };
   }
 
+  if (intent === "notifications") {
+    const notifyOnPostComment = form.get("notifyOnPostComment") === "on";
+    const notifyOnPostUpvote = form.get("notifyOnPostUpvote") === "on";
+    const notifyOnCommentReply = form.get("notifyOnCommentReply") === "on";
+    await db
+      .update(users)
+      .set({ notifyOnPostComment, notifyOnPostUpvote, notifyOnCommentReply, updatedAt: new Date() })
+      .where(eq(users.id, user.id));
+    return { ok: true, intent };
+  }
+
   if (intent === "twitch_disconnect") {
     await db
       .update(users)
@@ -202,15 +216,21 @@ export default function SettingsPage() {
   const submittingIntent =
     nav.state === "submitting" ? ((nav.formData?.get("_intent") as string | null) ?? "") : null;
 
-  const activeTab = (params.get("tab") ?? "profile") as "profile" | "security" | "connected";
+  const activeTab = (params.get("tab") ?? "profile") as
+    | "profile"
+    | "security"
+    | "connected"
+    | "notifications";
   const TABS = [
     { id: "profile" as const, label: "Profile" },
     { id: "security" as const, label: "Security" },
     { id: "connected" as const, label: "Connected" },
+    { id: "notifications" as const, label: "Notifications" },
   ];
 
   const profileOk = data && "ok" in data && data.ok && data.intent === "profile";
   const passwordOk = data && "ok" in data && data.ok && data.intent === "password";
+  const notifOk = data && "ok" in data && data.ok && data.intent === "notifications";
   const errorMsg = data && "error" in data ? data.error : null;
 
   const twitchOk = params.get("twitch_ok") === "1";
@@ -401,6 +421,47 @@ export default function SettingsPage() {
               </div>
 
               <TotpSection user={user} />
+            </div>
+          )}
+
+          {/* ── Notifications tab ── */}
+          {activeTab === "notifications" && (
+            <div className="rounded-lg p-6" style={cardStyle}>
+              <h2 className="text-sm font-semibold mb-1" style={{ color: "var(--color-text)" }}>
+                Notification preferences
+              </h2>
+              <p className="text-xs mb-5" style={{ color: "var(--color-text-faint)" }}>
+                Choose which activity sends you a notification.
+              </p>
+              <Form method="post" className="flex flex-col gap-5">
+                <input type="hidden" name="_intent" value="notifications" />
+                <NotifToggleRow
+                  name="notifyOnPostComment"
+                  label="Comments on my posts"
+                  description="When someone comments on a post you made"
+                  defaultChecked={user.notifyOnPostComment ?? true}
+                />
+                <NotifToggleRow
+                  name="notifyOnPostUpvote"
+                  label="Upvotes on my posts"
+                  description="When someone upvotes a post you made"
+                  defaultChecked={user.notifyOnPostUpvote ?? true}
+                />
+                <NotifToggleRow
+                  name="notifyOnCommentReply"
+                  label="Replies to my comments"
+                  description="When someone replies directly to your comment"
+                  defaultChecked={user.notifyOnCommentReply ?? true}
+                />
+                {notifOk && <Alert variant="success">Preferences saved.</Alert>}
+                <Button
+                  type="submit"
+                  loading={submittingIntent === "notifications" && isSubmitting}
+                  className="w-full"
+                >
+                  Save preferences
+                </Button>
+              </Form>
             </div>
           )}
 
@@ -837,5 +898,40 @@ function AvatarUpload({
         </p>
       )}
     </div>
+  );
+}
+
+function NotifToggleRow({
+  name,
+  label,
+  description,
+  defaultChecked,
+}: {
+  name: string;
+  label: string;
+  description: string;
+  defaultChecked: boolean;
+}) {
+  return (
+    <label
+      className="flex items-start justify-between gap-6 cursor-pointer"
+      style={{ color: "var(--color-text)" }}
+    >
+      <div className="flex flex-col gap-0.5">
+        <span className="text-sm font-medium" style={{ color: "var(--color-text)" }}>
+          {label}
+        </span>
+        <span className="text-xs" style={{ color: "var(--color-text-faint)" }}>
+          {description}
+        </span>
+      </div>
+      <input
+        type="checkbox"
+        name={name}
+        defaultChecked={defaultChecked}
+        className="mt-0.5 flex-shrink-0"
+        style={{ accentColor: "var(--color-text)", width: 16, height: 16, cursor: "pointer" }}
+      />
+    </label>
   );
 }

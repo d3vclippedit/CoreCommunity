@@ -211,6 +211,15 @@ function notifLabel(n: RecentNotif): string {
   if (n.type === "badge_received") {
     return `${n.actorDisplayName ?? "Someone"} gave your post a badge`;
   }
+  if (n.type === "post_comment") {
+    return `${n.actorDisplayName ?? "Someone"} commented on your post${n.postTitle ? `: ${n.postTitle}` : ""}`;
+  }
+  if (n.type === "post_upvote") {
+    return `${n.actorDisplayName ?? "Someone"} upvoted your post${n.postTitle ? `: ${n.postTitle}` : ""}`;
+  }
+  if (n.type === "comment_reply") {
+    return `${n.actorDisplayName ?? "Someone"} replied to your comment${n.postTitle ? ` on "${n.postTitle}"` : ""}`;
+  }
   return "New notification";
 }
 

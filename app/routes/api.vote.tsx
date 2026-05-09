@@ -3,6 +3,7 @@ import { redirect } from "@remix-run/cloudflare";
 import { and, eq, sql } from "drizzle-orm";
 import { getCurrentUser } from "~/lib/auth/user.server";
 import { createDb } from "~/lib/db/index";
+import { createPostUpvoteNotification } from "~/lib/notifications.server";
 import { checkRateLimit } from "~/lib/ratelimit";
 import { comments, posts, votes } from "../../db/schema";
 
@@ -76,6 +77,26 @@ export async function action({ request, context }: ActionFunctionArgs) {
         updatedAt: now,
       })
       .where(eq(posts.id, targetId));
+
+    // Notify post author on first upvote (not on un-vote or downvote)
+    if (value === 1 && oldValue < 1) {
+      try {
+        const post = await db.query.posts.findFirst({
+          where: eq(posts.id, targetId),
+          columns: { authorId: true, communityId: true },
+        });
+        if (post) {
+          await createPostUpvoteNotification(db, {
+            postAuthorId: post.authorId,
+            actorId: user.id,
+            communityId: post.communityId,
+            postId: targetId,
+          });
+        }
+      } catch {
+        // skip silently — vote already recorded
+      }
+    }
   } else {
     const upDelta = (value > 0 ? 1 : 0) - (oldValue > 0 ? 1 : 0);
     const downDelta = (value < 0 ? 1 : 0) - (oldValue < 0 ? 1 : 0);

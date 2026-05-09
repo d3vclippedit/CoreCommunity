@@ -1,6 +1,7 @@
 import type { ActionFunctionArgs, LoaderFunctionArgs, MetaFunction } from "@remix-run/cloudflare";
 import { Form, Link, useFetcher, useLoaderData, useRouteLoaderData } from "@remix-run/react";
-import { and, desc, eq, gt, isNull, or, sql } from "drizzle-orm";
+import { and, desc, eq, gt, inArray, isNull, or, sql } from "drizzle-orm";
+import { Heart } from "lucide-react";
 import { useEffect, useState } from "react";
 import { AppShell } from "~/components/layout/AppShell";
 import { Footer } from "~/components/layout/Footer";
@@ -10,7 +11,11 @@ import { getBalance } from "~/lib/coins.server";
 import { createDb } from "~/lib/db/index";
 import { getEmbedSrc } from "~/lib/embeds";
 import { renderMentions } from "~/lib/mentions";
-import { createMentionNotifications } from "~/lib/notifications.server";
+import {
+  createCommentReplyNotification,
+  createMentionNotifications,
+  createPostCommentNotification,
+} from "~/lib/notifications.server";
 import { type OgPreview, getOgPreview } from "~/lib/og.server";
 import { canFeaturePost, canPinPost } from "~/lib/permissions";
 import { checkRateLimit } from "~/lib/ratelimit";
@@ -86,6 +91,25 @@ export async function loader({ params, request, context }: LoaderFunctionArgs) {
     .where(eq(comments.postId, post.id))
     .orderBy(desc(comments.score))
     .limit(200);
+
+  // Load which comments the current user has liked
+  let likedCommentIds: string[] = [];
+  if (user && topComments.length > 0) {
+    const likeRows = await db
+      .select({ targetId: votes.targetId })
+      .from(votes)
+      .where(
+        and(
+          eq(votes.userId, user.id),
+          eq(votes.targetType, "comment"),
+          inArray(
+            votes.targetId,
+            topComments.map((c) => c.id),
+          ),
+        ),
+      );
+    likedCommentIds = likeRows.filter((r) => r.targetId !== null).map((r) => r.targetId as string);
+  }
 
   let userVote: number | null = null;
   let memberRole: string | null = null;
@@ -250,6 +274,7 @@ export async function loader({ params, request, context }: LoaderFunctionArgs) {
     isPostAuthor,
     pollData,
     giveawayData,
+    likedCommentIds,
   };
 }
 
@@ -272,7 +297,7 @@ export async function action({ params, request, context }: ActionFunctionArgs) {
   const db = createDb(env.DB);
   const post = await db.query.posts.findFirst({
     where: and(eq(posts.id, params.postId ?? ""), isNull(posts.removedAt)),
-    columns: { id: true, communityId: true },
+    columns: { id: true, communityId: true, authorId: true },
   });
   if (!post) throw new Response("Post not found", { status: 404 });
 
@@ -326,6 +351,34 @@ export async function action({ params, request, context }: ActionFunctionArgs) {
     // skip silently
   }
 
+  // Notify post author of new comment
+  try {
+    await createPostCommentNotification(db, {
+      postAuthorId: post.authorId,
+      actorId: user.id,
+      communityId: post.communityId,
+      postId: post.id,
+      commentId,
+    });
+  } catch {
+    // skip silently
+  }
+
+  // Notify parent comment author of reply
+  if (parentCommentId) {
+    try {
+      await createCommentReplyNotification(db, {
+        parentCommentId,
+        actorId: user.id,
+        communityId: post.communityId,
+        postId: post.id,
+        commentId,
+      });
+    } catch {
+      // skip silently
+    }
+  }
+
   return { ok: true };
 }
 
@@ -344,9 +397,11 @@ export default function PostPermalink() {
     userCoinBalance,
     pollData,
     giveawayData,
+    likedCommentIds: likedCommentIdsArr,
   } = useLoaderData<typeof loader>();
   const root = useRouteLoaderData<typeof rootLoader>("root");
   const rootUser = root?.user ?? null;
+  const likedCommentIds = new Set(likedCommentIdsArr);
   const commentFetcher = useFetcher<typeof action>();
   const modFetcher = useFetcher();
   const badgeFetcher = useFetcher<{ success?: boolean; newBalance?: number; error?: string }>();
@@ -720,6 +775,7 @@ export default function PostPermalink() {
                   nestedReplies={byParent}
                   user={rootUser}
                   depth={0}
+                  likedCommentIds={likedCommentIds}
                 />
               ))
             )}
@@ -748,12 +804,14 @@ function CommentThread({
   nestedReplies,
   user,
   depth,
+  likedCommentIds,
 }: {
   comment: CommentData;
   replies: CommentData[];
   nestedReplies: Record<string, CommentData[]>;
   user: { id: string } | null;
   depth: number;
+  likedCommentIds: Set<string>;
 }) {
   const [showReply, setShowReply] = useState(false);
   const replyFetcher = useFetcher<typeof action>();
@@ -794,7 +852,6 @@ function CommentThread({
                   {comment.authorHandle}
                 </Link>
                 <span>{relativeTime(comment.createdAt)}</span>
-                <span>▲ {comment.score}</span>
               </div>
               <p
                 className="text-sm leading-relaxed whitespace-pre-wrap"
@@ -809,22 +866,30 @@ function CommentThread({
                   ),
                 }}
               />
-              {user && (
-                <button
-                  type="button"
-                  onClick={() => setShowReply((v) => !v)}
-                  className="text-xs mt-1.5 hover:underline"
-                  style={{
-                    color: "var(--color-text-faint)",
-                    background: "none",
-                    border: "none",
-                    cursor: "pointer",
-                    padding: 0,
-                  }}
-                >
-                  {showReply ? "Cancel" : "Reply"}
-                </button>
-              )}
+              <div className="flex items-center gap-3 mt-1.5">
+                <LikeButton
+                  commentId={comment.id}
+                  initialScore={comment.score}
+                  liked={likedCommentIds.has(comment.id)}
+                  user={user}
+                />
+                {user && (
+                  <button
+                    type="button"
+                    onClick={() => setShowReply((v) => !v)}
+                    className="text-xs hover:underline"
+                    style={{
+                      color: "var(--color-text-faint)",
+                      background: "none",
+                      border: "none",
+                      cursor: "pointer",
+                      padding: 0,
+                    }}
+                  >
+                    {showReply ? "Cancel" : "Reply"}
+                  </button>
+                )}
+              </div>
             </>
           )}
 
@@ -889,9 +954,62 @@ function CommentThread({
           nestedReplies={nestedReplies}
           user={user}
           depth={depth + 1}
+          likedCommentIds={likedCommentIds}
         />
       ))}
     </div>
+  );
+}
+
+function LikeButton({
+  commentId,
+  initialScore,
+  liked,
+  user,
+}: {
+  commentId: string;
+  initialScore: number;
+  liked: boolean;
+  user: { id: string } | null;
+}) {
+  const fetcher = useFetcher();
+  const optimistic = fetcher.state !== "idle";
+  const isLiked = optimistic ? !liked : liked;
+  const score = optimistic ? initialScore + (liked ? -1 : 1) : initialScore;
+
+  if (!user) {
+    return score > 0 ? (
+      <span
+        className="flex items-center gap-1 text-xs"
+        style={{ color: "var(--color-text-faint)" }}
+      >
+        <Heart size={11} />
+        {score}
+      </span>
+    ) : null;
+  }
+
+  return (
+    <fetcher.Form method="post" action="/api/vote" className="inline-flex">
+      <input type="hidden" name="targetType" value="comment" />
+      <input type="hidden" name="targetId" value={commentId} />
+      <input type="hidden" name="value" value={isLiked ? "0" : "1"} />
+      <button
+        type="submit"
+        className="flex items-center gap-1 text-xs transition-colors"
+        style={{
+          color: isLiked ? "var(--color-danger)" : "var(--color-text-faint)",
+          background: "none",
+          border: "none",
+          cursor: "pointer",
+          padding: 0,
+        }}
+        aria-label={isLiked ? "Unlike" : "Like"}
+      >
+        <Heart size={11} fill={isLiked ? "currentColor" : "none"} />
+        {score > 0 && <span className="tabular-nums">{score}</span>}
+      </button>
+    </fetcher.Form>
   );
 }
 

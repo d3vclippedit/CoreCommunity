@@ -45,6 +45,14 @@ export const users = sqliteTable("users", {
   twitchUrl: text("twitch_url"),
   // Unlocked by spending $50+ on Core Coins
   gifAvatarUnlocked: integer("gif_avatar_unlocked", { mode: "boolean" }).notNull().default(false),
+  // Notification preferences
+  notifyOnPostComment: integer("notify_on_post_comment", { mode: "boolean" })
+    .notNull()
+    .default(true),
+  notifyOnPostUpvote: integer("notify_on_post_upvote", { mode: "boolean" }).notNull().default(true),
+  notifyOnCommentReply: integer("notify_on_comment_reply", { mode: "boolean" })
+    .notNull()
+    .default(true),
 });
 
 // Sessions stored in KV, not D1.
@@ -758,7 +766,13 @@ export const communitySubscriptions = sqliteTable("community_subscriptions", {
 
 // ─── Notifications ────────────────────────────────────────────────────────────
 
-export type NotificationType = "community_post" | "mention" | "badge_received";
+export type NotificationType =
+  | "community_post"
+  | "mention"
+  | "badge_received"
+  | "post_comment"
+  | "post_upvote"
+  | "comment_reply";
 
 export const notifications = sqliteTable("notifications", {
   id: text("id").primaryKey(),

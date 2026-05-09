@@ -110,6 +110,60 @@ function notifMessage(n: {
       </>
     );
   }
+  if (n.type === "post_comment") {
+    return (
+      <>
+        <span className="font-medium" style={{ color: "var(--color-text)" }}>
+          {n.actorDisplayName ?? "Someone"}
+        </span>{" "}
+        commented on your post
+        {n.postTitle ? (
+          <>
+            {" — "}
+            <span className="font-medium" style={{ color: "var(--color-text)" }}>
+              {n.postTitle}
+            </span>
+          </>
+        ) : null}
+      </>
+    );
+  }
+  if (n.type === "post_upvote") {
+    return (
+      <>
+        <span className="font-medium" style={{ color: "var(--color-text)" }}>
+          {n.actorDisplayName ?? "Someone"}
+        </span>{" "}
+        upvoted your post
+        {n.postTitle ? (
+          <>
+            {" — "}
+            <span className="font-medium" style={{ color: "var(--color-text)" }}>
+              {n.postTitle}
+            </span>
+          </>
+        ) : null}
+      </>
+    );
+  }
+  if (n.type === "comment_reply") {
+    return (
+      <>
+        <span className="font-medium" style={{ color: "var(--color-text)" }}>
+          {n.actorDisplayName ?? "Someone"}
+        </span>{" "}
+        replied to your comment
+        {n.postTitle ? (
+          <>
+            {" on "}
+            <span className="font-medium" style={{ color: "var(--color-text)" }}>
+              {n.postTitle}
+            </span>
+          </>
+        ) : null}
+      </>
+    );
+  }
   return "New notification";
 }
 
