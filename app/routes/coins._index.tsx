@@ -241,13 +241,6 @@ export default function CoinsPage() {
                 </div>
               </div>
 
-              {/* Community memberships */}
-              <MembershipSection
-                communities={membershipCommunities}
-                subscribedIds={subscribedIds}
-                user={user}
-              />
-
               {/* Badge types */}
               <div
                 className="rounded-xl p-5"
@@ -282,7 +275,7 @@ export default function CoinsPage() {
               </div>
             </div>
 
-            {/* ── Right column — Buy coins ── */}
+            {/* ── Right column — Buy coins + Membership ── */}
             <div className="w-full lg:w-80 xl:w-96 flex-shrink-0 flex flex-col gap-4">
               <div
                 className="rounded-xl p-5"
@@ -329,6 +322,13 @@ export default function CoinsPage() {
                   </div>
                 )}
               </div>
+
+              {/* Member Subscription */}
+              <MembershipSection
+                communities={membershipCommunities}
+                subscribedIds={subscribedIds}
+                user={user}
+              />
             </div>
           </div>
         </div>
