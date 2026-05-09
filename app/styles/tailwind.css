@@ -174,65 +174,6 @@
   }
 }
 
-/* ── Post badge milestone animations ─────────────────────────────────────── */
-@keyframes milestone-bronze {
-  0%,
-  100% {
-    box-shadow: 0 0 0 1px rgba(205, 127, 50, 0.45), 0 0 14px 2px rgba(205, 127, 50, 0.2);
-  }
-  50% {
-    box-shadow: 0 0 0 1px rgba(205, 127, 50, 0.75), 0 0 22px 4px rgba(205, 127, 50, 0.35);
-  }
-}
-@keyframes milestone-silver {
-  0%,
-  100% {
-    box-shadow: 0 0 0 1px rgba(180, 185, 210, 0.45), 0 0 14px 2px rgba(180, 185, 210, 0.18);
-  }
-  50% {
-    box-shadow: 0 0 0 1px rgba(210, 215, 240, 0.75), 0 0 22px 5px rgba(210, 215, 240, 0.3);
-  }
-}
-@keyframes milestone-gold {
-  0%,
-  100% {
-    box-shadow: 0 0 0 1px rgba(255, 196, 0, 0.5), 0 0 16px 2px rgba(255, 196, 0, 0.22);
-  }
-  50% {
-    box-shadow: 0 0 0 1px rgba(255, 210, 40, 0.85), 0 0 28px 6px rgba(255, 196, 0, 0.42);
-  }
-}
-@keyframes milestone-legendary {
-  0% {
-    box-shadow: 0 0 0 1px rgba(255, 60, 120, 0.8), 0 0 24px 5px rgba(255, 60, 120, 0.35);
-  }
-  25% {
-    box-shadow: 0 0 0 1px rgba(140, 60, 255, 0.8), 0 0 24px 5px rgba(140, 60, 255, 0.35);
-  }
-  50% {
-    box-shadow: 0 0 0 1px rgba(60, 190, 255, 0.8), 0 0 24px 5px rgba(60, 190, 255, 0.35);
-  }
-  75% {
-    box-shadow: 0 0 0 1px rgba(60, 255, 160, 0.8), 0 0 24px 5px rgba(60, 255, 160, 0.35);
-  }
-  100% {
-    box-shadow: 0 0 0 1px rgba(255, 60, 120, 0.8), 0 0 24px 5px rgba(255, 60, 120, 0.35);
-  }
-}
-
-.post-milestone-bronze {
-  animation: milestone-bronze 2.5s ease-in-out infinite;
-}
-.post-milestone-silver {
-  animation: milestone-silver 2s ease-in-out infinite;
-}
-.post-milestone-gold {
-  animation: milestone-gold 2s ease-in-out infinite;
-}
-.post-milestone-legendary {
-  animation: milestone-legendary 3s linear infinite;
-}
-
 /* ── Expand-in animation for in-feed post expand ─────────────────────────── */
 @keyframes expand-in {
   from {
@@ -255,9 +196,7 @@
 .post-card:hover {
   transform: translateY(-1px);
 }
-.post-card:not(.post-milestone-bronze):not(.post-milestone-silver):not(.post-milestone-gold):not(
-    .post-milestone-legendary
-  ):hover {
+.post-card:hover {
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
 }
 
@@ -512,8 +451,17 @@ body {
 }
 
 /* ── Community membership subscriber border ──────────────────────────────── */
-.subscriber-post {
-  border-left-width: 3px !important;
+.feed-card-border {
+  position: relative;
+  padding: 1px;
+  border-radius: 15px;
+  background: linear-gradient(
+    130deg,
+    rgba(255, 140, 0, 0.9),
+    rgba(255, 80, 0, 0.5),
+    rgba(255, 140, 0, 0.9)
+  );
+  box-shadow: 0 0 10px rgba(255, 120, 0, 0.15), 0 0 25px rgba(255, 120, 0, 0.08);
 }
 
 /* ── Members-only post badge ─────────────────────────────────────────────── */
