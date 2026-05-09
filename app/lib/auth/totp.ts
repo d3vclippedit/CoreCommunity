@@ -72,6 +72,6 @@ export async function verifyTotp(secret: string, token: string): Promise<boolean
 }
 
 export function getOtpAuthUri(secret: string, handle: string): string {
-  const label = encodeURIComponent(`CORE:@${handle}`);
-  return `otpauth://totp/${label}?secret=${secret}&issuer=CORE&digits=6&period=30&algorithm=SHA1`;
+  const label = encodeURIComponent(`Cormunities:@${handle}`);
+  return `otpauth://totp/${label}?secret=${secret}&issuer=Cormunities&digits=6&period=30&algorithm=SHA1`;
 }
