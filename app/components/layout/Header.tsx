@@ -1,6 +1,6 @@
 import { Form, Link, useFetcher, useLocation, useRouteLoaderData } from "@remix-run/react";
 import { Bell, Coins } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import coreMiniUrl from "~/assets/logotop.png";
 import { cn } from "~/lib/cn";
 import { formatCoins } from "~/lib/coins";
@@ -18,8 +18,21 @@ export function Header({ user }: HeaderProps) {
   const _location = useLocation();
   const root = useRouteLoaderData<typeof rootLoader>("root");
   const coinBalance = root?.coinBalance ?? 0;
-  const unreadNotifCount = root?.unreadNotifCount ?? 0;
-  const recentNotifs = root?.recentNotifs ?? [];
+
+  const pollFetcher = useFetcher<{ unreadCount: number; recentNotifs: RecentNotif[] }>();
+  const poll = useCallback(() => pollFetcher.load("/api/notifications/poll"), [pollFetcher]);
+
+  // Poll for new notifications every 30 seconds
+  useEffect(() => {
+    if (!user) return;
+    const id = setInterval(poll, 30_000);
+    return () => clearInterval(id);
+  }, [user, poll]);
+
+  const unreadNotifCount = pollFetcher.data?.unreadCount ?? root?.unreadNotifCount ?? 0;
+  const recentNotifs = (pollFetcher.data?.recentNotifs ??
+    root?.recentNotifs ??
+    []) as RecentNotif[];
 
   return (
     <header
@@ -113,7 +126,9 @@ export function Header({ user }: HeaderProps) {
             </div>
           )}
 
-          {user && <NotificationBell unreadCount={unreadNotifCount} notifs={recentNotifs} />}
+          {user && (
+            <NotificationBell unreadCount={unreadNotifCount} notifs={recentNotifs} onOpen={poll} />
+          )}
           {user ? (
             <UserMenu user={user} />
           ) : (
@@ -242,9 +257,11 @@ function relTime(date: Date | string): string {
 function NotificationBell({
   unreadCount,
   notifs,
+  onOpen,
 }: {
   unreadCount: number;
   notifs: RecentNotif[];
+  onOpen?: () => void;
 }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -265,7 +282,11 @@ function NotificationBell({
     <div ref={ref} className="relative">
       <button
         type="button"
-        onClick={() => setOpen((o) => !o)}
+        onClick={() => {
+          const opening = !open;
+          setOpen(opening);
+          if (opening) onOpen?.();
+        }}
         className="relative flex items-center justify-center rounded-md transition-colors"
         style={{
           width: 32,
