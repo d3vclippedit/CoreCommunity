@@ -209,7 +209,13 @@ export async function loader({ request, context }: LoaderFunctionArgs) {
       posts: rawPosts.map((p) => ({
         ...p,
         badgeCoinsCC: 0,
-        badges: [] as { icon: string; iconUrl: string | null; name: string; count: number; totalCoins: number }[],
+        badges: [] as {
+          icon: string;
+          iconUrl: string | null;
+          name: string;
+          count: number;
+          totalCoins: number;
+        }[],
       })),
       wallFeedPosts: [] as WallFeedPost[],
       discoverCommunities: [] as DiscoverCommunity[],

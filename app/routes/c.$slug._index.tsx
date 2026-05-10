@@ -244,7 +244,13 @@ type PostCardPost = {
   authorHandle: string;
   badgeCoinsCC: number;
   isSubscriber: boolean;
-  badges: { icon: string; iconUrl: string | null; name: string; count: number; totalCoins: number }[];
+  badges: {
+    icon: string;
+    iconUrl: string | null;
+    name: string;
+    count: number;
+    totalCoins: number;
+  }[];
 };
 
 function PostCard({
