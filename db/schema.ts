@@ -502,6 +502,7 @@ export const postBadgeDefinitions = sqliteTable("post_badge_definitions", {
   code: text("code").unique().notNull(),
   name: text("name").notNull(),
   icon: text("icon").notNull(),
+  iconUrl: text("icon_url"), // optional image/GIF override — takes priority over icon emoji
   coinCost: integer("coin_cost").notNull(),
   usdValueCents: integer("usd_value_cents").notNull(),
   visibilityWeight: real("visibility_weight").notNull().default(1.0),

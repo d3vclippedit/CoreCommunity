@@ -138,6 +138,7 @@ export async function loader({ params, request, context }: LoaderFunctionArgs) {
       isSubscriber: subscriberAuthorIds.has(p.authorId),
       badges: badges.map((b) => ({
         icon: b.icon,
+        iconUrl: b.iconUrl ?? null,
         name: b.name,
         count: b.count,
         totalCoins: b.totalCoins,
@@ -145,7 +146,13 @@ export async function loader({ params, request, context }: LoaderFunctionArgs) {
     } as typeof p & {
       badgeCoinsCC: number;
       isSubscriber: boolean;
-      badges: { icon: string; name: string; count: number; totalCoins: number }[];
+      badges: {
+        icon: string;
+        iconUrl: string | null;
+        name: string;
+        count: number;
+        totalCoins: number;
+      }[];
     };
   });
 
@@ -237,7 +244,7 @@ type PostCardPost = {
   authorHandle: string;
   badgeCoinsCC: number;
   isSubscriber: boolean;
-  badges: { icon: string; name: string; count: number; totalCoins: number }[];
+  badges: { icon: string; iconUrl: string | null; name: string; count: number; totalCoins: number }[];
 };
 
 function PostCard({
@@ -326,7 +333,20 @@ function PostCard({
                       className="text-sm leading-none"
                       title={`${b.name} ×${b.count}`}
                     >
-                      {b.icon}
+                      {b.iconUrl ? (
+                        <img
+                          src={b.iconUrl}
+                          alt={b.name}
+                          style={{
+                            width: 18,
+                            height: 18,
+                            display: "inline",
+                            verticalAlign: "middle",
+                          }}
+                        />
+                      ) : (
+                        b.icon
+                      )}
                     </span>
                   ))}
                 </div>

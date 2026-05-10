@@ -626,7 +626,20 @@ export default function PostPermalink() {
                       }}
                       title={`${b.name}: ${b.count} × ${b.coinCost} cc`}
                     >
-                      <span>{b.icon}</span>
+                      {b.iconUrl ? (
+                        <img
+                          src={b.iconUrl}
+                          alt={b.name}
+                          style={{
+                            width: 16,
+                            height: 16,
+                            display: "inline",
+                            verticalAlign: "middle",
+                          }}
+                        />
+                      ) : (
+                        <span>{b.icon}</span>
+                      )}
                       <span>{b.name}</span>
                       {b.count > 1 && (
                         <span style={{ color: "var(--color-text-faint)" }}>×{b.count}</span>
@@ -673,7 +686,15 @@ export default function PostPermalink() {
                             }}
                             title={canAfford ? `${def.coinCost} cc` : "Not enough coins"}
                           >
-                            <span className="text-lg">{def.icon}</span>
+                            {def.iconUrl ? (
+                              <img
+                                src={def.iconUrl}
+                                alt={def.name}
+                                style={{ width: 24, height: 24 }}
+                              />
+                            ) : (
+                              <span className="text-lg">{def.icon}</span>
+                            )}
                             <span
                               className="text-[10px] leading-tight font-medium"
                               style={{ color: "var(--color-text-faint)" }}

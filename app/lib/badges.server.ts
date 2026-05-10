@@ -119,6 +119,7 @@ export async function getPostBadgeSummary(db: Db, postId: string) {
       totalCoins: sql<number>`sum(${postBadgeApplications.coinAmount})`,
       name: postBadgeDefinitions.name,
       icon: postBadgeDefinitions.icon,
+      iconUrl: postBadgeDefinitions.iconUrl,
       coinCost: postBadgeDefinitions.coinCost,
       displayOrder: postBadgeDefinitions.displayOrder,
     })
@@ -145,6 +146,7 @@ export async function getBulkPostBadgeSummary(db: Db, postIds: string[]) {
       totalCoins: sql<number>`cast(sum(${postBadgeApplications.coinAmount}) as integer)`,
       name: postBadgeDefinitions.name,
       icon: postBadgeDefinitions.icon,
+      iconUrl: postBadgeDefinitions.iconUrl,
       displayOrder: postBadgeDefinitions.displayOrder,
     })
     .from(postBadgeApplications)

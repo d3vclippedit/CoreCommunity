@@ -53,7 +53,13 @@ type FeedPost = {
   communityName: string | null;
   communityIconUrl: string | null;
   badgeCoinsCC: number;
-  badges: { icon: string; name: string; count: number; totalCoins: number }[];
+  badges: {
+    icon: string;
+    iconUrl: string | null;
+    name: string;
+    count: number;
+    totalCoins: number;
+  }[];
 };
 
 type WallFeedPost = {
@@ -203,7 +209,7 @@ export async function loader({ request, context }: LoaderFunctionArgs) {
       posts: rawPosts.map((p) => ({
         ...p,
         badgeCoinsCC: 0,
-        badges: [] as { icon: string; name: string; count: number; totalCoins: number }[],
+        badges: [] as { icon: string; iconUrl: string | null; name: string; count: number; totalCoins: number }[],
       })),
       wallFeedPosts: [] as WallFeedPost[],
       discoverCommunities: [] as DiscoverCommunity[],
@@ -277,6 +283,7 @@ export async function loader({ request, context }: LoaderFunctionArgs) {
       badgeCoinsCC,
       badges: badges.map((b) => ({
         icon: b.icon,
+        iconUrl: b.iconUrl ?? null,
         name: b.name,
         count: b.count,
         totalCoins: b.totalCoins,
@@ -558,7 +565,20 @@ function FeedPostCard({ post }: { post: FeedPost }) {
                       className="text-sm leading-none"
                       title={`${b.name} ×${b.count}`}
                     >
-                      {b.icon}
+                      {b.iconUrl ? (
+                        <img
+                          src={b.iconUrl}
+                          alt={b.name}
+                          style={{
+                            width: 18,
+                            height: 18,
+                            display: "inline",
+                            verticalAlign: "middle",
+                          }}
+                        />
+                      ) : (
+                        b.icon
+                      )}
                     </span>
                   ))}
                 </div>
