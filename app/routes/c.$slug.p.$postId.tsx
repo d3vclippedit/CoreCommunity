@@ -3,6 +3,7 @@ import { Form, Link, useFetcher, useLoaderData, useRouteLoaderData } from "@remi
 import { and, desc, eq, gt, inArray, isNull, or, sql } from "drizzle-orm";
 import { Heart } from "lucide-react";
 import { useEffect, useState } from "react";
+import core9GifUrl from "~/assets/core9.gif";
 import { AppShell } from "~/components/layout/AppShell";
 import { Footer } from "~/components/layout/Footer";
 import { getCurrentUser } from "~/lib/auth/user.server";
@@ -37,6 +38,8 @@ import {
   votes,
 } from "../../db/schema";
 import { CommunityAvatar } from "./communities._index";
+
+const BADGE_GIF_URLS: Record<string, string> = { Core: core9GifUrl };
 
 export const meta: MetaFunction<typeof loader> = ({ data }) => {
   if (!data) return [{ title: "Cormunities" }];
@@ -628,7 +631,7 @@ export default function PostPermalink() {
                     >
                       {b.iconUrl ? (
                         <img
-                          src={b.iconUrl}
+                          src={BADGE_GIF_URLS[b.name] ?? b.iconUrl}
                           alt={b.name}
                           style={{
                             width: 16,
@@ -688,7 +691,7 @@ export default function PostPermalink() {
                           >
                             {def.iconUrl ? (
                               <img
-                                src={def.iconUrl}
+                                src={BADGE_GIF_URLS[def.name] ?? def.iconUrl}
                                 alt={def.name}
                                 style={{ width: 24, height: 24 }}
                               />

@@ -2,6 +2,7 @@ import type { LoaderFunctionArgs, MetaFunction } from "@remix-run/cloudflare";
 import { useFetcher, useLoaderData, useRouteLoaderData, useSearchParams } from "@remix-run/react";
 import { and, eq, isNull } from "drizzle-orm";
 import { type FormEvent, useEffect, useState } from "react";
+import core9GifUrl from "~/assets/core9.gif";
 import { AppShell } from "~/components/layout/AppShell";
 import { Footer } from "~/components/layout/Footer";
 import { Header } from "~/components/layout/Header";
@@ -266,7 +267,11 @@ export default function CoinsPage() {
                       className="flex flex-col items-center gap-1.5 rounded-lg p-3"
                       style={{ background: "var(--color-bg-elev-2)" }}
                     >
-                      <span className="text-2xl">{b.icon}</span>
+                      {"iconUrl" in b && b.iconUrl ? (
+                        <img src={b.iconUrl} alt={b.name} style={{ width: 32, height: 32 }} />
+                      ) : (
+                        <span className="text-2xl">{b.icon}</span>
+                      )}
                       <span
                         className="text-xs font-semibold"
                         style={{ color: "var(--color-text)" }}
@@ -346,7 +351,7 @@ const BADGE_DISPLAY = [
   { name: "Goated", icon: "🐐", coins: 1000 },
   { name: "Viral", icon: "💥", coins: 2500 },
   { name: "Legend", icon: "⭐", coins: 5000 },
-  { name: "Core", icon: "💎", coins: 10000 },
+  { name: "Core", icon: "💎", iconUrl: core9GifUrl, coins: 10000 },
 ];
 
 type MembershipCommunity = {

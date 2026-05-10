@@ -8,6 +8,7 @@ import {
 } from "@remix-run/react";
 import { and, eq, isNull } from "drizzle-orm";
 import { type FormEvent, useEffect, useState } from "react";
+import core9GifUrl from "~/assets/core9.gif";
 import { AppShell } from "~/components/layout/AppShell";
 import { Footer } from "~/components/layout/Footer";
 import { Header } from "~/components/layout/Header";
@@ -122,7 +123,7 @@ const BADGE_DISPLAY = [
   { name: "Goated", icon: "🐐", coins: 1000 },
   { name: "Viral", icon: "💥", coins: 2500 },
   { name: "Legend", icon: "⭐", coins: 5000 },
-  { name: "Core", icon: "💎", coins: 10000 },
+  { name: "Core", icon: "💎", iconUrl: core9GifUrl, coins: 10000 },
 ];
 
 export default function MonetisationPage() {
@@ -284,7 +285,11 @@ export default function MonetisationPage() {
                     {BADGE_DISPLAY.map((b) => (
                       <div key={b.name} className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                          <span className="text-base">{b.icon}</span>
+                          {"iconUrl" in b && b.iconUrl ? (
+                            <img src={b.iconUrl} alt={b.name} style={{ width: 20, height: 20 }} />
+                          ) : (
+                            <span className="text-base">{b.icon}</span>
+                          )}
                           <span className="text-xs" style={{ color: "var(--color-text-dim)" }}>
                             {b.name}
                           </span>
@@ -503,7 +508,15 @@ export default function MonetisationPage() {
                         className="flex items-center gap-1.5 rounded-md px-2 py-2"
                         style={{ background: "var(--color-bg-elev-2)" }}
                       >
-                        <span className="text-base flex-shrink-0">{b.icon}</span>
+                        {"iconUrl" in b && b.iconUrl ? (
+                          <img
+                            src={b.iconUrl}
+                            alt={b.name}
+                            style={{ width: 20, height: 20, flexShrink: 0 }}
+                          />
+                        ) : (
+                          <span className="text-base flex-shrink-0">{b.icon}</span>
+                        )}
                         <div className="min-w-0">
                           <p
                             className="text-xs font-medium truncate"

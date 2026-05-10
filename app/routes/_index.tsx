@@ -2,6 +2,7 @@ import type { LoaderFunctionArgs, MetaFunction } from "@remix-run/cloudflare";
 import { Link, useLoaderData, useNavigate, useSearchParams } from "@remix-run/react";
 import { and, desc, eq, inArray, isNull, or } from "drizzle-orm";
 import { useEffect, useRef } from "react";
+import core9GifUrl from "~/assets/core9.gif";
 import { CoreLogo } from "~/components/CoreLogo";
 import { InlineMedia, detectEmbed } from "~/components/PostExpand";
 import { AppShell } from "~/components/layout/AppShell";
@@ -19,6 +20,8 @@ import {
   wallPosts,
 } from "../../db/schema";
 import { CommunityAvatar } from "./communities._index";
+
+const BADGE_GIF_URLS: Record<string, string> = { Core: core9GifUrl };
 
 export const meta: MetaFunction = () => [
   { title: "CORE — Communities for creators who actually run them" },
@@ -573,7 +576,7 @@ function FeedPostCard({ post }: { post: FeedPost }) {
                     >
                       {b.iconUrl ? (
                         <img
-                          src={b.iconUrl}
+                          src={BADGE_GIF_URLS[b.name] ?? b.iconUrl}
                           alt={b.name}
                           style={{
                             width: 18,
