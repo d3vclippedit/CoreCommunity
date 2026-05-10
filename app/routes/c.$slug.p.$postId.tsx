@@ -634,8 +634,8 @@ export default function PostPermalink() {
                           src={BADGE_GIF_URLS[b.name] ?? b.iconUrl}
                           alt={b.name}
                           style={{
-                            width: 16,
-                            height: 16,
+                            width: 32,
+                            height: 32,
                             display: "inline",
                             verticalAlign: "middle",
                           }}
@@ -693,7 +693,7 @@ export default function PostPermalink() {
                               <img
                                 src={BADGE_GIF_URLS[def.name] ?? def.iconUrl}
                                 alt={def.name}
-                                style={{ width: 24, height: 24 }}
+                                style={{ width: 48, height: 48 }}
                               />
                             ) : (
                               <span className="text-lg">{def.icon}</span>

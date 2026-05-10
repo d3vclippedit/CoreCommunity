@@ -347,8 +347,8 @@ function PostCard({
                           src={BADGE_GIF_URLS[b.name] ?? b.iconUrl}
                           alt={b.name}
                           style={{
-                            width: 18,
-                            height: 18,
+                            width: 36,
+                            height: 36,
                             display: "inline",
                             verticalAlign: "middle",
                           }}

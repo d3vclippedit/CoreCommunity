@@ -286,7 +286,7 @@ export default function MonetisationPage() {
                       <div key={b.name} className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
                           {"iconUrl" in b && b.iconUrl ? (
-                            <img src={b.iconUrl} alt={b.name} style={{ width: 20, height: 20 }} />
+                            <img src={b.iconUrl} alt={b.name} style={{ width: 40, height: 40 }} />
                           ) : (
                             <span className="text-base">{b.icon}</span>
                           )}
@@ -512,7 +512,7 @@ export default function MonetisationPage() {
                           <img
                             src={b.iconUrl}
                             alt={b.name}
-                            style={{ width: 20, height: 20, flexShrink: 0 }}
+                            style={{ width: 40, height: 40, flexShrink: 0 }}
                           />
                         ) : (
                           <span className="text-base flex-shrink-0">{b.icon}</span>
