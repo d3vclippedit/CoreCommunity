@@ -630,9 +630,9 @@ export default function PostPermalink() {
                       }}
                       title={`${b.name}: ${b.count} × ${b.coinCost} cc`}
                     >
-                      {b.iconUrl ? (
+                      {(BADGE_GIF_URLS[b.name] ?? b.iconUrl) ? (
                         <img
-                          src={BADGE_GIF_URLS[b.name] ?? b.iconUrl}
+                          src={(BADGE_GIF_URLS[b.name] ?? b.iconUrl) as string}
                           alt={b.name}
                           style={{
                             width: 32,
@@ -683,21 +683,22 @@ export default function PostPermalink() {
                           <button
                             type="submit"
                             disabled={!canAfford || badgeFetcher.state !== "idle"}
-                            className="w-full rounded-lg p-2 flex flex-col items-center gap-0.5 transition-opacity hover:opacity-80 disabled:opacity-40"
+                            className="w-full rounded-lg flex flex-col items-center justify-center gap-1 transition-opacity hover:opacity-80 disabled:opacity-40"
                             style={{
                               background: "var(--color-bg-elev-2)",
                               border: "1px solid var(--color-border)",
+                              height: 76,
                             }}
                             title={canAfford ? `${def.coinCost} cc` : "Not enough coins"}
                           >
-                            {def.iconUrl ? (
+                            {(BADGE_GIF_URLS[def.name] ?? def.iconUrl) ? (
                               <img
-                                src={BADGE_GIF_URLS[def.name] ?? def.iconUrl}
+                                src={(BADGE_GIF_URLS[def.name] ?? def.iconUrl) as string}
                                 alt={def.name}
-                                style={{ width: 48, height: 48 }}
+                                style={{ width: 36, height: 36, objectFit: "contain" }}
                               />
                             ) : (
-                              <span className="text-lg">{def.icon}</span>
+                              <span style={{ fontSize: 30, lineHeight: 1 }}>{def.icon}</span>
                             )}
                             <span
                               className="text-[10px] leading-tight font-medium"
