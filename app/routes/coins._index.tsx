@@ -269,9 +269,24 @@ export default function CoinsPage() {
                       style={{ background: "var(--color-bg-elev-2)" }}
                     >
                       {"iconUrl" in b && b.iconUrl ? (
-                        <img src={b.iconUrl} alt={b.name} style={{ width: 64, height: 64 }} />
+                        <img
+                          src={b.iconUrl}
+                          alt={b.name}
+                          style={{ width: 64, height: 64, objectFit: "contain" }}
+                        />
                       ) : (
-                        <span className="text-2xl">{b.icon}</span>
+                        <span
+                          style={{
+                            width: 64,
+                            height: 64,
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            fontSize: 36,
+                          }}
+                        >
+                          {b.icon}
+                        </span>
                       )}
                       <span
                         className="text-xs font-semibold"

@@ -575,9 +575,9 @@ function FeedPostCard({ post }: { post: FeedPost }) {
                       className="text-sm leading-none"
                       title={`${b.name} ×${b.count}`}
                     >
-                      {b.iconUrl ? (
+                      {(BADGE_GIF_URLS[b.name] ?? b.iconUrl) ? (
                         <img
-                          src={BADGE_GIF_URLS[b.name] ?? b.iconUrl}
+                          src={(BADGE_GIF_URLS[b.name] ?? b.iconUrl) as string}
                           alt={b.name}
                           style={{
                             width: 36,

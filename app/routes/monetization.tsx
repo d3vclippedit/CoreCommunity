@@ -287,9 +287,25 @@ export default function MonetisationPage() {
                       <div key={b.name} className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
                           {"iconUrl" in b && b.iconUrl ? (
-                            <img src={b.iconUrl} alt={b.name} style={{ width: 40, height: 40 }} />
+                            <img
+                              src={b.iconUrl}
+                              alt={b.name}
+                              style={{ width: 40, height: 40, objectFit: "contain", flexShrink: 0 }}
+                            />
                           ) : (
-                            <span className="text-base">{b.icon}</span>
+                            <span
+                              style={{
+                                width: 40,
+                                height: 40,
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                fontSize: 24,
+                                flexShrink: 0,
+                              }}
+                            >
+                              {b.icon}
+                            </span>
                           )}
                           <span className="text-xs" style={{ color: "var(--color-text-dim)" }}>
                             {b.name}
@@ -513,10 +529,22 @@ export default function MonetisationPage() {
                           <img
                             src={b.iconUrl}
                             alt={b.name}
-                            style={{ width: 40, height: 40, flexShrink: 0 }}
+                            style={{ width: 40, height: 40, objectFit: "contain", flexShrink: 0 }}
                           />
                         ) : (
-                          <span className="text-base flex-shrink-0">{b.icon}</span>
+                          <span
+                            style={{
+                              width: 40,
+                              height: 40,
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              fontSize: 24,
+                              flexShrink: 0,
+                            }}
+                          >
+                            {b.icon}
+                          </span>
                         )}
                         <div className="min-w-0">
                           <p
