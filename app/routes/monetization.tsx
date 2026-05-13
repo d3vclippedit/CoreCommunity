@@ -8,7 +8,8 @@ import {
 } from "@remix-run/react";
 import { and, eq, isNull } from "drizzle-orm";
 import { type FormEvent, useEffect, useState } from "react";
-import core9GifUrl from "~/assets/core9.gif";
+import crownGifUrl from "~/assets/Crown.gif";
+import coreGifUrl from "~/assets/core.gif";
 import { AppShell } from "~/components/layout/AppShell";
 import { Footer } from "~/components/layout/Footer";
 import { Header } from "~/components/layout/Header";
@@ -122,8 +123,8 @@ const BADGE_DISPLAY = [
   { name: "W Post", icon: "🏆", coins: 500 },
   { name: "Goated", icon: "🐐", coins: 1000 },
   { name: "Viral", icon: "💥", coins: 2500 },
-  { name: "Legend", icon: "⭐", coins: 5000 },
-  { name: "Core", icon: "💎", iconUrl: core9GifUrl, coins: 10000 },
+  { name: "Crown", icon: "👑", iconUrl: crownGifUrl, coins: 5000 },
+  { name: "Core", icon: "💎", iconUrl: coreGifUrl, coins: 10000 },
 ];
 
 export default function MonetisationPage() {

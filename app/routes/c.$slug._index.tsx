@@ -1,7 +1,8 @@
 import type { LoaderFunctionArgs, MetaFunction } from "@remix-run/cloudflare";
 import { Link, useLoaderData, useNavigate, useSearchParams } from "@remix-run/react";
 import { and, desc, eq, inArray, isNull } from "drizzle-orm";
-import core9GifUrl from "~/assets/core9.gif";
+import crownGifUrl from "~/assets/Crown.gif";
+import coreGifUrl from "~/assets/core.gif";
 import { InlineMedia, detectEmbed } from "~/components/PostExpand";
 import { getCurrentUser } from "~/lib/auth/user.server";
 import { getBulkPostBadgeSummary } from "~/lib/badges.server";
@@ -14,7 +15,7 @@ import {
   users,
 } from "../../db/schema";
 
-const BADGE_GIF_URLS: Record<string, string> = { Core: core9GifUrl };
+const BADGE_GIF_URLS: Record<string, string> = { Core: coreGifUrl, Crown: crownGifUrl };
 
 export const meta: MetaFunction<typeof loader> = ({ data }) => {
   if (!data) return [{ title: "Cormunities" }];
