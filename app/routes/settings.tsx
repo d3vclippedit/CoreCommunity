@@ -162,13 +162,19 @@ export async function action({ request, context }: ActionFunctionArgs) {
 
   if (intent === "2fa_disable") {
     const code = (form.get("code") as string | null)?.replace(/\s/g, "") ?? "";
+    const password = (form.get("password") as string | null) ?? "";
     const row = await db.query.users.findFirst({
       where: eq(users.id, user.id),
-      columns: { totpSecret: true, totpEnabled: true },
+      columns: { totpSecret: true, totpEnabled: true, passwordHash: true },
     });
-    if (!row?.totpEnabled || !row.totpSecret) return { error: "2FA is not enabled.", intent };
-    const valid = await verifyTotp(row.totpSecret, code);
-    if (!valid) return { error: "Incorrect code.", intent };
+    if (!row?.totpEnabled) return { error: "2FA is not enabled.", intent };
+
+    // Accept either a valid TOTP code or the account password
+    const totpValid = row.totpSecret ? await verifyTotp(row.totpSecret, code) : false;
+    const passwordValid = password ? await verifyPassword(password, row.passwordHash) : false;
+    if (!totpValid && !passwordValid) {
+      return { error: "Incorrect code or password.", intent };
+    }
 
     await db
       .update(users)
@@ -756,12 +762,22 @@ function TotpSection({ user }: { user: LoaderData["user"] }) {
             id="disableCode"
             name="code"
             type="text"
-            label="Enter current 6-digit code to disable 2FA"
+            label="6-digit authenticator code"
             placeholder="123 456"
             inputMode="numeric"
             maxLength={7}
             autoComplete="one-time-code"
-            required
+          />
+          <p className="text-xs text-center" style={{ color: "var(--color-text-faint)" }}>
+            — or, if you no longer have access to the app —
+          </p>
+          <Input
+            id="disablePassword"
+            name="password"
+            type="password"
+            label="Account password"
+            placeholder="Your current password"
+            autoComplete="current-password"
           />
           <div className="flex gap-2">
             <Button type="submit" loading={fetcher.state !== "idle"}>
