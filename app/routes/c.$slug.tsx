@@ -21,6 +21,7 @@ import {
   communities,
   communityMemberships,
   communityNotificationPrefs,
+  communitySubscriptions,
   streamSnapshots,
   users,
 } from "../../db/schema";
@@ -47,6 +48,7 @@ export async function loader({ params, request, context }: LoaderFunctionArgs) {
 
   let membership = null;
   let notifyNewPosts = false;
+  let isSubscribed = false;
   if (user) {
     membership = await db.query.communityMemberships.findFirst({
       where: and(
@@ -67,6 +69,15 @@ export async function loader({ params, request, context }: LoaderFunctionArgs) {
     } catch {
       // notifications table not yet migrated
     }
+    const sub = await db.query.communitySubscriptions.findFirst({
+      where: and(
+        eq(communitySubscriptions.userId, user.id),
+        eq(communitySubscriptions.communityId, community.id),
+        eq(communitySubscriptions.status, "active"),
+      ),
+      columns: { id: true },
+    });
+    isSubscribed = !!sub;
   }
 
   const staffRows = await db
@@ -107,6 +118,7 @@ export async function loader({ params, request, context }: LoaderFunctionArgs) {
     community,
     membership: membership ?? null,
     notifyNewPosts,
+    isSubscribed,
     staffRows,
     ownerUser: ownerUser ?? null,
     host,
@@ -126,6 +138,7 @@ export default function CommunityHub() {
     community,
     membership,
     notifyNewPosts,
+    isSubscribed,
     staffRows,
     ownerUser,
     host,
@@ -187,6 +200,19 @@ export default function CommunityHub() {
         />
         {rootUser && <NotifyToggle communityId={community.id} notifyNewPosts={notifyNewPosts} />}
       </div>
+
+      {community.membershipEnabled && (
+        <div className="mt-3">
+          <CommunityMembershipWidget
+            communityId={community.id}
+            priceCoins={community.membershipPriceCoins ?? 0}
+            badgeIcon={community.membershipBadgeIcon ?? "⭐"}
+            borderColor={community.membershipBorderColor ?? "#F59E0B"}
+            isSubscribed={isSubscribed}
+            user={rootUser}
+          />
+        </div>
+      )}
 
       {twitchChannel && (
         <div className="mt-4 flex flex-col gap-2">
@@ -853,5 +879,103 @@ function ReportCommunityButton({ communityId }: { communityId: string }) {
         </button>
       </div>
     </fetcher.Form>
+  );
+}
+
+function CommunityMembershipWidget({
+  communityId,
+  priceCoins,
+  badgeIcon,
+  borderColor,
+  isSubscribed,
+  user,
+}: {
+  communityId: string;
+  priceCoins: number;
+  badgeIcon: string;
+  borderColor: string;
+  isSubscribed: boolean;
+  user: { id: string } | null;
+}) {
+  const fetcher = useFetcher<{ error?: string; success?: boolean }>({
+    key: "community-subscribe",
+  });
+  const optimisticSubscribed =
+    fetcher.formAction === "/api/community/subscribe"
+      ? true
+      : fetcher.formAction === "/api/community/cancel-subscription"
+        ? false
+        : isSubscribed;
+  const isSubmitting = fetcher.state !== "idle";
+
+  return (
+    <div className="rounded-lg overflow-hidden" style={{ border: `1px solid ${borderColor}` }}>
+      <div className="px-3 py-2 flex items-center gap-2" style={{ background: `${borderColor}22` }}>
+        <span className="text-base leading-none">{badgeIcon}</span>
+        <p className="text-xs font-semibold" style={{ color: borderColor }}>
+          Community Membership
+        </p>
+        {optimisticSubscribed && (
+          <span
+            className="ml-auto text-[10px] px-1.5 py-0.5 rounded-full font-semibold"
+            style={{ background: "rgba(61,214,140,0.15)", color: "var(--color-success)" }}
+          >
+            Active
+          </span>
+        )}
+      </div>
+      <div
+        className="px-3 py-2.5 flex flex-col gap-2"
+        style={{ background: "var(--color-bg-elev-1)" }}
+      >
+        <p className="text-xs" style={{ color: "var(--color-text-faint)" }}>
+          {priceCoins.toLocaleString()} cc/week · badge &amp; exclusive post border
+        </p>
+
+        {fetcher.data?.error && (
+          <p className="text-xs" style={{ color: "var(--color-danger)" }}>
+            {fetcher.data.error}
+          </p>
+        )}
+
+        {!user ? (
+          <Link
+            to="/auth/login"
+            className="w-full text-center py-1.5 text-xs font-semibold rounded-md no-underline block transition-opacity hover:opacity-90"
+            style={{ background: borderColor, color: "#000" }}
+          >
+            Sign in to subscribe
+          </Link>
+        ) : optimisticSubscribed ? (
+          <fetcher.Form method="post" action="/api/community/cancel-subscription">
+            <input type="hidden" name="communityId" value={communityId} />
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="text-xs px-3 py-1 rounded-md transition-opacity hover:opacity-80 disabled:opacity-50"
+              style={{
+                background: "var(--color-bg-elev-2)",
+                border: "1px solid var(--color-border)",
+                color: "var(--color-text-faint)",
+              }}
+            >
+              {isSubmitting ? "…" : "Cancel membership"}
+            </button>
+          </fetcher.Form>
+        ) : (
+          <fetcher.Form method="post" action="/api/community/subscribe">
+            <input type="hidden" name="communityId" value={communityId} />
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="w-full py-1.5 text-xs font-bold rounded-md transition-opacity hover:opacity-90 disabled:opacity-50"
+              style={{ background: borderColor, color: "#000" }}
+            >
+              {isSubmitting ? "Subscribing…" : `Subscribe — ${priceCoins.toLocaleString()} cc/wk`}
+            </button>
+          </fetcher.Form>
+        )}
+      </div>
+    </div>
   );
 }

@@ -1,7 +1,6 @@
 import type { LoaderFunctionArgs, MetaFunction } from "@remix-run/cloudflare";
 import { useFetcher, useLoaderData, useRouteLoaderData, useSearchParams } from "@remix-run/react";
-import { and, eq, isNull } from "drizzle-orm";
-import { type FormEvent, useEffect, useState } from "react";
+import { type FormEvent, useEffect } from "react";
 import crownGifUrl from "~/assets/Crown.gif";
 import coreGifUrl from "~/assets/core.gif";
 import { AppShell } from "~/components/layout/AppShell";
@@ -12,7 +11,6 @@ import { formatCoins } from "~/lib/coins";
 import { getActiveBundles, getBalance } from "~/lib/coins.server";
 import { createDb } from "~/lib/db/index";
 import type { loader as rootLoader } from "~/root";
-import { communities, communitySubscriptions } from "../../db/schema";
 
 export const meta: MetaFunction = () => [
   { title: "Core Coins — Cormunities" },
@@ -31,55 +29,14 @@ export async function loader({ request, context }: LoaderFunctionArgs) {
     const bundles = await getActiveBundles(db);
     const balance = user ? await getBalance(db, user.id) : 0;
 
-    const membershipCommunities = await db
-      .select({
-        id: communities.id,
-        slug: communities.slug,
-        name: communities.name,
-        membershipPriceCoins: communities.membershipPriceCoins,
-        membershipBadgeIcon: communities.membershipBadgeIcon,
-        membershipBorderColor: communities.membershipBorderColor,
-      })
-      .from(communities)
-      .where(and(eq(communities.membershipEnabled, true), isNull(communities.deletedAt)));
-
-    const activeSubscriptions = user
-      ? await db
-          .select({ communityId: communitySubscriptions.communityId })
-          .from(communitySubscriptions)
-          .where(
-            and(
-              eq(communitySubscriptions.userId, user.id),
-              eq(communitySubscriptions.status, "active"),
-            ),
-          )
-      : [];
-
-    const subscribedIds = new Set(activeSubscriptions.map((s) => s.communityId));
-
-    return {
-      user,
-      bundles,
-      balance,
-      dbReady: true,
-      membershipCommunities,
-      subscribedIds: [...subscribedIds],
-    };
+    return { user, bundles, balance, dbReady: true };
   } catch {
-    return {
-      user,
-      bundles: [],
-      balance: 0,
-      dbReady: false,
-      membershipCommunities: [],
-      subscribedIds: [],
-    };
+    return { user, bundles: [], balance: 0, dbReady: false };
   }
 }
 
 export default function CoinsPage() {
-  const { user, bundles, balance, dbReady, membershipCommunities, subscribedIds } =
-    useLoaderData<typeof loader>();
+  const { user, bundles, balance, dbReady } = useLoaderData<typeof loader>();
   const root = useRouteLoaderData<typeof rootLoader>("root");
   const rootUser = root?.user ?? null;
   const [params] = useSearchParams();
@@ -243,12 +200,8 @@ export default function CoinsPage() {
                 </div>
               </div>
 
-              {/* Member Subscription */}
-              <MembershipSection
-                communities={membershipCommunities}
-                subscribedIds={subscribedIds}
-                user={user}
-              />
+              {/* Executive Member */}
+              <ExecutiveMemberSection user={user} />
 
               {/* Badge types */}
               <div
@@ -370,177 +323,83 @@ const BADGE_DISPLAY = [
   { name: "Core", icon: "💎", iconUrl: coreGifUrl, coins: 10000 },
 ];
 
-type MembershipCommunity = {
-  id: string;
-  slug: string;
-  name: string;
-  membershipPriceCoins: number;
-  membershipBadgeIcon: string;
-  membershipBorderColor: string;
-};
-
-function MembershipSection({
-  communities: comms,
-  subscribedIds,
-  user,
-}: {
-  communities: MembershipCommunity[];
-  subscribedIds: string[];
-  user: { id: string } | null;
-}) {
-  const [selected, setSelected] = useState(comms[0]?.id ?? "");
-  const fetcher = useFetcher<{ error?: string; success?: boolean }>({ key: "community-subscribe" });
-  const selectedComm = comms.find((c) => c.id === selected);
-  const isSubscribed = subscribedIds.includes(selected);
-  const isSubmitting = fetcher.state !== "idle";
-
+function ExecutiveMemberSection({ user }: { user: { id: string } | null }) {
   return (
-    <div
-      className="rounded-xl overflow-hidden"
-      style={{ border: "2px solid #F59E0B", minHeight: 260 }}
-    >
-      {/* Amber header strip */}
+    <div className="rounded-xl overflow-hidden" style={{ border: "2px solid #A855F7" }}>
+      {/* Purple header strip */}
       <div
         className="px-5 py-3 flex items-center gap-2"
-        style={{ background: "rgba(245,158,11,0.15)" }}
+        style={{ background: "rgba(168,85,247,0.15)" }}
       >
-        <span className="text-lg">⭐</span>
+        <span className="text-lg">👑</span>
         <div>
-          <h2 className="text-sm font-bold" style={{ color: "#F59E0B" }}>
-            Member Subscription
+          <h2 className="text-sm font-bold" style={{ color: "#A855F7" }}>
+            Executive Member
           </h2>
           <p className="text-xs" style={{ color: "var(--color-text-dim)" }}>
-            Support a community with Core Coins — get a badge &amp; exclusive post border
+            Site-wide premium membership — coins, perks &amp; priority access
           </p>
         </div>
       </div>
 
       {/* Body */}
-      <div className="p-5" style={{ background: "var(--color-bg-elev-1)" }}>
-        {comms.length === 0 ? (
-          <div className="flex flex-col items-center gap-3 py-8 text-center">
-            <span className="text-4xl">🔐</span>
-            <p className="text-sm font-medium" style={{ color: "var(--color-text)" }}>
-              No memberships available yet
-            </p>
-            <p
-              className="text-xs max-w-xs leading-relaxed"
-              style={{ color: "var(--color-text-faint)" }}
-            >
-              Streamers can enable memberships in their community settings. Check back once your
-              favourite community activates it.
-            </p>
-          </div>
-        ) : (
-          <div className="flex flex-col gap-4">
-            {/* Community picker */}
-            <div className="flex flex-col gap-1.5">
-              <label
-                htmlFor="membership-community"
-                className="text-xs font-medium"
+      <div className="p-5 flex flex-col gap-4" style={{ background: "var(--color-bg-elev-1)" }}>
+        {/* Perks list */}
+        <div className="flex flex-col gap-2">
+          {[
+            { icon: "🪙", text: "400 cc every 7 days (1,600 cc/cycle)" },
+            { icon: "⚡", text: "Priority support &amp; early access to new features" },
+            { icon: "🏅", text: "Exclusive Executive Member badge across all communities" },
+          ].map(({ icon, text }) => (
+            <div key={text} className="flex items-start gap-2">
+              <span className="text-base leading-none mt-0.5">{icon}</span>
+              <p
+                className="text-xs leading-relaxed"
                 style={{ color: "var(--color-text-dim)" }}
-              >
-                Choose community
-              </label>
-              <select
-                id="membership-community"
-                value={selected}
-                onChange={(e) => setSelected(e.target.value)}
-                className="w-full rounded-md px-3 py-2 text-sm"
-                style={{
-                  background: "var(--color-bg-elev-2)",
-                  border: "1px solid var(--color-border)",
-                  color: "var(--color-text)",
-                  outline: "none",
-                }}
-              >
-                {comms.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    c/{c.slug} — {c.membershipPriceCoins} cc/week
-                  </option>
-                ))}
-              </select>
+                // biome-ignore lint/security/noDangerouslySetInnerHtml: static trusted string
+                dangerouslySetInnerHTML={{ __html: text }}
+              />
             </div>
+          ))}
+        </div>
 
-            {/* Selected community preview */}
-            {selectedComm && (
-              <div
-                className="rounded-lg p-4 flex items-center gap-3"
-                style={{
-                  background: "var(--color-bg-elev-2)",
-                  borderLeft: `4px solid ${selectedComm.membershipBorderColor}`,
-                }}
-              >
-                <span className="text-2xl">{selectedComm.membershipBadgeIcon}</span>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold" style={{ color: "var(--color-text)" }}>
-                    c/{selectedComm.slug} Member
-                  </p>
-                  <p className="text-xs mt-0.5" style={{ color: "var(--color-text-faint)" }}>
-                    {selectedComm.membershipPriceCoins} cc/week · custom badge + post border
-                  </p>
-                </div>
-                {isSubscribed && (
-                  <span
-                    className="text-xs px-2 py-1 rounded-full font-semibold"
-                    style={{ background: "rgba(61,214,140,0.15)", color: "var(--color-success)" }}
-                  >
-                    Active
-                  </span>
-                )}
-              </div>
-            )}
-
-            {fetcher.data?.error && (
-              <p className="text-xs" style={{ color: "var(--color-danger)" }}>
-                {fetcher.data.error}
-              </p>
-            )}
-            {fetcher.data?.success && (
-              <p className="text-xs font-medium" style={{ color: "var(--color-success)" }}>
-                Subscribed! Your membership badge is now active.
-              </p>
-            )}
-
-            {!user ? (
-              <p className="text-sm text-center py-2" style={{ color: "var(--color-text-faint)" }}>
-                <a href="/auth/login" style={{ color: "#F59E0B" }}>
-                  Sign in
-                </a>{" "}
-                to subscribe.
-              </p>
-            ) : isSubscribed ? (
-              <fetcher.Form method="post" action="/api/community/cancel-subscription">
-                <input type="hidden" name="communityId" value={selected} />
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="text-xs px-3 py-1.5 rounded-md transition-opacity hover:opacity-80 disabled:opacity-50"
-                  style={{
-                    background: "var(--color-bg-elev-2)",
-                    border: "1px solid var(--color-border)",
-                    color: "var(--color-text-dim)",
-                  }}
-                >
-                  {isSubmitting ? "…" : "Cancel membership"}
-                </button>
-              </fetcher.Form>
-            ) : (
-              <fetcher.Form method="post" action="/api/community/subscribe">
-                <input type="hidden" name="communityId" value={selected} />
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="w-full py-2.5 text-sm font-bold rounded-md transition-opacity hover:opacity-90 disabled:opacity-50"
-                  style={{ background: "#F59E0B", color: "#000" }}
-                >
-                  {isSubmitting
-                    ? "Subscribing…"
-                    : `Subscribe — ${selectedComm?.membershipPriceCoins ?? 0} cc/week`}
-                </button>
-              </fetcher.Form>
-            )}
+        {/* Pricing */}
+        <div
+          className="rounded-lg p-4 flex items-center justify-between"
+          style={{ background: "var(--color-bg-elev-2)", border: "1px solid var(--color-border)" }}
+        >
+          <div>
+            <p className="text-xl font-bold" style={{ color: "var(--color-text)" }}>
+              $9.99
+            </p>
+            <p className="text-xs" style={{ color: "var(--color-text-faint)" }}>
+              per 28 days
+            </p>
           </div>
+          <span
+            className="text-xs px-2.5 py-1 rounded-full font-semibold"
+            style={{ background: "rgba(168,85,247,0.15)", color: "#A855F7" }}
+          >
+            Best value
+          </span>
+        </div>
+
+        {!user ? (
+          <p className="text-sm text-center py-1" style={{ color: "var(--color-text-faint)" }}>
+            <a href="/auth/login" style={{ color: "#A855F7" }}>
+              Sign in
+            </a>{" "}
+            to subscribe.
+          </p>
+        ) : (
+          <button
+            type="button"
+            className="w-full py-2.5 text-sm font-bold rounded-md transition-opacity hover:opacity-90"
+            style={{ background: "#A855F7", color: "#fff" }}
+            onClick={() => alert("Executive Member subscriptions coming soon!")}
+          >
+            Subscribe — $9.99 / 28 days
+          </button>
         )}
       </div>
     </div>
